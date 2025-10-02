@@ -25,6 +25,10 @@
 	margin-top: 0.25rem;
 }
 
+.seo-panel p {
+	font-size: 0.85rem;
+}
+
 .seo-section {
 	margin-bottom: 2rem;
 	padding: 1rem;
@@ -75,6 +79,39 @@
 	border: 1px solid var(--background-modifier-border);
 	border-radius: 4px;
 	padding: 1rem;
+	transition: all 0.2s ease;
+}
+
+/* Color-coded check blocks */
+.seo-check.seo-passed {
+	background: var(--color-green-bg, rgba(34, 197, 94, 0.1));
+	border-left: 4px solid var(--color-green, #22c55e);
+	border-color: var(--color-green, #22c55e);
+}
+
+.seo-check.seo-warning {
+	background: var(--color-yellow-bg, rgba(234, 179, 8, 0.1));
+	border-left: 4px solid var(--color-yellow, #eab308);
+	border-color: var(--color-yellow, #eab308);
+}
+
+.seo-check.seo-error {
+	background: var(--color-red-bg, rgba(239, 68, 68, 0.1));
+	border-left: 4px solid var(--color-red, #ef4444);
+	border-color: var(--color-red, #ef4444);
+}
+
+/* Status icon colors to match the blocks */
+.seo-check.seo-passed .seo-status svg {
+	color: var(--color-green, #22c55e);
+}
+
+.seo-check.seo-warning .seo-status svg {
+	color: var(--color-yellow, #eab308);
+}
+
+.seo-check.seo-error .seo-status svg {
+	color: var(--color-red, #ef4444);
 }
 
 .seo-check-header {
@@ -145,7 +182,6 @@
 
 .seo-top-btn:hover:not(:disabled) {
 	background: var(--interactive-accent-hover);
-	transform: translateY(-1px);
 }
 
 .seo-top-btn:disabled {
@@ -160,8 +196,91 @@
 	margin-bottom: 1rem;
 }
 
+/* Vault audit stats styling */
+.seo-vault-summary {
+	background: var(--background-secondary);
+	padding: 1.5rem;
+	border-radius: 8px;
+	margin-bottom: 1.5rem;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.seo-stats-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+	gap: 1.5rem;
+	margin-bottom: 0;
+}
+
+.seo-stat-item {
+	text-align: center;
+	padding: 0.5rem;
+}
+
+.seo-stat-number {
+	font-size: 1.5rem;
+	font-weight: 600;
+	color: var(--text-normal);
+	margin-bottom: 0.25rem;
+	line-height: 1.2;
+}
+
+.seo-stat-label {
+	font-size: 0.8rem;
+	color: var(--text-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	font-weight: 500;
+}
+
+/* Color coding for stats numbers */
+.seo-score-excellent {
+	color: var(--color-green, #22c55e) !important;
+}
+
+.seo-score-good {
+	color: var(--color-blue, #3b82f6) !important;
+}
+
+.seo-score-fair {
+	color: var(--color-yellow, #eab308) !important;
+}
+
+.seo-score-poor {
+	color: var(--color-red, #ef4444) !important;
+}
+
+.seo-issues-count {
+	color: var(--color-red, #ef4444) !important;
+}
+
+.seo-warnings-count {
+	color: var(--color-yellow, #eab308) !important;
+}
+
+/* Current note color coding */
+.seo-issues-count-text {
+	color: var(--color-red, #ef4444) !important;
+}
+
+.seo-warnings-count-text {
+	color: var(--color-yellow, #eab308) !important;
+}
+
 .seo-issues-list {
 	margin-top: 1rem;
+}
+
+.seo-issues-header-container {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 1rem;
+}
+
+.seo-sort-buttons {
+	display: flex;
+	gap: 0.5rem;
 }
 
 .seo-file-issue {

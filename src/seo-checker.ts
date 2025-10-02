@@ -29,8 +29,7 @@ export async function runSEOCheck(plugin: SEOPlugin, files: TFile[]): Promise<SE
 		}
 	}
 	
-	new Notice(`SEO check completed for ${results.length} files.`);
-	
+	// Don't show notification here - let the calling code handle it
 	return results;
 }
 

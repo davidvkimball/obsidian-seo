@@ -72,7 +72,7 @@ export default class SEOPlugin extends Plugin {
 		await this.saveData(this.settings);
 	}
 
-	private addStatusBar() {
+	public addStatusBar() {
 		if (this.statusBarEl) return;
 
 		this.statusBarEl = this.addStatusBarItem();
@@ -85,7 +85,7 @@ export default class SEOPlugin extends Plugin {
 		});
 	}
 
-	private removeStatusBar() {
+	public removeStatusBar() {
 		if (this.statusBarEl) {
 			this.statusBarEl.remove();
 			this.statusBarEl = null;

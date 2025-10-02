@@ -14,7 +14,7 @@ export async function checkAltText(content: string, file: TFile, settings: SEOSe
 				results.push({
 					passed: false,
 					message: `Image ${index + 1} is missing alt text`,
-					suggestion: "Add descriptive alt text for accessibility and SEO",
+					suggestion: "Add descriptive alt text for accessibility",
 					severity: 'error'
 				});
 			}

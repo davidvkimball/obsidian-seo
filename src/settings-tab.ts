@@ -138,6 +138,13 @@ export class SEOSettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.showStatusBar = value;
 					await this.plugin.saveSettings();
+					
+					// Toggle status bar based on setting
+					if (value) {
+						this.plugin.addStatusBar();
+					} else {
+						this.plugin.removeStatusBar();
+					}
 				}));
 
 
