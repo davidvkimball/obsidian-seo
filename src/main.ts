@@ -11,9 +11,18 @@ export default class SEOPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
+		// Force icon refresh by clearing any cached icon data
+		this.forceIconRefresh();
+
 		// Register the side panel views
-		this.registerView(SEOCurrentPanelViewType, (leaf) => new SEOSidePanel(this, 'current', leaf));
-		this.registerView(SEOGlobalPanelViewType, (leaf) => new SEOSidePanel(this, 'global', leaf));
+		this.registerView(SEOCurrentPanelViewType, (leaf) => {
+			const panel = new SEOSidePanel(this, 'current', leaf);
+			return panel;
+		});
+		this.registerView(SEOGlobalPanelViewType, (leaf) => {
+			const panel = new SEOSidePanel(this, 'global', leaf);
+			return panel;
+		});
 
 		// Register commands
 		registerCommands(this);
@@ -32,6 +41,11 @@ export default class SEOPlugin extends Plugin {
 		// Add ribbon icon for easy access (default to global)
 		this.addRibbonIcon('search-check', 'Open SEO Global Panel', () => {
 			this.openGlobalPanel();
+		});
+
+		// Use onLayoutReady for better timing of icon refresh
+		this.app.workspace.onLayoutReady(() => {
+			this.forceIconRefresh();
 		});
 	}
 
@@ -79,35 +93,39 @@ export default class SEOPlugin extends Plugin {
 	}
 
 	openCurrentPanel() {
-		// Try to find existing current panel first
-		const existingLeaf = this.app.workspace.getLeavesOfType(SEOCurrentPanelViewType)[0];
-		if (existingLeaf) {
-			// If panel exists, just reveal it and make it active
-			this.app.workspace.revealLeaf(existingLeaf);
-			this.app.workspace.setActiveLeaf(existingLeaf);
-		} else {
-			// Create new panel in the right side
-			const leaf = this.app.workspace.getRightLeaf(false);
-			if (leaf) {
-				leaf.open(new SEOSidePanel(this, 'current', leaf));
-				this.app.workspace.setActiveLeaf(leaf);
-			}
-		}
+		this.openPanel(SEOCurrentPanelViewType, 'current');
 	}
 
 	openGlobalPanel() {
-		// Try to find existing global panel first
-		const existingLeaf = this.app.workspace.getLeavesOfType(SEOGlobalPanelViewType)[0];
+		this.openPanel(SEOGlobalPanelViewType, 'global');
+	}
+
+	private openPanel(viewType: string, panelType: 'current' | 'global') {
+		// Try to find existing panel first
+		const existingLeaf = this.app.workspace.getLeavesOfType(viewType)[0];
 		if (existingLeaf) {
 			// If panel exists, just reveal it and make it active
 			this.app.workspace.revealLeaf(existingLeaf);
 			this.app.workspace.setActiveLeaf(existingLeaf);
+			
+			// Force icon refresh for existing panel using onLayoutReady
+			if (existingLeaf.view instanceof SEOSidePanel) {
+				this.app.workspace.onLayoutReady(() => {
+					(existingLeaf.view as SEOSidePanel).forceIconRefresh();
+				});
+			}
 		} else {
 			// Create new panel in the right side
 			const leaf = this.app.workspace.getRightLeaf(false);
 			if (leaf) {
-				leaf.open(new SEOSidePanel(this, 'global', leaf));
+				const panel = new SEOSidePanel(this, panelType, leaf);
+				leaf.open(panel);
 				this.app.workspace.setActiveLeaf(leaf);
+				
+				// Force icon refresh for new panel using onLayoutReady
+				this.app.workspace.onLayoutReady(() => {
+					panel.forceIconRefresh();
+				});
 			}
 		}
 	}
@@ -208,5 +226,58 @@ export default class SEOPlugin extends Plugin {
 		}
 		
 		return files;
+	}
+
+	// Force icon refresh to handle Obsidian's icon caching issues
+	private forceIconRefresh() {
+		// Approach 1: Force a DOM refresh by temporarily modifying and restoring the workspace
+		const workspaceEl = this.app.workspace.containerEl;
+		if (workspaceEl) {
+			// Trigger a reflow to clear any cached icon data
+			workspaceEl.style.display = 'none';
+			workspaceEl.offsetHeight; // Force reflow
+			workspaceEl.style.display = '';
+		}
+		
+		// Approach 2: Force refresh of any existing panels
+		const existingCurrentPanels = this.app.workspace.getLeavesOfType(SEOCurrentPanelViewType);
+		const existingGlobalPanels = this.app.workspace.getLeavesOfType(SEOGlobalPanelViewType);
+		
+		[...existingCurrentPanels, ...existingGlobalPanels].forEach(leaf => {
+			if (leaf.view instanceof SEOSidePanel) {
+				// Force a re-render to refresh the icon
+				leaf.view.render();
+			}
+		});
+		
+		// Approach 3: Force icon registration by creating a temporary element
+		this.registerIconProperly();
+	}
+
+	// Register icon properly to ensure it's available in Obsidian's icon system
+	private registerIconProperly() {
+		// Approach 1: Create a temporary element to force icon registration
+		const tempEl = document.createElement('div');
+		tempEl.setAttribute('data-icon', 'search-check');
+		tempEl.style.display = 'none';
+		document.body.appendChild(tempEl);
+		
+		// Force a reflow to ensure the icon is registered
+		tempEl.offsetHeight;
+		
+		// Clean up
+		document.body.removeChild(tempEl);
+		
+		// Approach 2: Force icon registration through Obsidian's icon system
+		// This ensures the icon is properly registered in Obsidian's internal icon cache
+		const iconContainer = this.app.workspace.containerEl.querySelector('.workspace-tabs');
+		if (iconContainer) {
+			const iconEl = document.createElement('div');
+			iconEl.setAttribute('data-icon', 'search-check');
+			iconEl.style.display = 'none';
+			iconContainer.appendChild(iconEl);
+			iconEl.offsetHeight; // Force reflow
+			iconContainer.removeChild(iconEl);
+		}
 	}
 }

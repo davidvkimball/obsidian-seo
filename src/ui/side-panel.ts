@@ -33,6 +33,11 @@ export class SEOSidePanel extends ItemView {
 	async onOpen() {
 		try {
 			this.render();
+			
+			// Force icon refresh after panel is opened using onLayoutReady
+			this.app.workspace.onLayoutReady(() => {
+				this.forceIconRefresh();
+			});
 		} catch (error) {
 			console.error('Error opening SEO panel:', error);
 		}
@@ -44,6 +49,41 @@ export class SEOSidePanel extends ItemView {
 
 	cleanup() {
 		// Cleanup resources
+	}
+
+	// Force icon refresh to handle Obsidian's icon caching issues
+	public forceIconRefresh() {
+		// Multiple approaches to ensure icon is properly displayed
+		setTimeout(() => {
+			// Approach 1: Direct DOM manipulation of icon element
+			const iconEl = this.containerEl.querySelector('.view-header-icon') as HTMLElement;
+			if (iconEl) {
+				// Clear and reset the icon
+				iconEl.innerHTML = '';
+				iconEl.setAttribute('data-icon', 'search-check');
+				// Force a re-render by temporarily changing the attribute
+				iconEl.setAttribute('data-icon', '');
+				iconEl.offsetHeight; // Force reflow
+				iconEl.setAttribute('data-icon', 'search-check');
+			}
+			
+			// Approach 2: Force re-render of the entire header
+			const headerEl = this.containerEl.querySelector('.view-header') as HTMLElement;
+			if (headerEl) {
+				headerEl.style.display = 'none';
+				headerEl.offsetHeight; // Force reflow
+				headerEl.style.display = '';
+			}
+			
+			// Approach 3: Trigger a workspace refresh
+			this.app.workspace.trigger('layout-change');
+			
+			// Approach 4: Force re-registration of the view
+			this.leaf.setViewState({
+				type: this.getViewType(),
+				state: this.leaf.view.getState()
+			});
+		}, 100);
 	}
 
 
