@@ -1,8 +1,204 @@
-/*
+/* SEO Plugin Styles */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.seo-panel {
+	padding: 1rem;
+	max-width: 100%;
+	box-sizing: border-box;
+	height: 100%;
+	overflow-y: auto;
+}
 
-If your plugin does not need CSS, delete this file.
+.seo-panel-header {
+	margin-bottom: 1rem;
+}
 
-*/
+.seo-panel-header h2 {
+	margin: 0;
+	color: var(--text-normal);
+	font-size: 0.9rem;
+	font-weight: 600;
+}
+
+.seo-filename {
+	font-size: 0.8rem;
+	color: var(--text-muted);
+	margin-top: 0.25rem;
+}
+
+.seo-section {
+	margin-bottom: 2rem;
+	padding: 1rem;
+	background: var(--background-secondary);
+	border-radius: 8px;
+	border: 1px solid var(--background-modifier-border);
+}
+
+.seo-section h3 {
+	margin: 0 0 1rem 0;
+	color: var(--text-normal);
+	font-size: 0.9rem;
+	font-weight: 600;
+}
+
+.seo-no-results {
+	color: var(--text-muted);
+	font-style: italic;
+}
+
+.seo-no-results p {
+	margin: 0.5rem 0;
+}
+
+.seo-score {
+	font-weight: bold;
+	margin-bottom: 1rem;
+	padding: 0.5rem;
+	background: var(--background-secondary);
+	border-radius: 4px;
+}
+
+.seo-issues {
+	color: var(--text-error);
+}
+
+.seo-success {
+	color: var(--text-success);
+}
+
+.seo-checks {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.seo-check {
+	border: 1px solid var(--background-modifier-border);
+	border-radius: 4px;
+	padding: 1rem;
+}
+
+.seo-check-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 0.5rem;
+	font-weight: 600;
+	font-size: 0.85rem;
+}
+
+.seo-status {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	height: 20px;
+}
+
+.seo-status svg {
+	width: 16px;
+	height: 16px;
+}
+
+.seo-results {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+
+.seo-result {
+	padding: 0.5rem 0;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.seo-result:last-child {
+	border-bottom: none;
+}
+
+.seo-result.seo-error {
+	color: var(--text-error);
+}
+
+.seo-result.seo-warning {
+	color: var(--text-warning);
+}
+
+.seo-result.seo-info {
+	color: var(--text-muted);
+}
+
+.seo-suggestion {
+	font-size: 0.9em;
+	color: var(--text-muted);
+	margin-top: 0.25rem;
+	font-style: italic;
+}
+
+.seo-top-btn {
+	margin: 1rem 0;
+	width: 100%;
+	padding: 0.75rem 1rem;
+	border-radius: 6px;
+	font-weight: 500;
+	transition: all 0.2s ease;
+	border: 1px solid var(--interactive-accent);
+}
+
+.seo-top-btn:hover:not(:disabled) {
+	background: var(--interactive-accent-hover);
+	transform: translateY(-1px);
+}
+
+.seo-top-btn:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+.seo-summary {
+	background: var(--background-secondary);
+	padding: 1rem;
+	border-radius: 4px;
+	margin-bottom: 1rem;
+}
+
+.seo-issues-list {
+	margin-top: 1rem;
+}
+
+.seo-file-issue {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.5rem;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.seo-file-stats {
+	color: var(--text-muted);
+	font-size: 0.8em;
+}
+
+.seo-file-link {
+	color: var(--text-accent);
+	text-decoration: none;
+	cursor: pointer;
+	font-size: 0.8em;
+}
+
+.seo-file-link:hover {
+	text-decoration: underline;
+}
+
+.seo-issues-header {
+	font-size: 0.8rem;
+	margin: 0.5rem 0;
+	color: var(--text-normal);
+}
+
+.seo-status-bar {
+	cursor: pointer;
+	transition: color 0.2s ease;
+}
+
+.seo-status-bar:hover {
+	color: var(--text-accent);
+}
