@@ -2,43 +2,86 @@ import { TFile } from "obsidian";
 import { SEOSettings } from "../settings";
 import { SEOCheckResult } from "../types";
 
+// Helper function to remove code blocks, inline code, and HTML content from content
+function removeCodeBlocks(content: string): string {
+	return content
+		.replace(/```[\s\S]*?```/g, '') // Remove code blocks
+		.replace(/~~~[\s\S]*?~~~/g, '') // Remove code blocks with ~~~
+		.replace(/`[^`\n]+`/g, '') // Remove inline code
+		.replace(/<[^>]*>/g, '') // Remove HTML tags (but keep text content)
+		.replace(/^---\n[\s\S]*?\n---\n/, ''); // Remove frontmatter
+}
+
+// Helper function specifically for naked links - removes HTML attributes
+function removeHtmlAttributes(content: string): string {
+	return content
+		.replace(/```[\s\S]*?```/g, '') // Remove code blocks
+		.replace(/~~~[\s\S]*?~~~/g, '') // Remove code blocks with ~~~
+		.replace(/`[^`\n]+`/g, '') // Remove inline code
+		.replace(/<[^>]*>/g, '') // Remove HTML tags completely
+		.replace(/^---\n[\s\S]*?\n---\n/, ''); // Remove frontmatter
+}
+
 export async function checkAltText(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
+	// Remove code blocks to avoid false positives
+	const cleanContent = removeCodeBlocks(content);
+	
 	// Check markdown images ![alt](src)
-	const markdownImages = content.match(/!\[([^\]]*)\]\([^)]+\)/g);
+	const markdownImages = cleanContent.match(/!\[([^\]]*)\]\([^)]+\)/g);
 	if (markdownImages) {
-		markdownImages.forEach((match, index) => {
+		const missingAltText = markdownImages.filter(match => {
 			const altText = match.match(/!\[([^\]]*)\]/)?.[1];
-			if (!altText || altText.trim() === '') {
-				results.push({
-					passed: false,
-					message: `Image ${index + 1} is missing alt text`,
-					suggestion: "Add descriptive alt text for accessibility",
-					severity: 'error'
-				});
-			}
+			return !altText || altText.trim() === '';
 		});
+		if (missingAltText.length > 0) {
+			const count = missingAltText.length;
+			const isPlural = count > 1;
+			results.push({
+				passed: false,
+				message: `${count} image${isPlural ? 's are' : ' is'} missing alt text`,
+				suggestion: "Add descriptive alt text for accessibility",
+				severity: 'error'
+			});
+		}
 	}
 	
-	// Check HTML images <img alt="text">
-	const htmlImages = content.match(/<img[^>]*>/g);
-	if (htmlImages) {
-		htmlImages.forEach((match, index) => {
-			if (!match.includes('alt=')) {
+		// Check wikilink images ![[image.png]] and ![[image.png|alt text]]
+		const wikilinkImages = cleanContent.match(/!\[\[([^\]]+)\]\]/g);
+		if (wikilinkImages) {
+			const missingAltText = wikilinkImages.filter(match => !match.includes('|'));
+			if (missingAltText.length > 0) {
+				const count = missingAltText.length;
+				const isPlural = count > 1;
 				results.push({
 					passed: false,
-					message: `HTML image ${index + 1} is missing alt attribute`,
-					suggestion: "Add alt attribute to HTML img tags",
+					message: `${count} wikilink image${isPlural ? 's are' : ' is'} missing alt text`,
+					suggestion: "Add alt text using ![[image.png|alt text]] syntax or consider using standard markdown image syntax",
 					severity: 'error'
 				});
 			}
-		});
+		}
+	
+	// Check HTML images <img alt="text">
+	const htmlImages = cleanContent.match(/<img[^>]*>/g);
+	if (htmlImages) {
+		const missingAlt = htmlImages.filter(match => !match.includes('alt='));
+		if (missingAlt.length > 0) {
+			const count = missingAlt.length;
+			const isPlural = count > 1;
+			results.push({
+				passed: false,
+				message: `${count} HTML image${isPlural ? 's are' : ' is'} missing alt attribute`,
+				suggestion: "Add alt attribute to HTML img tags",
+				severity: 'error'
+			});
+		}
 	}
 	
 	if (results.length === 0) {
 		// Check if there are any images at all
-		const hasImages = markdownImages && markdownImages.length > 0 || htmlImages && htmlImages.length > 0;
+		const hasImages = markdownImages && markdownImages.length > 0 || htmlImages && htmlImages.length > 0 || wikilinkImages && wikilinkImages.length > 0;
 		if (hasImages) {
 			results.push({
 				passed: true,
@@ -60,8 +103,11 @@ export async function checkAltText(content: string, file: TFile, settings: SEOSe
 export async function checkNakedLinks(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
+	// Remove code blocks and HTML content to avoid false positives
+	const cleanContent = removeHtmlAttributes(content);
+	
 	// Find naked links (URLs without markdown link syntax)
-	const nakedLinks = content.match(/(?<!\]\()https?:\/\/[^\s\)]+/g);
+	const nakedLinks = cleanContent.match(/(?<!\]\()https?:\/\/[^\s\)]+/g);
 	if (nakedLinks) {
 		nakedLinks.forEach((link, index) => {
 			results.push({
@@ -87,24 +133,38 @@ export async function checkNakedLinks(content: string, file: TFile, settings: SE
 export async function checkHeadingOrder(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
-	const lines = content.split('\n');
-	let lastHeadingLevel = 0;
+	// Remove frontmatter
+	let bodyContent = content.replace(/^---\n[\s\S]*?\n---\n/, '');
+	
+	// Remove code blocks (both ``` and ~~~)
+	bodyContent = bodyContent.replace(/```[\s\S]*?```/g, '');
+	bodyContent = bodyContent.replace(/~~~[\s\S]*?~~~/g, '');
+	
+	const lines = bodyContent.split('\n');
+	let lastHeadingLevel = null;
 	let hasHeading = false;
 	
 	for (let i = 0; i < lines.length; i++) {
 		const line = lines[i];
-		const headingMatch = line.match(/^(#{1,6})\s/);
+		const headingMatch = line.match(/^(#{1,6})\s+(.+)/);
 		
 		if (headingMatch) {
 			hasHeading = true;
 			const currentLevel = headingMatch[1].length;
+			const headingText = headingMatch[2].trim();
 			
+			// If this is the first heading, don't check for violations
+			if (lastHeadingLevel === null) {
+				lastHeadingLevel = currentLevel;
+				continue;
+			}
+			
+			// Check if current level skips levels after the last heading
 			if (currentLevel > lastHeadingLevel + 1) {
 				results.push({
 					passed: false,
-					message: `Heading level ${currentLevel} after level ${lastHeadingLevel} (line ${i + 1})`,
+					message: `"${headingText}" (H${currentLevel}) skips heading level(s) after H${lastHeadingLevel}`,
 					suggestion: "Use heading levels in order (H1 → H2 → H3, etc.)",
-					line: i + 1,
 					severity: 'warning'
 				});
 			}
@@ -134,32 +194,20 @@ export async function checkKeywordDensity(content: string, file: TFile, settings
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.keywordProperty) {
-		return [{
-			passed: true,
-			message: "Keyword density check skipped (no keyword property configured)",
-			severity: 'info'
-		}];
+		return [];
 	}
 	
 	// Extract keyword from frontmatter
 	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
 	if (!frontmatterMatch) {
-		return [{
-			passed: true,
-			message: "No frontmatter found, keyword density check skipped",
-			severity: 'info'
-		}];
+		return [];
 	}
 	
 	const frontmatter = frontmatterMatch[1];
 	const keywordMatch = frontmatter.match(new RegExp(`^${settings.keywordProperty}:\\s*(.+)$`, 'm'));
 	
 	if (!keywordMatch) {
-		return [{
-			passed: true,
-			message: "No keyword found in frontmatter, keyword density check skipped",
-			severity: 'info'
-		}];
+		return [];
 	}
 	
 	const keyword = keywordMatch[1].trim();
@@ -203,18 +251,22 @@ export async function checkKeywordDensity(content: string, file: TFile, settings
 export async function checkBrokenLinks(content: string, file: TFile, settings: SEOSettings, app?: any): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
+	// Remove code blocks to avoid false positives
+	const cleanContent = removeCodeBlocks(content);
+	
 	// Find internal links [[link]] and [text](link)
 	const internalLinks = [
-		...content.match(/\[\[([^\]]+)\]\]/g) || [],
-		...content.match(/\[([^\]]+)\]\(([^)]+)\)/g) || []
+		...cleanContent.match(/\[\[([^\]]+)\]\]/g) || [],
+		...cleanContent.match(/\[([^\]]+)\]\(([^)]+)\)/g) || []
 	];
-	
+
 	for (const link of internalLinks) {
 		let linkTarget = '';
-		
+
 		if (link.startsWith('[[')) {
-			// Wikilink
-			linkTarget = link.match(/\[\[([^\]]+)\]\]/)?.[1] || '';
+			// Wikilink - extract the actual target (before the | if there's an alias)
+			const fullTarget = link.match(/\[\[([^\]]+)\]\]/)?.[1] || '';
+			linkTarget = fullTarget.split('|')[0]; // Get the part before the pipe
 		} else {
 			// Markdown link
 			const match = link.match(/\[([^\]]+)\]\(([^)]+)\)/);
@@ -222,15 +274,35 @@ export async function checkBrokenLinks(content: string, file: TFile, settings: S
 		}
 		
 		if (linkTarget && !linkTarget.startsWith('http')) {
-			// Check if file exists
-			const targetFile = app?.vault.getAbstractFileByPath(linkTarget);
-			if (!targetFile) {
-				results.push({
-					passed: false,
-					message: `Broken internal link: ${linkTarget}`,
-					suggestion: "Check the link path or create the target file",
-					severity: 'error'
-				});
+			// Check if it's a wikilink or embedded image first
+			const isWikilink = link.startsWith('[[');
+			const isEmbeddedImage = linkTarget.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i);
+			
+			if (isWikilink || isEmbeddedImage) {
+				// For wikilinks and embedded images, use Obsidian's link resolution
+				const resolvedLink = app?.metadataCache.getFirstLinkpathDest(linkTarget, file.path);
+				if (!resolvedLink) {
+					// Link doesn't exist in Obsidian - this is a broken link
+					results.push({
+						passed: false,
+						message: `Broken link: ${linkTarget}`,
+						suggestion: isEmbeddedImage 
+							? "Verify the image path exists or check if it's a relative path"
+							: "Check if the wikilink target exists or create the target note",
+						severity: 'error'
+					});
+				}
+			} else {
+				// For regular markdown links, check if file exists
+				const targetFile = app?.vault.getAbstractFileByPath(linkTarget);
+				if (!targetFile) {
+					results.push({
+						passed: false,
+						message: `Broken internal link: ${linkTarget}`,
+						suggestion: "Check the link path or create the target file",
+						severity: 'error'
+					});
+				}
 			}
 		}
 	}
@@ -238,7 +310,67 @@ export async function checkBrokenLinks(content: string, file: TFile, settings: S
 	if (results.length === 0) {
 		results.push({
 			passed: true,
-			message: "No broken internal links found",
+			message: "No broken links found",
+			severity: 'info'
+		});
+	}
+	
+	return results;
+}
+
+export async function checkPotentiallyBrokenLinks(content: string, file: TFile, settings: SEOSettings, app?: any): Promise<SEOCheckResult[]> {
+	const results: SEOCheckResult[] = [];
+	
+	// Remove code blocks to avoid false positives
+	const cleanContent = removeCodeBlocks(content);
+	
+	// Find internal links [[link]] and [text](link)
+	const internalLinks = [
+		...cleanContent.match(/\[\[([^\]]+)\]\]/g) || [],
+		...cleanContent.match(/\[([^\]]+)\]\(([^)]+)\)/g) || []
+	];
+
+	for (const link of internalLinks) {
+		let linkTarget = '';
+
+		if (link.startsWith('[[')) {
+			// Wikilink - extract the actual target (before the | if there's an alias)
+			const fullTarget = link.match(/\[\[([^\]]+)\]\]/)?.[1] || '';
+			linkTarget = fullTarget.split('|')[0]; // Get the part before the pipe
+		} else {
+			// Markdown link
+			const match = link.match(/\[([^\]]+)\]\(([^)]+)\)/);
+			linkTarget = match?.[2] || '';
+		}
+		
+		if (linkTarget && !linkTarget.startsWith('http')) {
+			// Check if it's a wikilink or embedded image first
+			const isWikilink = link.startsWith('[[');
+			const isEmbeddedImage = linkTarget.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i);
+			
+			if (isWikilink || isEmbeddedImage) {
+				// For wikilinks and embedded images, use Obsidian's link resolution
+				const resolvedLink = app?.metadataCache.getFirstLinkpathDest(linkTarget, file.path);
+				if (resolvedLink) {
+					// Only show as potentially broken if it's a wikilink (not embedded images)
+					// Embedded images that exist are fine, wikilinks may not work on web
+					if (isWikilink) {
+						results.push({
+							passed: false,
+							message: `Potentially broken link: ${linkTarget}`,
+							suggestion: "Wikilinks may not work on the web - consider converting to standard markdown links",
+							severity: 'warning'
+						});
+					}
+				}
+			}
+		}
+	}
+	
+	if (results.length === 0) {
+		results.push({
+			passed: true,
+			message: "No potentially broken links found",
 			severity: 'info'
 		});
 	}
@@ -250,11 +382,7 @@ export async function checkMetaDescription(content: string, file: TFile, setting
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.descriptionProperty) {
-		return [{
-			passed: true,
-			message: "Meta description check skipped (no description property configured)",
-			severity: 'info'
-		}];
+		return [];
 	}
 	
 	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
@@ -313,11 +441,7 @@ export async function checkTitleLength(content: string, file: TFile, settings: S
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.titleProperty) {
-		return [{
-			passed: true,
-			message: "Title length check skipped (no title property configured)",
-			severity: 'info'
-		}];
+		return [];
 	}
 	
 	let title = '';
@@ -339,11 +463,7 @@ export async function checkTitleLength(content: string, file: TFile, settings: S
 	
 	// Skip check if no title found and filename fallback is disabled
 	if (!title) {
-		return [{
-			passed: true,
-			message: "Title length check skipped (no title found)",
-			severity: 'info'
-		}];
+		return [];
 	}
 	
 	const length = title.length;
@@ -384,7 +504,12 @@ export async function checkContentLength(content: string, file: TFile, settings:
 		}];
 	}
 	
-	const bodyContent = content.replace(/^---\n[\s\S]*?\n---\n/, '');
+	// Remove only frontmatter and code blocks - count everything a reader would see
+	let bodyContent = content.replace(/^---\n[\s\S]*?\n---\n/, ''); // Remove frontmatter
+	bodyContent = bodyContent.replace(/```[\s\S]*?```/g, ''); // Remove code blocks
+	bodyContent = bodyContent.replace(/~~~[\s\S]*?~~~/g, ''); // Remove code blocks with ~~~
+	// Keep everything else - wikilinks, images, HTML, headings, lists - all are readable content
+	
 	const wordCount = bodyContent.split(/\s+/).filter(word => word.length > 0).length;
 	
 	if (wordCount < settings.minContentLength) {
@@ -416,8 +541,11 @@ export async function checkImageNaming(content: string, file: TFile, settings: S
 		}];
 	}
 	
+	// Remove code blocks to avoid false positives
+	const cleanContent = removeCodeBlocks(content);
+	
 	// Find image references
-	const imageMatches = content.match(/!\[[^\]]*\]\(([^)]+)\)/g);
+	const imageMatches = cleanContent.match(/!\[[^\]]*\]\(([^)]+)\)/g);
 	if (imageMatches) {
 		imageMatches.forEach((match, index) => {
 			const imagePath = match.match(/!\[[^\]]*\]\(([^)]+)\)/)?.[1];
@@ -425,7 +553,7 @@ export async function checkImageNaming(content: string, file: TFile, settings: S
 				const fileName = imagePath.split('/').pop() || '';
 				
 				// Check for problematic patterns
-				if (fileName.includes(' ')) {
+				if (fileName.includes(' ') || fileName.includes('%20')) {
 					results.push({
 						passed: false,
 						message: `Image ${index + 1} has spaces in filename: ${fileName}`,
@@ -439,11 +567,22 @@ export async function checkImageNaming(content: string, file: TFile, settings: S
 						suggestion: "Use descriptive filenames for better SEO",
 						severity: 'warning'
 					});
-				} else if (fileName.toLowerCase().includes('pasted') || fileName.toLowerCase().includes('image')) {
+				} else if (fileName.toLowerCase().includes('pasted') || 
+						   fileName.toLowerCase().includes('image') ||
+						   fileName.toLowerCase().includes('untitled') ||
+						   fileName.toLowerCase().includes('screenshot') ||
+						   fileName.toLowerCase().includes('photo')) {
 					results.push({
 						passed: false,
 						message: `Image ${index + 1} has generic filename: ${fileName}`,
 						suggestion: "Use descriptive filenames for better SEO",
+						severity: 'warning'
+					});
+				} else if (fileName.length < 5 || fileName.length > 50) {
+					results.push({
+						passed: false,
+						message: `Image ${index + 1} has inappropriate filename length: ${fileName}`,
+						suggestion: "Use descriptive filenames between 5-50 characters",
 						severity: 'warning'
 					});
 				}
@@ -466,20 +605,103 @@ export async function checkDuplicateContent(content: string, file: TFile, settin
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.checkDuplicateContent) {
-		return [{
-			passed: true,
-			message: "Duplicate content check disabled",
-			severity: 'info'
-		}];
+		return [];
 	}
 	
-	// This is a simplified duplicate check - in a real implementation,
-	// you'd compare against other files in the vault
-	results.push({
-		passed: true,
-		message: "Duplicate content check not yet implemented",
-		severity: 'info'
-	});
+	// Check for duplicate content across other files in the vault
+	const app = (globalThis as any).app;
+	if (!app) {
+		return results;
+	}
+	
+	// Get files to compare against based on scan directories setting
+	let filesToCheck: TFile[];
+	
+	if (settings.scanDirectories.trim()) {
+		// Only check files in specified directories
+		const targetDirs = settings.scanDirectories.split(',').map(d => d.trim());
+		filesToCheck = app.vault.getMarkdownFiles().filter((f: TFile) => {
+			return targetDirs.some(dir => f.path.startsWith(dir + '/') || f.path.startsWith(dir + '\\'));
+		});
+	} else {
+		// Check all markdown files in vault
+		filesToCheck = app.vault.getMarkdownFiles();
+	}
+	
+	const otherFiles = filesToCheck.filter((f: TFile) => f.path !== file.path);
+	
+	if (otherFiles.length === 0) {
+		results.push({
+			passed: true,
+			message: "No other files to compare against",
+			severity: 'info'
+		});
+		return results;
+	}
+	
+	// Extract meaningful content from current file (remove frontmatter, code blocks, etc.)
+	const cleanContent = removeCodeBlocks(content);
+	const currentParagraphs = cleanContent
+		.split('\n\n')
+		.filter(p => p.trim().length > 100) // Only check substantial paragraphs
+		.map(p => p.trim().toLowerCase().replace(/\s+/g, ' ')); // Normalize whitespace
+	
+	if (currentParagraphs.length === 0) {
+		results.push({
+			passed: true,
+			message: "No substantial content to check",
+			severity: 'info'
+		});
+		return results;
+	}
+	
+	// Check each paragraph against other files
+	const duplicateInfo: { paragraph: string; duplicateFiles: string[] }[] = [];
+	
+	for (const paragraph of currentParagraphs) {
+		const duplicateFiles: string[] = [];
+		
+		for (const otherFile of otherFiles) {
+			try {
+				const otherContent = await app.vault.read(otherFile);
+				const cleanOtherContent = removeCodeBlocks(otherContent);
+				const otherParagraphs = cleanOtherContent
+					.split('\n\n')
+					.filter(p => p.trim().length > 100)
+					.map(p => p.trim().toLowerCase().replace(/\s+/g, ' '));
+				
+				// Check if this paragraph exists in the other file
+				if (otherParagraphs.includes(paragraph)) {
+					duplicateFiles.push(otherFile.path);
+				}
+			} catch (error) {
+				// Skip files that can't be read
+				continue;
+			}
+		}
+		
+		if (duplicateFiles.length > 0) {
+			duplicateInfo.push({ paragraph, duplicateFiles });
+		}
+	}
+	
+	if (duplicateInfo.length > 0) {
+		const totalDuplicates = duplicateInfo.length;
+		const allDuplicateFiles = [...new Set(duplicateInfo.flatMap(d => d.duplicateFiles))];
+		
+		results.push({
+			passed: false,
+			message: `Found ${totalDuplicates} paragraph(s) duplicated in other files`,
+			suggestion: `Duplicate content found. Review and rewrite duplicate content to improve SEO.<br><br>${allDuplicateFiles.map(path => `• ${path}`).join('<br>')}`,
+			severity: 'warning'
+		});
+	} else {
+		results.push({
+			passed: true,
+			message: "No duplicate content found across vault",
+			severity: 'info'
+		});
+	}
 	
 	return results;
 }
@@ -496,12 +718,21 @@ export async function checkReadingLevel(content: string, file: TFile, settings: 
 	}
 	
 	// Simple Flesch-Kincaid reading level calculation
-	const bodyContent = content.replace(/^---\n[\s\S]*?\n---\n/, '');
-	const sentences = bodyContent.split(/[.!?]+/).filter(s => s.trim().length > 0);
-	const words = bodyContent.split(/\s+/).filter(w => w.length > 0);
+	let bodyContent = content.replace(/^---\n[\s\S]*?\n---\n/, '');
+	
+	// Remove only code blocks and inline code, keep other markdown formatting
+	bodyContent = bodyContent
+		.replace(/```[\s\S]*?```/g, '') // Remove code blocks
+		.replace(/~~~[\s\S]*?~~~/g, '') // Remove code blocks with ~~~
+		.replace(/`[^`\n]+`/g, '') // Remove inline code
+		.replace(/https?:\/\/[^\s]+/g, '') // Remove URLs
+		.trim();
+	
+	const sentences = bodyContent.split(/[.!?]+/).filter(s => s.trim().length > 10);
+	const words = bodyContent.split(/\s+/).filter(w => w.length > 0 && /^[a-zA-Z]/.test(w));
 	const syllables = words.reduce((total, word) => total + countSyllables(word), 0);
 	
-	if (sentences.length === 0 || words.length === 0) {
+	if (sentences.length === 0 || words.length < 10) {
 		results.push({
 			passed: true,
 			message: "Not enough content for reading level analysis",
@@ -512,16 +743,29 @@ export async function checkReadingLevel(content: string, file: TFile, settings: 
 	
 	const avgWordsPerSentence = words.length / sentences.length;
 	const avgSyllablesPerWord = syllables / words.length;
-	const readingLevel = 0.39 * avgWordsPerSentence + 11.8 * avgSyllablesPerWord - 15.59;
 	
-	if (readingLevel > 12) {
+	// Use Flesch Reading Ease instead of Flesch-Kincaid for better results with short content
+	const fleschScore = 206.835 - (1.015 * avgWordsPerSentence) - (84.6 * avgSyllablesPerWord);
+	
+	// Convert Flesch Reading Ease to approximate grade level
+	let readingLevel: number;
+	if (fleschScore >= 90) readingLevel = 5; // Very easy
+	else if (fleschScore >= 80) readingLevel = 6; // Easy
+	else if (fleschScore >= 70) readingLevel = 7; // Fairly easy
+	else if (fleschScore >= 60) readingLevel = 8; // Standard
+	else if (fleschScore >= 50) readingLevel = 9; // Fairly difficult
+	else if (fleschScore >= 30) readingLevel = 10; // Difficult
+	else readingLevel = 12; // Very difficult
+	
+	// More reasonable thresholds - 12+ is very high, 6- is very low
+	if (readingLevel > 15) {
 		results.push({
 			passed: false,
-			message: `Reading level too high: ${readingLevel.toFixed(1)} (College level)`,
+			message: `Reading level too high: ${readingLevel.toFixed(1)} (Graduate level)`,
 			suggestion: "Consider simplifying language for broader audience",
 			severity: 'warning'
 		});
-	} else if (readingLevel < 6) {
+	} else if (readingLevel < 4) {
 		results.push({
 			passed: false,
 			message: `Reading level too low: ${readingLevel.toFixed(1)} (Elementary level)`,

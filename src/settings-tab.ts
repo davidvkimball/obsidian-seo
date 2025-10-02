@@ -14,7 +14,7 @@ export class SEOSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl('h2', { text: 'SEO Plugin Settings' });
+		containerEl.createEl('h2', { text: 'Scope' });
 
 		// Directory settings
 		new Setting(containerEl)
@@ -29,7 +29,7 @@ export class SEOSettingTab extends PluginSettingTab {
 				}));
 
 		// Property names
-		containerEl.createEl('h3', { text: 'Property Names' });
+		containerEl.createEl('h2', { text: 'Property Names' });
 
 		new Setting(containerEl)
 			.setName('Keyword property')
@@ -75,7 +75,7 @@ export class SEOSettingTab extends PluginSettingTab {
 				}));
 
 		// Check toggles
-		containerEl.createEl('h3', { text: 'Check Options' });
+		containerEl.createEl('h2', { text: 'Check Options' });
 
 		new Setting(containerEl)
 			.setName('Check content length')
@@ -127,29 +127,8 @@ export class SEOSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		// UI settings
-		containerEl.createEl('h3', { text: 'UI Settings' });
-
-		new Setting(containerEl)
-			.setName('Show status bar')
-			.setDesc('Show SEO status in the status bar')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.showStatusBar)
-				.onChange(async (value) => {
-					this.plugin.settings.showStatusBar = value;
-					await this.plugin.saveSettings();
-					
-					// Toggle status bar based on setting
-					if (value) {
-						this.plugin.addStatusBar();
-					} else {
-						this.plugin.removeStatusBar();
-					}
-				}));
-
-
 		// Thresholds
-		containerEl.createEl('h3', { text: 'Thresholds' });
+		containerEl.createEl('h2', { text: 'Thresholds' });
 
 		new Setting(containerEl)
 			.setName('Minimum content length')

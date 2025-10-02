@@ -6,7 +6,7 @@ import { SEOSidePanel, SEOPanelViewType, SEOCurrentPanelViewType, SEOGlobalPanel
 
 export default class SEOPlugin extends Plugin {
 	settings: SEOSettings;
-	statusBarEl: HTMLElement | null = null;
+	// Status bar removed
 
 	async onload() {
 		await this.loadSettings();
@@ -30,10 +30,7 @@ export default class SEOPlugin extends Plugin {
 		// Add settings tab
 		this.addSettingTab(new SEOSettingTab(this.app, this));
 
-		// Add status bar if enabled
-		if (this.settings.showStatusBar) {
-			this.addStatusBar();
-		}
+		// Status bar removed
 
 		// Register real-time checking for current note
 		this.registerRealTimeChecking();
@@ -50,12 +47,6 @@ export default class SEOPlugin extends Plugin {
 	}
 
 	onunload() {
-		// Clean up status bar
-		if (this.statusBarEl) {
-			this.statusBarEl.remove();
-			this.statusBarEl = null;
-		}
-		
 		// Note: Obsidian automatically cleans up:
 		// - Registered views (registerView)
 		// - Registered commands (addCommand) 
@@ -73,23 +64,11 @@ export default class SEOPlugin extends Plugin {
 	}
 
 	public addStatusBar() {
-		if (this.statusBarEl) return;
-
-		this.statusBarEl = this.addStatusBarItem();
-		this.statusBarEl.setText('SEO: Ready');
-		this.statusBarEl.addClass('seo-status-bar');
-		
-		// Add click handler to open panel
-		this.statusBarEl.addEventListener('click', () => {
-			this.openGlobalPanel();
-		});
+		// Status bar removed - not useful
 	}
 
 	public removeStatusBar() {
-		if (this.statusBarEl) {
-			this.statusBarEl.remove();
-			this.statusBarEl = null;
-		}
+		// Status bar removed
 	}
 
 	openCurrentPanel() {
@@ -147,16 +126,10 @@ export default class SEOPlugin extends Plugin {
 	async checkCurrentNote() {
 		const activeFile = this.app.workspace.getActiveFile();
 		if (!activeFile || !activeFile.path.endsWith('.md')) {
-			if (this.statusBarEl) {
-				this.statusBarEl.setText('SEO: Ready');
-			}
 			return;
 		}
 
-		// Update status bar
-		if (this.statusBarEl) {
-			this.statusBarEl.setText('SEO: Checking...');
-		}
+		// Status bar removed
 
 		try {
 			// Run SEO check on current note
@@ -165,24 +138,12 @@ export default class SEOPlugin extends Plugin {
 			
 			// Results will be displayed when panels are opened
 			
-			// Update status bar with results
-			if (this.statusBarEl) {
-				this.statusBarEl.setText('SEO: ✓');
-			}
 		} catch (error) {
 			console.error('Error checking current note:', error);
-			if (this.statusBarEl) {
-				this.statusBarEl.setText('SEO: Error');
-			}
 		}
 	}
 
-	// Public method to update status bar from external calls
-	updateStatusBar(status: string) {
-		if (this.statusBarEl) {
-			this.statusBarEl.setText(`SEO: ${status}`);
-		}
-	}
+	// Status bar methods removed
 
 	// Public method for bulk checking
 	async runBulkCheck() {

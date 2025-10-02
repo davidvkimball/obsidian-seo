@@ -16,7 +16,7 @@ export interface SEOSettings {
 	showNotices: boolean;
 	
 	// UI settings
-	showStatusBar: boolean;
+	defaultSort: 'issues-desc' | 'issues-asc' | 'warnings-desc' | 'warnings-asc' | 'filename-asc' | 'filename-desc';
 	
 	// Thresholds
 	minContentLength: number;
@@ -36,7 +36,7 @@ export const DEFAULT_SETTINGS: SEOSettings = {
 	checkDuplicateContent: true,
 	checkReadingLevel: true,
 	showNotices: true,
-	showStatusBar: true,
+	defaultSort: 'warnings-desc',
 	minContentLength: 300,
 	keywordDensityMin: 1,
 	keywordDensityMax: 2,

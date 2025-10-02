@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, TFile, Notice } from "obsidian";
+import { ItemView, WorkspaceLeaf, TFile, Notice, setIcon, Menu } from "obsidian";
 import SEOPlugin from "../main";
 import { SEOResults } from "../types";
 
@@ -12,11 +12,13 @@ export class SEOSidePanel extends ItemView {
 	globalResults: SEOResults[] = [];
 	panelType: 'current' | 'global' = 'current';
 	sortState: 'none' | 'issues-asc' | 'issues-desc' | 'warnings-asc' | 'warnings-desc' | 'score-asc' | 'score-desc' = 'none';
+	currentSort: 'issues-desc' | 'issues-asc' | 'warnings-desc' | 'warnings-asc' | 'filename-asc' | 'filename-desc';
 
 	constructor(plugin: SEOPlugin, panelType: 'current' | 'global' = 'current', leaf?: WorkspaceLeaf) {
 		super(leaf || plugin.app.workspace.getLeaf());
 		this.plugin = plugin;
 		this.panelType = panelType;
+		this.currentSort = plugin.settings.defaultSort;
 	}
 
 	getViewType(): string {
@@ -362,11 +364,15 @@ export class SEOSidePanel extends ItemView {
 			}
 			
 			const checkEl = checksContainer.createEl('div', { cls: `seo-check ${statusClass}` });
-			const header = checkEl.createEl('div', { cls: 'seo-check-header' });
+			const header = checkEl.createEl('div', { cls: 'seo-check-header seo-collapsible-header' });
 			
 			// Convert camelCase to sentence case
-			const displayName = checkName.replace(/([A-Z])/g, ' $1').trim()
+			let displayName = checkName.replace(/([A-Z])/g, ' $1').trim()
 				.replace(/^./, str => str.toUpperCase());
+			
+			// Add collapse icon
+			const collapseIcon = header.createEl('span', { cls: 'seo-collapse-icon' });
+			collapseIcon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6,9 12,15 18,9"/></svg>';
 			
 			header.createEl('span', { text: displayName });
 			
@@ -392,10 +398,22 @@ export class SEOSidePanel extends ItemView {
 				});
 				
 				if (result.suggestion) {
-					li.createEl('div', { 
-						text: result.suggestion,
+					const suggestionEl = li.createEl('div', { 
 						cls: 'seo-suggestion'
 					});
+					suggestionEl.innerHTML = result.suggestion;
+				}
+			});
+			
+			// Add click handler for collapse functionality
+			header.addEventListener('click', () => {
+				const isCollapsed = resultsList.style.display === 'none';
+				resultsList.style.display = isCollapsed ? 'block' : 'none';
+				
+				// Rotate the collapse icon
+				const icon = collapseIcon.querySelector('svg');
+				if (icon) {
+					icon.style.transform = isCollapsed ? 'rotate(0deg)' : 'rotate(-90deg)';
 				}
 			});
 		});
@@ -458,14 +476,58 @@ export class SEOSidePanel extends ItemView {
 			const issuesHeader = issuesList.createEl('div', { cls: 'seo-issues-header-container' });
 			issuesHeader.createEl('h4', { text: 'Files with issues', cls: 'seo-issues-header' });
 			
+			// Sort button
+			const sortBtn = issuesHeader.createEl('button', {
+				cls: 'seo-sort-btn',
+				attr: { 'aria-label': 'Sort files' }
+			});
+			setIcon(sortBtn, 'arrow-up-narrow-wide');
+			sortBtn.addEventListener('click', (e) => {
+				this.showSortMenu(e, issuesFiles, issuesList);
+			});
 			
-			issuesFiles.forEach(result => {
+			// Apply saved sort preference
+			let sortedFiles = [...issuesFiles];
+			switch (this.currentSort) {
+				case 'warnings-desc':
+					sortedFiles.sort((a, b) => b.warningsCount - a.warningsCount);
+					break;
+				case 'warnings-asc':
+					sortedFiles.sort((a, b) => a.warningsCount - b.warningsCount);
+					break;
+				case 'issues-desc':
+					sortedFiles.sort((a, b) => b.issuesCount - a.issuesCount);
+					break;
+				case 'issues-asc':
+					sortedFiles.sort((a, b) => a.issuesCount - b.issuesCount);
+					break;
+				case 'filename-asc':
+					sortedFiles.sort((a, b) => {
+						const aFileName = a.file.split('/').pop() || '';
+						const bFileName = b.file.split('/').pop() || '';
+						const fileNameCompare = aFileName.localeCompare(bFileName);
+						if (fileNameCompare !== 0) return fileNameCompare;
+						return a.file.localeCompare(b.file);
+					});
+					break;
+				case 'filename-desc':
+					sortedFiles.sort((a, b) => {
+						const aFileName = a.file.split('/').pop() || '';
+						const bFileName = b.file.split('/').pop() || '';
+						const fileNameCompare = bFileName.localeCompare(aFileName);
+						if (fileNameCompare !== 0) return fileNameCompare;
+						return b.file.localeCompare(a.file);
+					});
+					break;
+			}
+			
+			sortedFiles.forEach(result => {
 				const fileEl = issuesList.createEl('div', { cls: 'seo-file-issue' });
 				fileEl.setAttribute('data-file-path', result.file);
 				
 				// Make file path clickable
 				const fileLink = fileEl.createEl('a', { 
-					text: result.file,
+					text: this.getDisplayPath(result.file),
 					cls: 'seo-file-link',
 					href: '#'
 				});
@@ -473,15 +535,267 @@ export class SEOSidePanel extends ItemView {
 					e.preventDefault();
 					const file = this.app.vault.getAbstractFileByPath(result.file);
 					if (file) {
-						this.app.workspace.openLinkText(result.file, '', true);
+						// Check if file is already open, if so switch to it, otherwise open new tab
+						const existingLeaf = this.app.workspace.getLeavesOfType('markdown').find(leaf => 
+							leaf.view.getState().file === result.file
+						);
+						if (existingLeaf) {
+							this.app.workspace.setActiveLeaf(existingLeaf);
+						} else {
+							this.app.workspace.openLinkText(result.file, '', true);
+						}
 					}
 				});
 				
-				fileEl.createEl('span', { 
+				// Stats and audit button container
+				const statsContainer = fileEl.createEl('div', { cls: 'seo-stats-container' });
+				
+				// Issues and warnings text
+				statsContainer.createEl('span', { 
 					text: `${result.issuesCount} issues, ${result.warningsCount} warnings`,
 					cls: 'seo-file-stats'
 				});
+				
+				// Audit button
+				const auditBtn = statsContainer.createEl('button', {
+					cls: 'clickable-icon seo-audit-btn',
+					attr: { 'aria-label': 'Audit this note' }
+				});
+				setIcon(auditBtn, 'search-check');
+				auditBtn.addEventListener('click', async (e) => {
+					e.preventDefault();
+					e.stopPropagation();
+					// Open the note
+					const file = this.app.vault.getAbstractFileByPath(result.file);
+					if (file) {
+						// Check if file is already open, if so switch to it, otherwise open new tab
+						const existingLeaf = this.app.workspace.getLeavesOfType('markdown').find(leaf => 
+							leaf.view.getState().file === result.file
+						);
+						if (existingLeaf) {
+							this.app.workspace.setActiveLeaf(existingLeaf);
+						} else {
+							this.app.workspace.openLinkText(result.file, '', true);
+						}
+						// Open current note panel and run audit
+						this.plugin.openCurrentPanel();
+						// Wait for panel to open, then trigger the check
+						setTimeout(() => {
+							// Find and click the "Check current note" button
+							const currentPanel = this.app.workspace.getLeavesOfType(SEOCurrentPanelViewType)[0];
+							if (currentPanel) {
+								const checkBtn = currentPanel.view.containerEl.querySelector('.seo-top-btn') as HTMLButtonElement;
+								if (checkBtn) {
+									checkBtn.click();
+								}
+							}
+						}, 200);
+					}
+				});
 			});
 		}
+	}
+
+	// Show sort menu and handle sorting
+	private showSortMenu(event: MouseEvent, issuesFiles: SEOResults[], issuesList: HTMLElement) {
+		const menu = new Menu();
+		
+		// Warnings (high to low)
+		menu.addItem((item) => {
+			item.setTitle('Warnings (high to low)')
+				.onClick(() => {
+					this.currentSort = 'warnings-desc';
+					this.plugin.settings.defaultSort = 'warnings-desc';
+					this.plugin.saveSettings();
+					this.sortAndRenderFiles(issuesFiles, issuesList, (a, b) => b.warningsCount - a.warningsCount);
+				});
+			if (this.currentSort === 'warnings-desc') {
+				item.setIcon('check');
+			}
+		});
+		
+		// Warnings (low to high)
+		menu.addItem((item) => {
+			item.setTitle('Warnings (low to high)')
+				.onClick(() => {
+					this.currentSort = 'warnings-asc';
+					this.plugin.settings.defaultSort = 'warnings-asc';
+					this.plugin.saveSettings();
+					this.sortAndRenderFiles(issuesFiles, issuesList, (a, b) => a.warningsCount - b.warningsCount);
+				});
+			if (this.currentSort === 'warnings-asc') {
+				item.setIcon('check');
+			}
+		});
+		
+		// Divider
+		menu.addSeparator();
+		
+		// Issues (high to low)
+		menu.addItem((item) => {
+			item.setTitle('Issues (high to low)')
+				.onClick(() => {
+					this.currentSort = 'issues-desc';
+					this.plugin.settings.defaultSort = 'issues-desc';
+					this.plugin.saveSettings();
+					this.sortAndRenderFiles(issuesFiles, issuesList, (a, b) => b.issuesCount - a.issuesCount);
+				});
+			if (this.currentSort === 'issues-desc') {
+				item.setIcon('check');
+			}
+		});
+		
+		// Issues (low to high)
+		menu.addItem((item) => {
+			item.setTitle('Issues (low to high)')
+				.onClick(() => {
+					this.currentSort = 'issues-asc';
+					this.plugin.settings.defaultSort = 'issues-asc';
+					this.plugin.saveSettings();
+					this.sortAndRenderFiles(issuesFiles, issuesList, (a, b) => a.issuesCount - b.issuesCount);
+				});
+			if (this.currentSort === 'issues-asc') {
+				item.setIcon('check');
+			}
+		});
+		
+		// Divider
+		menu.addSeparator();
+		
+		// File name (A to Z)
+		menu.addItem((item) => {
+			item.setTitle('File name (A to Z)')
+				.onClick(() => {
+					this.currentSort = 'filename-asc';
+					this.plugin.settings.defaultSort = 'filename-asc';
+					this.plugin.saveSettings();
+					this.sortAndRenderFiles(issuesFiles, issuesList, (a, b) => {
+						const aFileName = a.file.split('/').pop() || '';
+						const bFileName = b.file.split('/').pop() || '';
+						const fileNameCompare = aFileName.localeCompare(bFileName);
+						if (fileNameCompare !== 0) return fileNameCompare;
+						// If filenames are the same, sort by folder
+						return a.file.localeCompare(b.file);
+					});
+				});
+			if (this.currentSort === 'filename-asc') {
+				item.setIcon('check');
+			}
+		});
+		
+		// File name (Z to A)
+		menu.addItem((item) => {
+			item.setTitle('File name (Z to A)')
+				.onClick(() => {
+					this.currentSort = 'filename-desc';
+					this.plugin.settings.defaultSort = 'filename-desc';
+					this.plugin.saveSettings();
+					this.sortAndRenderFiles(issuesFiles, issuesList, (a, b) => {
+						const aFileName = a.file.split('/').pop() || '';
+						const bFileName = b.file.split('/').pop() || '';
+						const fileNameCompare = bFileName.localeCompare(aFileName);
+						if (fileNameCompare !== 0) return fileNameCompare;
+						// If filenames are the same, sort by folder
+						return b.file.localeCompare(a.file);
+					});
+				});
+			if (this.currentSort === 'filename-desc') {
+				item.setIcon('check');
+			}
+		});
+		
+		menu.showAtPosition({ x: event.clientX, y: event.clientY });
+	}
+
+	// Helper function to get parent folder and filename
+	private getDisplayPath(fullPath: string): string {
+		const parts = fullPath.split('/');
+		if (parts.length <= 2) {
+			return fullPath; // Return as-is if no parent folder
+		}
+		return parts.slice(-2).join('/'); // Return last two parts (parent folder + filename)
+	}
+
+	// Sort files and re-render
+	private sortAndRenderFiles(issuesFiles: SEOResults[], issuesList: HTMLElement, sortFn: (a: SEOResults, b: SEOResults) => number) {
+		// Sort the array
+		const sortedFiles = [...issuesFiles].sort(sortFn);
+		
+		// Clear existing file items
+		issuesList.querySelectorAll('.seo-file-issue').forEach(el => el.remove());
+		
+		// Re-render sorted files
+		sortedFiles.forEach(result => {
+			const fileEl = issuesList.createEl('div', { cls: 'seo-file-issue' });
+			fileEl.setAttribute('data-file-path', result.file);
+			
+			// Make file path clickable
+			const fileLink = fileEl.createEl('a', { 
+				text: this.getDisplayPath(result.file),
+				cls: 'seo-file-link',
+				href: '#'
+			});
+			fileLink.addEventListener('click', (e) => {
+				e.preventDefault();
+				const file = this.app.vault.getAbstractFileByPath(result.file);
+				if (file) {
+					// Check if file is already open, if so switch to it, otherwise open new tab
+					const existingLeaf = this.app.workspace.getLeavesOfType('markdown').find(leaf => 
+						leaf.view.getState().file === result.file
+					);
+					if (existingLeaf) {
+						this.app.workspace.setActiveLeaf(existingLeaf);
+					} else {
+						this.app.workspace.openLinkText(result.file, '', true);
+					}
+				}
+			});
+			
+			// Stats and audit button container
+			const statsContainer = fileEl.createEl('div', { cls: 'seo-stats-container' });
+			
+			// Issues and warnings text
+			statsContainer.createEl('span', { 
+				text: `${result.issuesCount} issues, ${result.warningsCount} warnings`,
+				cls: 'seo-file-stats'
+			});
+			
+			// Audit button
+			const auditBtn = statsContainer.createEl('button', {
+				cls: 'clickable-icon seo-audit-btn',
+				attr: { 'aria-label': 'Audit this note' }
+			});
+			setIcon(auditBtn, 'search-check');
+			auditBtn.addEventListener('click', async (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				// Open the note
+				const file = this.app.vault.getAbstractFileByPath(result.file);
+				if (file) {
+					// Check if file is already open, if so switch to it, otherwise open new tab
+					const existingLeaf = this.app.workspace.getLeavesOfType('markdown').find(leaf => 
+						leaf.view.getState().file === result.file
+					);
+					if (existingLeaf) {
+						this.app.workspace.setActiveLeaf(existingLeaf);
+					} else {
+						this.app.workspace.openLinkText(result.file, '', true);
+					}
+					// Open current note panel and run audit
+					this.plugin.openCurrentPanel();
+					// Wait for panel to open, then trigger the check
+					setTimeout(() => {
+						// Find and click the "Check current note" button
+						const currentPanel = this.app.workspace.getLeavesOfType(SEOCurrentPanelViewType)[0];
+						if (currentPanel) {
+							const checkBtn = currentPanel.view.containerEl.querySelector('.seo-top-btn') as HTMLButtonElement;
+							if (checkBtn) {
+								checkBtn.click();
+							}
+						}
+					}, 200);
+				}
+			});
+		});
 	}
 }

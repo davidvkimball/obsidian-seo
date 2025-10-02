@@ -1,5 +1,70 @@
 /* SEO Plugin Styles */
 
+/* Header with flexbox layout */
+.seo-issues-header-container {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+/* Stats container and audit button */
+.seo-stats-container {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+/* Sort button styling */
+.seo-sort-btn {
+	border: none !important;
+	background: none !important;
+	box-shadow: none !important;
+	cursor: default;
+	padding: 0 !important;
+	color: var(--text-muted);
+	transition: color 0.2s ease;
+}
+
+.seo-sort-btn:hover {
+	background: none !important;
+	color: var(--text-normal);
+}
+
+/* Right-align checkmark icons in menu */
+.menu .menu-item {
+	display: flex !important;
+	justify-content: space-between !important;
+	align-items: center !important;
+}
+
+.menu .menu-item .menu-item-icon {
+	margin-left: auto !important;
+	order: 2 !important;
+}
+
+/* Override any clickable-icon styling */
+.seo-sort-btn.clickable-icon {
+	border: none !important;
+	background: none !important;
+	box-shadow: none !important;
+	padding: 0 !important;
+}
+
+.seo-audit-btn {
+	background: none;
+	border: none;
+	padding: 0.25rem;
+	border-radius: 0.25rem;
+	color: var(--text-muted);
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.seo-audit-btn:hover {
+	background: var(--background-modifier-hover);
+	color: var(--text-normal);
+}
+
 .seo-panel {
 	padding: 1rem;
 	max-width: 100%;
@@ -320,4 +385,21 @@
 
 .seo-status-bar:hover {
 	color: var(--text-accent);
+}
+
+/* Collapsible check sections */
+.seo-collapsible-header {
+	cursor: pointer;
+	user-select: none;
+}
+
+.seo-collapse-icon {
+	display: inline-flex;
+	align-items: center;
+	margin-right: 0.5rem;
+	transition: transform 0.2s ease;
+}
+
+.seo-collapse-icon svg {
+	transition: transform 0.2s ease;
 }
