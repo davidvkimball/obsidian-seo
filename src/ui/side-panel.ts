@@ -36,7 +36,7 @@ export class SEOSidePanel extends ItemView {
 	}
 
 	getDisplayText(): string {
-		return this.panelType === 'current' ? "SEO check: current note" : "SEO check: vault";
+		return this.panelType === 'current' ? "SEO audit: current note" : "SEO audit: vault";
 	}
 
 	getIcon(): string {
@@ -166,13 +166,13 @@ export class SEOSidePanel extends ItemView {
 
 			// Action button at the top
 			if (this.panelType === 'current') {
-				const checkCurrentBtn = containerEl.createEl('button', { 
-					text: 'Check current note',
+				const auditCurrentBtn = containerEl.createEl('button', { 
+					text: 'Audit current note',
 					cls: 'mod-cta seo-btn seo-top-btn'
 				});
-				checkCurrentBtn.addEventListener('click', async () => {
-					checkCurrentBtn.textContent = 'Checking...';
-					checkCurrentBtn.disabled = true;
+				auditCurrentBtn.addEventListener('click', async () => {
+					auditCurrentBtn.textContent = 'Auditing...';
+					auditCurrentBtn.disabled = true;
 					
 					try {
 						const result = await this.actions.checkCurrentNote();
@@ -181,8 +181,8 @@ export class SEOSidePanel extends ItemView {
 							this.render();
 						}
 					} finally {
-						checkCurrentBtn.textContent = 'Check current note';
-						checkCurrentBtn.disabled = false;
+						auditCurrentBtn.textContent = 'Audit current note';
+						auditCurrentBtn.disabled = false;
 					}
 				});
 			}
@@ -193,14 +193,14 @@ export class SEOSidePanel extends ItemView {
 					this.resultsDisplay.renderResults(this.currentNoteResults);
 				} else {
 					const noResults = containerEl.createEl('div', { cls: 'seo-no-results' });
-					noResults.createEl('p', { text: 'Open a markdown file and click "Check current note" to audit it.' });
+					noResults.createEl('p', { text: 'Open a markdown file and click "Audit current note" to audit it.' });
 				}
 			} else {
 				if (this.globalResults.length > 0) {
 					this.renderGlobalResults(containerEl);
 				} else {
 					const noGlobal = containerEl.createEl('div', { cls: 'seo-no-results' });
-					noGlobal.createEl('p', { text: 'Click "Check all notes" to audit your files in your configured directories.' });
+					noGlobal.createEl('p', { text: 'Click "Audit all notes" to audit your files in your configured directories.' });
 				}
 			}
 

@@ -42,7 +42,7 @@ export default class SEOPlugin extends Plugin {
 		this.realTimeChecker.registerRealTimeChecking();
 
 		// Add ribbon icon for easy access (default to global)
-		this.addRibbonIcon('search-check', 'Open SEO check panel', () => {
+		this.addRibbonIcon('search-check', 'Open SEO audit panel', () => {
 			this.openGlobalPanel();
 		});
 	}

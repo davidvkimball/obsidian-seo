@@ -27,7 +27,7 @@ export class PanelActions {
 			this.plugin.settings.lastScanTimestamp = Date.now();
 			await this.plugin.saveSettings();
 			
-			new Notice(`SEO check complete with ${results.length} files.`);
+			new Notice(`SEO audit complete with ${results.length} files.`);
 			return results;
 		} catch (error) {
 			console.error('Error running initial scan:', error);
@@ -53,7 +53,7 @@ export class PanelActions {
 			const results = await runSEOCheck(this.plugin, [activeFile]);
 			
 			if (results.length > 0) {
-				new Notice('SEO check complete.');
+				new Notice('SEO audit complete.');
 				return results[0];
 			}
 			return null;
@@ -86,7 +86,7 @@ export class PanelActions {
 			this.plugin.settings.lastScanTimestamp = Date.now();
 			await this.plugin.saveSettings();
 			
-			new Notice(`SEO check complete with ${results.length} files.`);
+			new Notice(`SEO audit complete with ${results.length} files.`);
 			return results;
 		} catch (error) {
 			console.error('Error checking all notes:', error);

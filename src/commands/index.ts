@@ -6,7 +6,7 @@ export function registerCommands(plugin: SEOPlugin) {
 	// Open SEO Current Note panel
 	plugin.addCommand({
 		id: "seo-open-current",
-		name: "Open current note check",
+		name: "Open current note audit",
 		callback: () => {
 			plugin.openCurrentPanel();
 		}
@@ -15,7 +15,7 @@ export function registerCommands(plugin: SEOPlugin) {
 	// Open SEO Global panel
 	plugin.addCommand({
 		id: "seo-open-global",
-		name: "Open vault check",
+		name: "Open vault audit",
 		callback: () => {
 			plugin.openGlobalPanel();
 		}
