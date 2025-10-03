@@ -13,6 +13,7 @@ export class SEOSidePanel extends ItemView {
 	panelType: 'current' | 'global' = 'current';
 	sortState: 'none' | 'issues-asc' | 'issues-desc' | 'warnings-asc' | 'warnings-desc' | 'score-asc' | 'score-desc' = 'none';
 	currentSort: 'issues-desc' | 'issues-asc' | 'warnings-desc' | 'warnings-asc' | 'filename-asc' | 'filename-desc';
+	hasRunInitialScan: boolean = false;
 
 	constructor(plugin: SEOPlugin, panelType: 'current' | 'global' = 'current', leaf?: WorkspaceLeaf) {
 		super(leaf || plugin.app.workspace.getLeaf());
@@ -35,12 +36,23 @@ export class SEOSidePanel extends ItemView {
 
 	async onOpen() {
 		try {
+			// Load cached results for global panel
+			if (this.panelType === 'global' && this.plugin.settings.cachedGlobalResults.length > 0) {
+				this.globalResults = this.plugin.settings.cachedGlobalResults;
+			}
+			
 			this.render();
 			
 			// Force icon refresh after panel is opened using onLayoutReady
 			this.app.workspace.onLayoutReady(() => {
 				this.forceIconRefresh();
 			});
+
+			// Auto-scan for global panel on first open if no cached results
+			if (this.panelType === 'global' && !this.hasRunInitialScan && this.globalResults.length === 0) {
+				this.hasRunInitialScan = true;
+				await this.runInitialScan();
+			}
 		} catch (error) {
 			console.error('Error opening SEO panel:', error);
 		}
@@ -52,6 +64,34 @@ export class SEOSidePanel extends ItemView {
 
 	cleanup() {
 		// Cleanup resources
+	}
+
+	// Run initial scan for global panel
+	async runInitialScan() {
+		try {
+			// Get files to check
+			const files = await this.plugin.getFilesToCheck();
+			if (files.length === 0) {
+				return;
+			}
+			
+			// Import and run SEO check directly
+			const { runSEOCheck } = await import("../seo-checker");
+			const results = await runSEOCheck(this.plugin, files);
+			
+			this.globalResults = results;
+			
+			// Save results to settings
+			this.plugin.settings.cachedGlobalResults = results;
+			this.plugin.settings.lastScanTimestamp = Date.now();
+			await this.plugin.saveSettings();
+			
+			this.render();
+			new Notice(`SEO audit complete with ${results.length} files.`);
+		} catch (error) {
+			console.error('Error running initial scan:', error);
+			new Notice('Error analyzing files. Check console for details.');
+		}
 	}
 
 	// Get vault folders information for display
@@ -263,37 +303,7 @@ export class SEOSidePanel extends ItemView {
 					}
 				});
 			} else {
-				const checkAllBtn = containerEl.createEl('button', { 
-					text: 'Check all notes',
-					cls: 'mod-cta seo-btn seo-top-btn'
-				});
-				checkAllBtn.addEventListener('click', async () => {
-					checkAllBtn.textContent = 'Checking...';
-					checkAllBtn.disabled = true;
-					
-					try {
-						// Get files to check
-						const files = await this.plugin.getFilesToCheck();
-						if (files.length === 0) {
-							new Notice('No markdown files found in configured directories.');
-							return;
-						}
-						
-						// Import and run SEO check directly
-						const { runSEOCheck } = await import("../seo-checker");
-						const results = await runSEOCheck(this.plugin, files);
-						
-						this.globalResults = results;
-						this.render();
-						new Notice(`SEO audit complete with ${results.length} files.`);
-					} catch (error) {
-						console.error('Error checking all notes:', error);
-						new Notice('Error analyzing files. Check console for details.');
-					} finally {
-							checkAllBtn.textContent = 'Check all notes';
-						checkAllBtn.disabled = false;
-					}
-				});
+				// Don't show the button at the top for global panel - it will be shown below stats
 			}
 
 			// Content based on panel type
@@ -467,13 +477,57 @@ export class SEOSidePanel extends ItemView {
 		}
 		warningsStat.createEl('div', { cls: 'seo-stat-label', text: 'Warnings' });
 
+		// Add refresh button below stats
+		const refreshBtn = container.createEl('button', { 
+			text: 'Refresh',
+			cls: 'mod-cta seo-btn seo-refresh-btn'
+		});
+		refreshBtn.addEventListener('click', async () => {
+			refreshBtn.textContent = 'Refreshing...';
+			refreshBtn.disabled = true;
+			
+			try {
+				// Get files to check
+				const files = await this.plugin.getFilesToCheck();
+				if (files.length === 0) {
+					new Notice('No markdown files found in configured directories.');
+					return;
+				}
+				
+				// Import and run SEO check directly
+				const { runSEOCheck } = await import("../seo-checker");
+				const results = await runSEOCheck(this.plugin, files);
+				
+				this.globalResults = results;
+				
+				// Save results to settings
+				this.plugin.settings.cachedGlobalResults = results;
+				this.plugin.settings.lastScanTimestamp = Date.now();
+				await this.plugin.saveSettings();
+				
+				this.render();
+				new Notice(`SEO audit complete with ${results.length} files.`);
+			} catch (error) {
+				console.error('Error checking all notes:', error);
+				new Notice('Error analyzing files. Check console for details.');
+			} finally {
+				refreshBtn.textContent = 'Refresh';
+				refreshBtn.disabled = false;
+			}
+		});
+
 		// Files with issues
 		const issuesFiles = this.globalResults.filter(r => r.issuesCount > 0 || r.warningsCount > 0);
 		if (issuesFiles.length > 0) {
 			const issuesList = container.createEl('div', { cls: 'seo-issues-list' });
 			
-			// Header with sorting buttons
-			const issuesHeader = issuesList.createEl('div', { cls: 'seo-issues-header-container' });
+			// Header with sorting buttons and collapse functionality
+			const issuesHeader = issuesList.createEl('div', { cls: 'seo-issues-header-container seo-collapsible-header' });
+			
+			// Collapse icon
+			const collapseIcon = issuesHeader.createEl('span', { cls: 'seo-collapse-icon' });
+			collapseIcon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6,9 12,15 18,9"/></svg>';
+			
 			issuesHeader.createEl('h4', { text: 'Files with issues', cls: 'seo-issues-header' });
 			
 			// Sort button
@@ -485,6 +539,9 @@ export class SEOSidePanel extends ItemView {
 			sortBtn.addEventListener('click', (e) => {
 				this.showSortMenu(e, issuesFiles, issuesList);
 			});
+			
+			// Files list container
+			const filesListContainer = issuesList.createEl('div', { cls: 'seo-files-list-container' });
 			
 			// Apply saved sort preference
 			let sortedFiles = [...issuesFiles];
@@ -522,7 +579,7 @@ export class SEOSidePanel extends ItemView {
 			}
 			
 			sortedFiles.forEach(result => {
-				const fileEl = issuesList.createEl('div', { cls: 'seo-file-issue' });
+				const fileEl = filesListContainer.createEl('div', { cls: 'seo-file-issue' });
 				fileEl.setAttribute('data-file-path', result.file);
 				
 				// Make file path clickable
@@ -592,6 +649,23 @@ export class SEOSidePanel extends ItemView {
 						}, 200);
 					}
 				});
+			});
+
+			// Add collapse functionality to the header
+			issuesHeader.addEventListener('click', (e) => {
+				// Don't collapse if clicking on the sort button
+				if ((e.target as HTMLElement).closest('.seo-sort-btn')) {
+					return;
+				}
+				
+				const isCollapsed = filesListContainer.style.display === 'none';
+				filesListContainer.style.display = isCollapsed ? 'block' : 'none';
+				
+				// Rotate the collapse icon
+				const icon = collapseIcon.querySelector('svg');
+				if (icon) {
+					icon.style.transform = isCollapsed ? 'rotate(0deg)' : 'rotate(-90deg)';
+				}
 			});
 		}
 	}
@@ -721,12 +795,16 @@ export class SEOSidePanel extends ItemView {
 		// Sort the array
 		const sortedFiles = [...issuesFiles].sort(sortFn);
 		
+		// Find the files list container
+		const filesListContainer = issuesList.querySelector('.seo-files-list-container');
+		if (!filesListContainer) return;
+		
 		// Clear existing file items
-		issuesList.querySelectorAll('.seo-file-issue').forEach(el => el.remove());
+		filesListContainer.querySelectorAll('.seo-file-issue').forEach(el => el.remove());
 		
 		// Re-render sorted files
 		sortedFiles.forEach(result => {
-			const fileEl = issuesList.createEl('div', { cls: 'seo-file-issue' });
+			const fileEl = filesListContainer.createEl('div', { cls: 'seo-file-issue' });
 			fileEl.setAttribute('data-file-path', result.file);
 			
 			// Make file path clickable

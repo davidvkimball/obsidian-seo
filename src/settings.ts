@@ -23,6 +23,10 @@ export interface SEOSettings {
 	keywordDensityMin: number;
 	keywordDensityMax: number;
 	duplicateThreshold: number;
+	
+	// Cached scan results
+	cachedGlobalResults: any[];
+	lastScanTimestamp: number;
 }
 
 export const DEFAULT_SETTINGS: SEOSettings = {
@@ -40,5 +44,7 @@ export const DEFAULT_SETTINGS: SEOSettings = {
 	minContentLength: 300,
 	keywordDensityMin: 1,
 	keywordDensityMax: 2,
-	duplicateThreshold: 80
+	duplicateThreshold: 80,
+	cachedGlobalResults: [],
+	lastScanTimestamp: 0
 };
