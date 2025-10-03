@@ -52,12 +52,16 @@ export class SEOSidePanel extends ItemView {
 			
 			// Ensure icon is correct before rendering
 			this.forceIconRefresh();
-			this.render();
 
 			// Auto-scan for global panel on first open if no cached results
 			if (this.panelType === 'global' && !this.hasRunInitialScan && this.globalResults.length === 0) {
+				// Show loading state first
+				this.showLoadingState();
 				this.hasRunInitialScan = true;
 				await this.runInitialScan();
+			} else {
+				// Render normally if we have cached results or it's not a global panel
+				this.render();
 			}
 		} catch (error) {
 			console.error('Error opening SEO panel:', error);
@@ -138,6 +142,37 @@ export class SEOSidePanel extends ItemView {
 	async updateResults(results: SEOResults[]) {
 		this.globalResults = results;
 		this.render();
+	}
+
+	// Show loading state for large scans
+	showLoadingState() {
+		const { containerEl } = this;
+		containerEl.empty();
+		containerEl.addClass('seo-panel');
+
+		// Header
+		const header = containerEl.createEl('div', { cls: 'seo-panel-header' });
+		header.createEl('h2', { text: this.panelType === 'current' ? 'SEO audit: current note' : 'SEO audit: vault' });
+
+		// Show vault folders information for global panel
+		if (this.panelType === 'global') {
+			const foldersInfo = getVaultFoldersInfo(this.plugin.settings.scanDirectories);
+			const foldersEl = header.createEl('div', { cls: 'seo-filename' });
+			foldersEl.textContent = foldersInfo;
+		}
+
+		// Loading state
+		const loadingContainer = containerEl.createEl('div', { cls: 'seo-loading-container' });
+		const spinnerEl = loadingContainer.createEl('div', { cls: 'seo-loading-spinner' });
+		setIcon(spinnerEl, 'loader-circle');
+		loadingContainer.createEl('h3', { 
+			text: 'Running SEO audit...',
+			cls: 'seo-loading-title'
+		});
+		loadingContainer.createEl('p', { 
+			text: 'This may take a moment for large vaults. Please wait...',
+			cls: 'seo-loading-message'
+		});
 	}
 
 	render() {

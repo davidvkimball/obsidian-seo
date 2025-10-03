@@ -1,5 +1,37 @@
 /* SEO Plugin Styles */
 
+/* Loading state styles */
+.seo-loading-container {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	padding: 2rem;
+	text-align: center;
+}
+
+.seo-loading-spinner {
+	font-size: 2rem;
+	margin-bottom: 1rem;
+	animation: spin 1s linear infinite;
+}
+
+.seo-loading-title {
+	margin: 0 0 0.5rem 0;
+	color: var(--text-normal);
+}
+
+.seo-loading-message {
+	margin: 0;
+	color: var(--text-muted);
+	font-size: 0.9rem;
+}
+
+@keyframes spin {
+	from { transform: rotate(0deg); }
+	to { transform: rotate(360deg); }
+}
+
 /* Header with flexbox layout */
 .seo-issues-header-container {
 	display: flex;

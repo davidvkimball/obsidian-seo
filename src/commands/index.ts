@@ -31,26 +31,42 @@ export function registerCommands(plugin: SEOPlugin) {
 			const existingPanels = plugin.app.workspace.getLeavesOfType('seo-global-panel');
 			const isFirstRun = existingPanels.length === 0;
 			
+			console.log('Vault command: isFirstRun =', isFirstRun);
+			
 			plugin.openGlobalPanel();
 			
-			// Only trigger manual refresh if panel already existed (not first run)
-			if (!isFirstRun) {
-				setTimeout(async () => {
-					const globalPanels = plugin.app.workspace.getLeavesOfType('seo-global-panel');
-					if (globalPanels.length > 0) {
-						const panel = globalPanels[0];
-						if (panel.view) {
-							// Cast to SEOSidePanel and trigger refresh
-							const seoPanel = panel.view as any;
-							// Trigger the refresh logic (same as clicking the refresh button)
-							await seoPanel.actions.refreshGlobalResults();
-							// Update the panel display with new results
-							seoPanel.render();
-						}
+			// Always check if panel opened successfully
+			setTimeout(async () => {
+				const globalPanels = plugin.app.workspace.getLeavesOfType('seo-global-panel');
+				console.log('Vault command: panels found after open =', globalPanels.length);
+				
+				if (globalPanels.length === 0) {
+					console.log('ERROR: Panel did not open! Trying fallback...');
+					// Fallback: try to open again
+					plugin.openGlobalPanel();
+					return;
+				}
+				
+				const panel = globalPanels[0];
+				if (panel.view) {
+					const seoPanel = panel.view as any;
+					
+					// If first run, let onOpen() handle it automatically
+					if (isFirstRun) {
+						console.log('First run: panel will handle loading state automatically');
+						// Force the panel to be visible
+						plugin.app.workspace.revealLeaf(panel);
+						plugin.app.workspace.setActiveLeaf(panel);
+						console.log('Panel forced to be active');
+					} else {
+						console.log('Subsequent run: triggering refresh');
+						// Trigger the refresh logic (same as clicking the refresh button)
+						await seoPanel.actions.refreshGlobalResults();
+						// Update the panel display with new results
+						seoPanel.render();
 					}
-				}, 500);
-			}
-			// If first run, let the panel's onOpen() handle the initial scan automatically
+				}
+			}, 300);
 		}
 	});
 

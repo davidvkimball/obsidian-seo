@@ -18,6 +18,11 @@ export class PanelActions {
 				return [];
 			}
 			
+			// Show notification for large scans
+			if (files.length > 20) {
+				new Notice(`Running SEO audit on ${files.length} files... This may take a moment.`);
+			}
+			
 			// Import and run SEO check directly
 			const { runSEOCheck } = await import("../seo-checker");
 			const results = await runSEOCheck(this.plugin, files);
@@ -77,6 +82,11 @@ export class PanelActions {
 				return [];
 			}
 			
+			// Show notification for large scans
+			if (files.length > 20) {
+				new Notice(`Refreshing SEO audit on ${files.length} files... This may take a moment.`);
+			}
+			
 			// Import and run SEO check directly
 			const { runSEOCheck } = await import("../seo-checker");
 			const results = await runSEOCheck(this.plugin, files);
@@ -121,7 +131,12 @@ export class PanelActions {
 	}
 
 	async openFileAndAudit(filePath: string): Promise<void> {
-		await this.openFile(filePath);
+		// Get the file object
+		const file = this.app.vault.getAbstractFileByPath(filePath);
+		if (!file) return;
+		
+		// Open the file directly using workspace
+		await this.app.workspace.getLeaf().openFile(file as any);
 		
 		// Open current note panel and run audit
 		this.plugin.openCurrentPanel();
