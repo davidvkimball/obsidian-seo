@@ -25,24 +25,19 @@ export class PanelManager {
 			this.app.workspace.revealLeaf(existingLeaf);
 			this.app.workspace.setActiveLeaf(existingLeaf);
 			
-			// Force icon refresh for existing panel using onLayoutReady
+			// Ensure icon loads properly - use setTimeout for panel timing
 			if (existingLeaf.view instanceof SEOSidePanel) {
-				this.app.workspace.onLayoutReady(() => {
-					(existingLeaf.view as SEOSidePanel).forceIconRefresh();
-				});
+				setTimeout(() => (existingLeaf.view as SEOSidePanel).forceIconRefresh(), 100);
 			}
 		} else {
 			// Create new panel in the right side
 			const leaf = this.app.workspace.getRightLeaf(false);
 			if (leaf) {
 				const panel = new SEOSidePanel(this.plugin, panelType, leaf);
+				// Ensure icon is correct before opening
+				panel.forceIconRefresh();
 				leaf.open(panel);
 				this.app.workspace.setActiveLeaf(leaf);
-				
-				// Force icon refresh for new panel using onLayoutReady
-				this.app.workspace.onLayoutReady(() => {
-					panel.forceIconRefresh();
-				});
 			}
 		}
 	}

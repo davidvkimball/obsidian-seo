@@ -20,6 +20,27 @@ export function registerCommands(plugin: SEOPlugin) {
 			plugin.openGlobalPanel();
 		}
 	});
+
+	// Clear cache
+	plugin.addCommand({
+		id: "seo-clear-cache",
+		name: "Clear SEO cache",
+		callback: () => {
+			plugin.clearCache();
+			new Notice('SEO cache cleared');
+		}
+	});
+
+	// Show cache statistics
+	plugin.addCommand({
+		id: "seo-cache-stats",
+		name: "Show cache statistics",
+		callback: () => {
+			const stats = plugin.getCacheStats();
+			new Notice(`Cache: ${stats.size} files cached`);
+		}
+	});
+
 }
 
 async function getFilesToCheck(plugin: SEOPlugin): Promise<TFile[]> {

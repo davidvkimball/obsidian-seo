@@ -1,4 +1,4 @@
-import { Plugin, Notice } from "obsidian";
+import { Plugin, Notice, TFile } from "obsidian";
 import { SEOSettings, DEFAULT_SETTINGS } from "./settings";
 import { registerCommands } from "./commands";
 import { SEOSettingTab } from "./settings-tab";
@@ -19,7 +19,7 @@ export default class SEOPlugin extends Plugin {
 		this.panelManager = new PanelManager(this.app, this);
 		this.realTimeChecker = new RealTimeChecker(this.app, this);
 
-		// Force icon refresh by clearing any cached icon data
+		// Ensure icons load properly using Obsidian's API
 		this.forceIconRefresh();
 
 		// Register the side panel views
@@ -44,11 +44,6 @@ export default class SEOPlugin extends Plugin {
 		// Add ribbon icon for easy access (default to global)
 		this.addRibbonIcon('search-check', 'Open SEO check panel', () => {
 			this.openGlobalPanel();
-		});
-
-		// Use onLayoutReady for better timing of icon refresh
-		this.app.workspace.onLayoutReady(() => {
-			this.forceIconRefresh();
 		});
 	}
 
@@ -95,56 +90,31 @@ export default class SEOPlugin extends Plugin {
 		return this.panelManager.getFilesToCheck();
 	}
 
-	// Force icon refresh to handle Obsidian's icon caching issues
-	private forceIconRefresh() {
-		// Approach 1: Force a DOM refresh by temporarily modifying and restoring the workspace
-		const workspaceEl = this.app.workspace.containerEl;
-		if (workspaceEl) {
-			// Trigger a reflow to clear any cached icon data
-			workspaceEl.style.display = 'none';
-			workspaceEl.offsetHeight; // Force reflow
-			workspaceEl.style.display = '';
-		}
-		
-		// Approach 2: Force refresh of any existing panels
-		const existingCurrentPanels = this.app.workspace.getLeavesOfType(SEOCurrentPanelViewType);
-		const existingGlobalPanels = this.app.workspace.getLeavesOfType(SEOGlobalPanelViewType);
-		
-		[...existingCurrentPanels, ...existingGlobalPanels].forEach(leaf => {
-			if (leaf.view instanceof SEOSidePanel) {
-				// Force a re-render to refresh the icon
-				leaf.view.render();
-			}
-		});
-		
-		// Approach 3: Force icon registration by creating a temporary element
-		this.registerIconProperly();
+	// Cache management
+	clearCache() {
+		const { clearCache } = require("./seo-checker");
+		clearCache();
 	}
 
-	// Register icon properly to ensure it's available in Obsidian's icon system
-	private registerIconProperly() {
-		// Approach 1: Create a temporary element to force icon registration
-		const tempEl = document.createElement('div');
-		tempEl.setAttribute('data-icon', 'search-check');
-		tempEl.style.display = 'none';
-		document.body.appendChild(tempEl);
-		
-		// Force a reflow to ensure the icon is registered
-		tempEl.offsetHeight;
-		
-		// Clean up
-		document.body.removeChild(tempEl);
-		
-		// Approach 2: Force icon registration through Obsidian's icon system
-		// This ensures the icon is properly registered in Obsidian's internal icon cache
-		const iconContainer = this.app.workspace.containerEl.querySelector('.workspace-tabs');
-		if (iconContainer) {
-			const iconEl = document.createElement('div');
-			iconEl.setAttribute('data-icon', 'search-check');
-			iconEl.style.display = 'none';
-			iconContainer.appendChild(iconEl);
-			iconEl.offsetHeight; // Force reflow
-			iconContainer.removeChild(iconEl);
-		}
+	getCacheStats() {
+		const { getCacheStats } = require("./seo-checker");
+		return getCacheStats();
+	}
+
+
+	// Proper icon refresh using Obsidian's onLayoutReady API
+	private forceIconRefresh() {
+		// Use Obsidian's proper API to ensure icons load correctly
+		this.app.workspace.onLayoutReady(() => {
+			// Force refresh of any existing panels
+			const existingCurrentPanels = this.app.workspace.getLeavesOfType(SEOCurrentPanelViewType);
+			const existingGlobalPanels = this.app.workspace.getLeavesOfType(SEOGlobalPanelViewType);
+			
+			[...existingCurrentPanels, ...existingGlobalPanels].forEach(leaf => {
+				if (leaf.view instanceof SEOSidePanel) {
+					leaf.view.render();
+				}
+			});
+		});
 	}
 }

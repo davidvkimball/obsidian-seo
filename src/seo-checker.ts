@@ -1,6 +1,16 @@
 import { TFile, Notice } from "obsidian";
 import SEOPlugin from "./main";
 import { SEOResults, SEOCheckResult } from "./types";
+
+// Simple cache for SEO results
+interface CacheEntry {
+	result: SEOResults;
+	timestamp: number;
+	fileHash: string;
+}
+
+const cache = new Map<string, CacheEntry>();
+const CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 import { 
 	checkAltText, 
 	checkNakedLinks, 
@@ -22,8 +32,19 @@ export async function runSEOCheck(plugin: SEOPlugin, files: TFile[]): Promise<SE
 	
 	for (const file of files) {
 		try {
+			// Check cache first
+			const cachedResult = getCachedResult(file);
+			if (cachedResult) {
+				results.push(cachedResult);
+				continue;
+			}
+			
+			// Run fresh check
 			const content = await plugin.app.vault.read(file);
 			const result = await checkFile(plugin, file, content);
+			
+			// Cache the result
+			cacheResult(file, result, plugin.app);
 			results.push(result);
 		} catch (error) {
 			console.error(`Error checking file ${file.path}:`, error);
@@ -145,4 +166,44 @@ async function checkFile(plugin: SEOPlugin, file: TFile, content: string): Promi
 		issuesCount,
 		warningsCount
 	};
+}
+
+// Cache helper functions
+async function generateFileHash(file: TFile, app: any): Promise<string> {
+	try {
+		const content = await app.vault.read(file);
+		const stat = await app.vault.adapter.stat(file.path);
+		// Simple hash combining content length and modification time
+		return `${content.length}-${stat.mtime}`;
+	} catch (error) {
+		return `${Date.now()}`; // Fallback to timestamp
+	}
+}
+
+function getCachedResult(file: TFile): SEOResults | null {
+	const entry = cache.get(file.path);
+	if (!entry) return null;
+	
+	const now = Date.now();
+	const isExpired = (now - entry.timestamp) > CACHE_EXPIRY_MS;
+	
+	return isExpired ? null : entry.result;
+}
+
+async function cacheResult(file: TFile, result: SEOResults, app: any): Promise<void> {
+	const fileHash = await generateFileHash(file, app);
+	cache.set(file.path, {
+		result,
+		timestamp: Date.now(),
+		fileHash
+	});
+}
+
+// Export cache management functions
+export function clearCache(): void {
+	cache.clear();
+}
+
+export function getCacheStats(): { size: number } {
+	return { size: cache.size };
 }

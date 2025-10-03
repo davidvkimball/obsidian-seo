@@ -50,12 +50,9 @@ export class SEOSidePanel extends ItemView {
 				this.globalResults = this.plugin.settings.cachedGlobalResults;
 			}
 			
+			// Ensure icon is correct before rendering
+			this.forceIconRefresh();
 			this.render();
-			
-			// Force icon refresh after panel is opened using onLayoutReady
-			this.app.workspace.onLayoutReady(() => {
-				this.forceIconRefresh();
-			});
 
 			// Auto-scan for global panel on first open if no cached results
 			if (this.panelType === 'global' && !this.hasRunInitialScan && this.globalResults.length === 0) {
@@ -86,7 +83,18 @@ export class SEOSidePanel extends ItemView {
 
 	// Force icon refresh to handle Obsidian's icon caching issues
 	public forceIconRefresh() {
-		// Multiple approaches to ensure icon is properly displayed
+		// Immediate approach - try to set icon before DOM is rendered
+		// This should prevent the flash of wrong icon
+		
+		// Force re-registration of the view with correct icon
+		if (this.leaf) {
+			this.leaf.setViewState({
+				type: this.getViewType(),
+				state: this.leaf.view.getState()
+			});
+		}
+		
+		// Also do the DOM manipulation as backup
 		setTimeout(() => {
 			// Approach 1: Direct DOM manipulation of icon element
 			const iconEl = this.containerEl.querySelector('.view-header-icon') as HTMLElement;
@@ -110,13 +118,7 @@ export class SEOSidePanel extends ItemView {
 			
 			// Approach 3: Trigger a workspace refresh
 			this.app.workspace.trigger('layout-change');
-			
-			// Approach 4: Force re-registration of the view
-			this.leaf.setViewState({
-				type: this.getViewType(),
-				state: this.leaf.view.getState()
-			});
-		}, 100);
+		}, 50); // Reduced timeout for faster correction
 	}
 
 	async updateCurrentNoteResults(file: TFile) {
