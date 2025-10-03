@@ -77,10 +77,17 @@ The plugin uses a weighted scoring system that prioritizes critical SEO factors:
 
 ## Installation
 
+### BRAT
+
+1. Download the [Beta Reviewers Auto-update Tester (BRAT)](https://github.com/TfTHacker/obsidian42-brat) plugin from the [Obsidian community plugins directory](https://obsidian.md/plugins?id=obsidian42-brat) and enable it.
+2. In the BRAT plugin settings, select `Add beta plugin`.
+3. Paste the following: `https://github.com/davidvkimball/obsidian-seo` and select `Add plugin`.
+
+### Manual
+
 1. Clone or download this plugin into your Obsidian vault’s `.obsidian/plugins/` directory.
 2. Ensure `manifest.json`, `main.js`, and `styles.css` are in the `seo` folder.
 3. In Obsidian, go to **Settings > Community Plugins**, enable "Community Plugins" if not already enabled, and then enable "SEO."
-4. Click the settings icon next to "SEO" to configure options.
 
 ## Contributing
 
