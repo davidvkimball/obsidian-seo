@@ -44,6 +44,10 @@ export class PanelActions {
 		}
 
 		try {
+			// Clear cache first to ensure fresh results
+			const { clearCacheForFile } = await import("../seo-checker");
+			clearCacheForFile(activeFile.path);
+			
 			// Import and run SEO check directly
 			const { runSEOCheck } = await import("../seo-checker");
 			const results = await runSEOCheck(this.plugin, [activeFile]);
@@ -62,6 +66,10 @@ export class PanelActions {
 
 	async refreshGlobalResults(): Promise<SEOResults[]> {
 		try {
+			// Clear cache first to ensure fresh results
+			const { clearAllCache } = await import("../seo-checker");
+			clearAllCache();
+			
 			// Get files to check
 			const files = await this.plugin.getFilesToCheck();
 			if (files.length === 0) {

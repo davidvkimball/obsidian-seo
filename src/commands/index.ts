@@ -21,7 +21,6 @@ export function registerCommands(plugin: SEOPlugin) {
 		}
 	});
 
-
 }
 
 async function getFilesToCheck(plugin: SEOPlugin): Promise<TFile[]> {

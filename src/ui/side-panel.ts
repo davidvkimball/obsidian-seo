@@ -148,7 +148,7 @@ export class SEOSidePanel extends ItemView {
 
 			// Header with proper spacing
 			const header = containerEl.createEl('div', { cls: 'seo-panel-header' });
-			header.createEl('h2', { text: this.panelType === 'current' ? 'SEO check: current note' : 'SEO check: vault' });
+			header.createEl('h2', { text: this.panelType === 'current' ? 'SEO audit: current note' : 'SEO audit: vault' });
 
 			// Show current note file path if available
 			if (this.panelType === 'current') {

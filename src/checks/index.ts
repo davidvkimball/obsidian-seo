@@ -416,14 +416,14 @@ export async function checkMetaDescription(content: string, file: TFile, setting
 		results.push({
 			passed: false,
 			message: `Description too short: ${length} characters`,
-			suggestion: "Aim for 120-160 characters for optimal SEO",
+			suggestion: "Aim for 120-160 characters",
 			severity: 'warning'
 		});
 	} else if (length > 160) {
 		results.push({
 			passed: false,
 			message: `Description too long: ${length} characters`,
-			suggestion: "Aim for 120-160 characters for optimal SEO",
+			suggestion: "Aim for 120-160 characters",
 			severity: 'warning'
 		});
 	} else {
@@ -472,14 +472,14 @@ export async function checkTitleLength(content: string, file: TFile, settings: S
 		results.push({
 			passed: false,
 			message: `Title too short: ${length} characters`,
-			suggestion: "Aim for 30-60 characters for optimal SEO",
+			suggestion: "Aim for 30-60 characters.",
 			severity: 'warning'
 		});
 	} else if (length > 60) {
 		results.push({
 			passed: false,
 			message: `Title too long: ${length} characters`,
-			suggestion: "Aim for 30-60 characters for optimal SEO",
+			suggestion: "Aim for 30-60 characters.",
 			severity: 'warning'
 		});
 	} else {

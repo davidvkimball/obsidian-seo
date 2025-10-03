@@ -62,6 +62,9 @@ export default class SEOPlugin extends Plugin {
 
 	async saveSettings() {
 		await this.saveData(this.settings);
+		// Clear cache when settings change to ensure fresh results
+		const { clearAllCache } = await import("./seo-checker");
+		clearAllCache();
 	}
 
 	public addStatusBar() {

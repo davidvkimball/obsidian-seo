@@ -12,7 +12,19 @@ export class ResultsDisplay {
 	renderResults(results: SEOResults): void {
 		// Overall score
 		const scoreEl = this.container.createEl('div', { cls: 'seo-score' });
-		scoreEl.createEl('span', { text: `Overall score: ${results.overallScore}%` });
+		const scoreText = scoreEl.createEl('span', { text: 'Score: ' });
+		const scoreNumber = scoreEl.createEl('span', { text: `${results.overallScore}%` });
+		
+		// Apply color coding to the score
+		if (results.overallScore >= 80) {
+			scoreNumber.addClass('seo-score-excellent');
+		} else if (results.overallScore >= 60) {
+			scoreNumber.addClass('seo-score-good');
+		} else if (results.overallScore >= 40) {
+			scoreNumber.addClass('seo-score-fair');
+		} else {
+			scoreNumber.addClass('seo-score-poor');
+		}
 		
 		if (results.issuesCount > 0 || results.warningsCount > 0) {
 			const issuesSpan = scoreEl.createEl('span', { text: ` (` });
@@ -130,16 +142,21 @@ export class ResultsDisplay {
 		// Average score with color coding
 		const scoreStat = statsGrid.createEl('div', { cls: 'seo-stat-item' });
 		const scoreNumber = scoreStat.createEl('div', { cls: 'seo-stat-number', text: `${avgScore}%` });
+		let scoreLabel = 'Average score';
 		if (avgScore >= 80) {
 			scoreNumber.addClass('seo-score-excellent');
+			scoreLabel = 'Excellent';
 		} else if (avgScore >= 60) {
 			scoreNumber.addClass('seo-score-good');
+			scoreLabel = 'Good';
 		} else if (avgScore >= 40) {
 			scoreNumber.addClass('seo-score-fair');
+			scoreLabel = 'Fair';
 		} else {
 			scoreNumber.addClass('seo-score-poor');
+			scoreLabel = 'Poor';
 		}
-		scoreStat.createEl('div', { cls: 'seo-stat-label', text: 'Average score' });
+		scoreStat.createEl('div', { cls: 'seo-stat-label', text: scoreLabel });
 		
 		// Issues count with color coding
 		const issuesStat = statsGrid.createEl('div', { cls: 'seo-stat-item' });

@@ -7,6 +7,7 @@ interface CacheEntry {
 	result: SEOResults;
 	timestamp: number;
 	fileHash: string;
+	settingsHash: string;
 }
 
 const cache = new Map<string, CacheEntry>();
@@ -33,7 +34,7 @@ export async function runSEOCheck(plugin: SEOPlugin, files: TFile[]): Promise<SE
 	for (const file of files) {
 		try {
 			// Check cache first
-			const cachedResult = getCachedResult(file);
+			const cachedResult = getCachedResult(file, plugin);
 			if (cachedResult) {
 				results.push(cachedResult);
 				continue;
@@ -44,7 +45,7 @@ export async function runSEOCheck(plugin: SEOPlugin, files: TFile[]): Promise<SE
 			const result = await checkFile(plugin, file, content);
 			
 			// Cache the result
-			cacheResult(file, result, plugin.app);
+			cacheResult(file, result, plugin);
 			results.push(result);
 		} catch (error) {
 			console.error(`Error checking file ${file.path}:`, error);
@@ -180,22 +181,57 @@ async function generateFileHash(file: TFile, app: any): Promise<string> {
 	}
 }
 
-function getCachedResult(file: TFile): SEOResults | null {
+function generateSettingsHash(settings: any): string {
+	// Create a hash of the settings that affect SEO checks
+	// This includes all settings that could change the results
+	const relevantSettings = {
+		keywordProperty: settings.keywordProperty || '',
+		keywordDensityMin: settings.keywordDensityMin,
+		keywordDensityMax: settings.keywordDensityMax,
+		descriptionProperty: settings.descriptionProperty || '',
+		titleProperty: settings.titleProperty || '',
+		useFilenameAsTitle: settings.useFilenameAsTitle,
+		checkContentLength: settings.checkContentLength,
+		minContentLength: settings.minContentLength,
+		checkDuplicateContent: settings.checkDuplicateContent,
+		scanDirectories: settings.scanDirectories || '',
+		// Add other settings that affect SEO results
+	};
+	
+	// Simple hash of the settings object
+	return JSON.stringify(relevantSettings);
+}
+
+function getCachedResult(file: TFile, plugin: SEOPlugin): SEOResults | null {
 	const entry = cache.get(file.path);
-	if (!entry) return null;
+	if (!entry) {
+		return null;
+	}
 	
 	const now = Date.now();
 	const isExpired = (now - entry.timestamp) > CACHE_EXPIRY_MS;
 	
-	return isExpired ? null : entry.result;
+	// Check if settings have changed
+	const currentSettingsHash = generateSettingsHash(plugin.settings);
+	const settingsChanged = entry.settingsHash !== currentSettingsHash;
+	
+	if (isExpired || settingsChanged) {
+		// Remove expired or invalidated entry
+		cache.delete(file.path);
+		return null;
+	}
+	
+	return entry.result;
 }
 
-async function cacheResult(file: TFile, result: SEOResults, app: any): Promise<void> {
-	const fileHash = await generateFileHash(file, app);
+async function cacheResult(file: TFile, result: SEOResults, plugin: SEOPlugin): Promise<void> {
+	const fileHash = await generateFileHash(file, plugin.app);
+	const settingsHash = generateSettingsHash(plugin.settings);
 	cache.set(file.path, {
 		result,
 		timestamp: Date.now(),
-		fileHash
+		fileHash,
+		settingsHash
 	});
 }
 
@@ -206,4 +242,14 @@ export function clearCache(): void {
 
 export function getCacheStats(): { size: number } {
 	return { size: cache.size };
+}
+
+// Clear cache for a specific file (useful when settings change)
+export function clearCacheForFile(filePath: string): void {
+	cache.delete(filePath);
+}
+
+// Clear cache for all files (useful when global settings change)
+export function clearAllCache(): void {
+	cache.clear();
 }
