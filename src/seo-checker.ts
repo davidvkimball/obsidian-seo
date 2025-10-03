@@ -26,7 +26,9 @@ import {
 	checkDuplicateContent,
 	checkReadingLevel,
 	checkNotices,
-	checkKeywordInTitle
+	checkKeywordInTitle,
+	checkKeywordInSlug,
+	checkSlugFormat
 } from "./checks";
 
 export async function runSEOCheck(plugin: SEOPlugin, files: TFile[]): Promise<SEOResults[]> {
@@ -62,6 +64,8 @@ async function checkFile(plugin: SEOPlugin, file: TFile, content: string): Promi
 		titleLength: await checkTitleLength(content, file, plugin.settings),
 		metaDescription: await checkMetaDescription(content, file, plugin.settings),
 		keywordInTitle: await checkKeywordInTitle(content, file, plugin.settings),
+		keywordInSlug: await checkKeywordInSlug(content, file, plugin.settings),
+		slugFormat: await checkSlugFormat(content, file, plugin.settings),
 		keywordDensity: await checkKeywordDensity(content, file, plugin.settings),
 		headingOrder: await checkHeadingOrder(content, file, plugin.settings),
 		contentLength: await checkContentLength(content, file, plugin.settings),

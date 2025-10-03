@@ -7,6 +7,8 @@ export interface SEOSettings {
 	descriptionProperty: string;
 	titleProperty: string;
 	useFilenameAsTitle: boolean;
+	slugProperty: string;
+	useFilenameAsSlug: boolean;
 	
 	// Check toggles
 	checkContentLength: boolean;
@@ -35,12 +37,14 @@ export const DEFAULT_SETTINGS: SEOSettings = {
 	descriptionProperty: "",
 	titleProperty: "",
 	useFilenameAsTitle: false,
+	slugProperty: "",
+	useFilenameAsSlug: false,
 	checkContentLength: true,
 	checkImageNaming: true,
 	checkDuplicateContent: true,
 	checkReadingLevel: true,
 	showNotices: true,
-	defaultSort: 'warnings-desc',
+	defaultSort: 'issues-desc',
 	minContentLength: 300,
 	keywordDensityMin: 1,
 	keywordDensityMax: 2,

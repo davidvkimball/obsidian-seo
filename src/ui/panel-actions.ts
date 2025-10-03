@@ -157,6 +157,33 @@ export class PanelActions {
 	showSortMenu(event: MouseEvent, issuesFiles: SEOResults[], issuesList: HTMLElement, currentSort: string, onSortChange: (sortType: string) => void): void {
 		const menu = new Menu();
 		
+		// Issues (high to low) - DEFAULT
+		menu.addItem((item) => {
+			item.setTitle('Issues (high to low)')
+				.onClick(() => {
+					onSortChange('issues-desc');
+					this.sortAndRenderFiles(issuesFiles, issuesList, (a, b) => b.issuesCount - a.issuesCount);
+				});
+			if (currentSort === 'issues-desc') {
+				item.setIcon('check');
+			}
+		});
+		
+		// Issues (low to high)
+		menu.addItem((item) => {
+			item.setTitle('Issues (low to high)')
+				.onClick(() => {
+					onSortChange('issues-asc');
+					this.sortAndRenderFiles(issuesFiles, issuesList, (a, b) => a.issuesCount - b.issuesCount);
+				});
+			if (currentSort === 'issues-asc') {
+				item.setIcon('check');
+			}
+		});
+		
+		// Divider
+		menu.addSeparator();
+		
 		// Warnings (high to low)
 		menu.addItem((item) => {
 			item.setTitle('Warnings (high to low)')
@@ -177,33 +204,6 @@ export class PanelActions {
 					this.sortAndRenderFiles(issuesFiles, issuesList, (a, b) => a.warningsCount - b.warningsCount);
 				});
 			if (currentSort === 'warnings-asc') {
-				item.setIcon('check');
-			}
-		});
-		
-		// Divider
-		menu.addSeparator();
-		
-		// Issues (high to low)
-		menu.addItem((item) => {
-			item.setTitle('Issues (high to low)')
-				.onClick(() => {
-					onSortChange('issues-desc');
-					this.sortAndRenderFiles(issuesFiles, issuesList, (a, b) => b.issuesCount - a.issuesCount);
-				});
-			if (currentSort === 'issues-desc') {
-				item.setIcon('check');
-			}
-		});
-		
-		// Issues (low to high)
-		menu.addItem((item) => {
-			item.setTitle('Issues (low to high)')
-				.onClick(() => {
-					onSortChange('issues-asc');
-					this.sortAndRenderFiles(issuesFiles, issuesList, (a, b) => a.issuesCount - b.issuesCount);
-				});
-			if (currentSort === 'issues-asc') {
 				item.setIcon('check');
 			}
 		});

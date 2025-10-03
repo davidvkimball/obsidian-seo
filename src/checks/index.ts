@@ -38,10 +38,17 @@ export async function checkAltText(content: string, file: TFile, settings: SEOSe
 		if (missingAltText.length > 0) {
 			const count = missingAltText.length;
 			const isPlural = count > 1;
+			
+			// Extract image paths for display
+			const imagePaths = missingAltText.map(match => {
+				const pathMatch = match.match(/!\[[^\]]*\]\(([^)]+)\)/);
+				return pathMatch ? pathMatch[1] : match;
+			});
+			
 			results.push({
 				passed: false,
 				message: `${count} image${isPlural ? 's are' : ' is'} missing alt text`,
-				suggestion: "Add descriptive alt text for accessibility",
+				suggestion: `Add descriptive alt text for accessibility:<br><br>${imagePaths.map(path => `• ${path}`).join('<br>')}`,
 				severity: 'error'
 			});
 		}
@@ -51,29 +58,47 @@ export async function checkAltText(content: string, file: TFile, settings: SEOSe
 		const wikilinkImages = cleanContent.match(/!\[\[([^\]]+)\]\]/g);
 		if (wikilinkImages) {
 			const missingAltText = wikilinkImages.filter(match => !match.includes('|'));
-			if (missingAltText.length > 0) {
-				const count = missingAltText.length;
-				const isPlural = count > 1;
-				results.push({
-					passed: false,
-					message: `${count} wikilink image${isPlural ? 's are' : ' is'} missing alt text`,
-					suggestion: "Add alt text using ![[image.png|alt text]] syntax or consider using standard markdown image syntax",
-					severity: 'error'
-				});
-			}
+		if (missingAltText.length > 0) {
+			const count = missingAltText.length;
+			const isPlural = count > 1;
+			
+			// Extract image paths for display
+			const imagePaths = missingAltText.map(match => {
+				const pathMatch = match.match(/!\[\[([^\]]+)\]\]/);
+				return pathMatch ? pathMatch[1] : match;
+			});
+			
+			results.push({
+				passed: false,
+				message: `${count} wikilink image${isPlural ? 's are' : ' is'} missing alt text`,
+				suggestion: `Add alt text using ![[image.png|alt text]] syntax or consider using standard markdown image syntax:<br><br>${imagePaths.map(path => `• ${path}`).join('<br>')}`,
+				severity: 'error'
+			});
+		}
 		}
 	
 	// Check HTML images <img alt="text">
 	const htmlImages = cleanContent.match(/<img[^>]*>/g);
 	if (htmlImages) {
-		const missingAlt = htmlImages.filter(match => !match.includes('alt='));
+		const missingAlt = htmlImages.filter(img => {
+			// Check if alt attribute is missing or empty
+			const altMatch = img.match(/alt\s*=\s*["']([^"']*)["']/);
+			return !altMatch || altMatch[1].trim() === '';
+		});
 		if (missingAlt.length > 0) {
 			const count = missingAlt.length;
 			const isPlural = count > 1;
+			
+			// Extract src attributes for display
+			const imagePaths = missingAlt.map(img => {
+				const srcMatch = img.match(/src\s*=\s*["']([^"']*)["']/);
+				return srcMatch ? srcMatch[1] : 'HTML img tag';
+			});
+			
 			results.push({
 				passed: false,
 				message: `${count} HTML image${isPlural ? 's are' : ' is'} missing alt attribute`,
-				suggestion: "Add alt attribute to HTML img tags",
+				suggestion: `Add alt attribute to HTML img tags:<br><br>${imagePaths.map(path => `• ${path}`).join('<br>')}`,
 				severity: 'error'
 			});
 		}
@@ -446,19 +471,19 @@ export async function checkTitleLength(content: string, file: TFile, settings: S
 	
 	let title = '';
 	
-	// Check frontmatter first
-	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
-	if (frontmatterMatch) {
-		const frontmatter = frontmatterMatch[1];
-		const titleMatch = frontmatter.match(new RegExp(`^${settings.titleProperty}:\\s*(.+)$`, 'm'));
-		if (titleMatch) {
-			title = titleMatch[1].trim();
-		}
-	}
-	
-	// Fall back to filename if no frontmatter title and setting is enabled
-	if (!title && settings.useFilenameAsTitle) {
+	// If useFilenameAsTitle is enabled, ignore title property and use filename
+	if (settings.useFilenameAsTitle) {
 		title = file.basename;
+	} else {
+		// Check frontmatter for title property
+		const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+		if (frontmatterMatch) {
+			const frontmatter = frontmatterMatch[1];
+			const titleMatch = frontmatter.match(new RegExp(`^${settings.titleProperty}:\\s*(.+)$`, 'm'));
+			if (titleMatch) {
+				title = titleMatch[1].trim();
+			}
+		}
 	}
 	
 	// Skip check if no title found and filename fallback is disabled
@@ -839,6 +864,131 @@ export async function checkNotices(content: string, file: TFile, settings: SEOSe
 	return results;
 }
 
+export async function checkKeywordInSlug(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+	const results: SEOCheckResult[] = [];
+	
+	if (!settings.keywordProperty.trim()) {
+		return [];
+	}
+	
+	// Get keyword from frontmatter
+	const keywordMatch = content.match(new RegExp(`^${settings.keywordProperty}:\\s*(.+)$`, 'm'));
+	const keyword = keywordMatch?.[1]?.trim();
+	
+	if (!keyword) {
+		return [{
+			passed: true,
+			message: "No keyword found in frontmatter",
+			severity: 'info'
+		}];
+	}
+	
+	// Get slug from frontmatter or use filename
+	let slug = '';
+	if (settings.useFilenameAsSlug) {
+		// Use filename without extension
+		slug = file.basename;
+	} else if (settings.slugProperty.trim()) {
+		const slugMatch = content.match(new RegExp(`^${settings.slugProperty}:\\s*(.+)$`, 'm'));
+		slug = slugMatch?.[1]?.trim() || '';
+	}
+	
+	if (!slug) {
+		return [{
+			passed: true,
+			message: "No slug found",
+			severity: 'info'
+		}];
+	}
+	
+	// Check if keyword appears in slug (case-insensitive)
+	const keywordInSlug = slug.toLowerCase().includes(keyword.toLowerCase());
+	
+	if (keywordInSlug) {
+		results.push({
+			passed: true,
+			message: `Keyword "${keyword}" found in slug`,
+			severity: 'info'
+		});
+	} else {
+		results.push({
+			passed: false,
+			message: `Keyword "${keyword}" not found in slug`,
+			suggestion: `Consider including your target keyword in the slug for better SEO. Current slug: "${slug}"`,
+			severity: 'warning'
+		});
+	}
+	
+	return results;
+}
+
+export async function checkSlugFormat(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+	const results: SEOCheckResult[] = [];
+	
+	// Get slug from frontmatter or use filename
+	let slug = '';
+	if (settings.useFilenameAsSlug) {
+		// Use filename without extension
+		slug = file.basename;
+	} else if (settings.slugProperty.trim()) {
+		const slugMatch = content.match(new RegExp(`^${settings.slugProperty}:\\s*(.+)$`, 'm'));
+		slug = slugMatch?.[1]?.trim() || '';
+	}
+	
+	if (!slug) {
+		return [{
+			passed: true,
+			message: "No slug found",
+			severity: 'info'
+		}];
+	}
+	
+	// Check for problematic patterns
+	const issues: string[] = [];
+	
+	// Check for spaces
+	if (slug.includes(' ')) {
+		issues.push('contains spaces');
+	}
+	
+	// Check for "Untitled"
+	if (slug.toLowerCase().includes('untitled')) {
+		issues.push('contains "Untitled"');
+	}
+	
+	// Check for random string patterns (8+ consecutive alphanumeric characters)
+	if (slug.match(/^[a-f0-9]{8,}$/i)) {
+		issues.push('appears to be a random string');
+	}
+	
+	// Check for illegal URL characters
+	if (slug.match(/[<>:"'|?*]/)) {
+		issues.push('contains illegal URL characters');
+	}
+	
+	// Check for multiple consecutive special characters
+	if (slug.match(/[-_]{2,}/)) {
+		issues.push('has multiple consecutive separators');
+	}
+	
+	if (issues.length > 0) {
+		results.push({
+			passed: false,
+			message: `Slug format issues: ${issues.join(', ')}`,
+			suggestion: `Use kebab-case format (e.g., "my-awesome-post") or underscores (e.g., "my_awesome_post"). Current slug: "${slug}"`,
+			severity: 'warning'
+		});
+	} else {
+		results.push({
+			passed: true,
+			message: "Slug format looks good",
+			severity: 'info'
+		});
+	}
+	
+	return results;
+}
+
 // Helper functions
 function countSyllables(word: string): number {
 	word = word.toLowerCase();
@@ -873,24 +1023,18 @@ function getReadingLevelDescription(level: number): string {
 export async function checkKeywordInTitle(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
-	// Skip if no title property or keyword property is configured
-	if (!settings.titleProperty || !settings.keywordProperty) {
+	// Skip if no keyword property is configured
+	if (!settings.keywordProperty.trim()) {
 		return [];
 	}
 	
 	let title = '';
 	let keyword = '';
 	
-	// Get title from frontmatter
+	// Get keyword from frontmatter
 	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
 	if (frontmatterMatch) {
 		const frontmatter = frontmatterMatch[1];
-		
-		// Extract title
-		const titleMatch = frontmatter.match(new RegExp(`^${settings.titleProperty}:\\s*(.+)$`, 'm'));
-		if (titleMatch) {
-			title = titleMatch[1].trim();
-		}
 		
 		// Extract keyword
 		const keywordMatch = frontmatter.match(new RegExp(`^${settings.keywordProperty}:\\s*(.+)$`, 'm'));
@@ -899,9 +1043,18 @@ export async function checkKeywordInTitle(content: string, file: TFile, settings
 		}
 	}
 	
-	// Fall back to filename if no frontmatter title and setting is enabled
-	if (!title && settings.useFilenameAsTitle) {
+	// Get title - use filename if setting is enabled, otherwise use title property
+	if (settings.useFilenameAsTitle) {
 		title = file.basename;
+	} else if (settings.titleProperty.trim()) {
+		// Extract title from frontmatter
+		if (frontmatterMatch) {
+			const frontmatter = frontmatterMatch[1];
+			const titleMatch = frontmatter.match(new RegExp(`^${settings.titleProperty}:\\s*(.+)$`, 'm'));
+			if (titleMatch) {
+				title = titleMatch[1].trim();
+			}
+		}
 	}
 	
 	// Skip check if no title or keyword found

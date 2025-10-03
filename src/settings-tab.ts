@@ -33,7 +33,7 @@ export class SEOSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Keyword property')
-			.setDesc('Frontmatter property name for target keyword (e.g., targetKeyword, seo, keyword)')
+			.setDesc('Property name for target keyword (e.g., targetKeyword, seo, keyword)')
 			.addText(text => text
 				.setPlaceholder('targetKeyword')
 				.setValue(this.plugin.settings.keywordProperty)
@@ -44,7 +44,7 @@ export class SEOSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Description property')
-			.setDesc('Frontmatter property name for meta description')
+			.setDesc('Property name for meta description')
 			.addText(text => text
 				.setPlaceholder('description')
 				.setValue(this.plugin.settings.descriptionProperty)
@@ -55,7 +55,7 @@ export class SEOSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Title property')
-			.setDesc('Frontmatter property name for title (leave blank to skip title checks)')
+			.setDesc('Property name for title (leave blank to skip title checks)')
 			.addText(text => text
 				.setPlaceholder('title')
 				.setValue(this.plugin.settings.titleProperty)
@@ -65,12 +65,33 @@ export class SEOSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Use filename as title fallback')
-			.setDesc('Use filename as title when title property is not set')
+			.setName('Use file name as title')
+			.setDesc('Use file name as title instead of a property')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.useFilenameAsTitle)
 				.onChange(async (value) => {
 					this.plugin.settings.useFilenameAsTitle = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Slug property')
+			.setDesc('Property name for slug (leave blank to skip slug checks)')
+			.addText(text => text
+				.setPlaceholder('slug')
+				.setValue(this.plugin.settings.slugProperty)
+				.onChange(async (value) => {
+					this.plugin.settings.slugProperty = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Use file name as slug')
+			.setDesc('Use file name as slug instead of a property')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.useFilenameAsSlug)
+				.onChange(async (value) => {
+					this.plugin.settings.useFilenameAsSlug = value;
 					await this.plugin.saveSettings();
 				}));
 

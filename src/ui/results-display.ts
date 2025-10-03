@@ -3,6 +3,8 @@ import { SEOResults } from "../types";
 import { getDisplayPath } from "./panel-utils";
 
 export class ResultsDisplay {
+	private isCollapsed: boolean = true; // Track collapse state
+	
 	constructor(
 		private container: HTMLElement,
 		private onFileClick: (filePath: string) => Promise<void>,
@@ -10,10 +12,13 @@ export class ResultsDisplay {
 	) {}
 
 	renderResults(results: SEOResults): void {
-		// Overall score
-		const scoreEl = this.container.createEl('div', { cls: 'seo-score' });
-		const scoreText = scoreEl.createEl('span', { text: 'Score: ' });
-		const scoreNumber = scoreEl.createEl('span', { text: `${Math.round(results.overallScore)}%` });
+		// Overall score with collapsible toggle
+		const scoreEl = this.container.createEl('div', { cls: 'seo-score-header' });
+		
+		// Left side: Score text (not bold, not large)
+		const scoreText = scoreEl.createEl('div', { cls: 'seo-score-text' });
+		scoreText.createEl('span', { text: 'Score: ' });
+		const scoreNumber = scoreText.createEl('span', { text: `${Math.round(results.overallScore)}%` });
 		
 		// Apply color coding to the score
 		if (results.overallScore >= 80) {
@@ -27,26 +32,41 @@ export class ResultsDisplay {
 		}
 		
 		if (results.issuesCount > 0 || results.warningsCount > 0) {
-			const issuesSpan = scoreEl.createEl('span', { text: ` (` });
-			const issuesCount = issuesSpan.createEl('span', { 
+			scoreText.createEl('span', { text: ` (` });
+			const issuesCount = scoreText.createEl('span', { 
 				text: `${results.issuesCount} issues`,
 				cls: 'seo-issues-count-text'
 			});
-			const comma = issuesSpan.createEl('span', { text: ', ' });
-			const warningsCount = issuesSpan.createEl('span', { 
+			scoreText.createEl('span', { text: ', ' });
+			const warningsCount = scoreText.createEl('span', { 
 				text: `${results.warningsCount} warnings`,
 				cls: 'seo-warnings-count-text'
 			});
-			issuesSpan.createEl('span', { text: ')' });
+			scoreText.createEl('span', { text: ')' });
 		} else {
-			scoreEl.createEl('span', { 
+			scoreText.createEl('span', { 
 				text: ' (All checks passed!)',
 				cls: 'seo-success'
 			});
 		}
+		
+		// Right side: Toggle button (styled like global sort icon)
+		const toggleBtn = scoreEl.createEl('div', { cls: 'seo-toggle-icon' });
+		setIcon(toggleBtn, 'chevrons-down-up'); // Default: collapsed state
+		
+		toggleBtn.addEventListener('click', () => {
+			// Toggle the state
+			this.isCollapsed = !this.isCollapsed;
+			// chevrons-down-up = "collapse all", chevrons-up-down = "expand all"
+			setIcon(toggleBtn, this.isCollapsed ? 'chevrons-up-down' : 'chevrons-down-up');
+			this.toggleChecksVisibility();
+		});
 
-		// Individual checks
+		// Individual checks container
 		const checksContainer = this.container.createEl('div', { cls: 'seo-checks' });
+		
+		// Initial state: all items expanded, icon shows "collapse all"
+		this.isCollapsed = false;
 		
 		Object.entries(results.checks).forEach(([checkName, checkResults]) => {
 			if (checkResults.length === 0) return;
@@ -93,6 +113,8 @@ export class ResultsDisplay {
 
 			// Results
 			const resultsList = checkEl.createEl('ul', { cls: 'seo-results' });
+			// Start expanded
+			resultsList.style.display = 'block';
 			checkResults.forEach(result => {
 				const li = resultsList.createEl('li', { 
 					cls: `seo-result seo-${result.severity}`,
@@ -116,6 +138,16 @@ export class ResultsDisplay {
 				const icon = collapseIcon.querySelector('svg');
 				if (icon) {
 					icon.style.transform = isCollapsed ? 'rotate(0deg)' : 'rotate(-90deg)';
+				}
+				
+				// If any individual item is expanded, reset main toggle to "collapse all" state
+				if (isCollapsed) {
+					// Item was just expanded, reset main toggle to "collapse all" state
+					this.isCollapsed = false;
+					const toggleBtn = this.container.querySelector('.seo-toggle-icon') as HTMLElement;
+					if (toggleBtn) {
+						setIcon(toggleBtn, 'chevrons-down-up');
+					}
 				}
 			});
 		});
@@ -264,16 +296,52 @@ export class ResultsDisplay {
 		
 		switch (sortType) {
 			case 'warnings-desc':
-				sortedFiles.sort((a, b) => b.warningsCount - a.warningsCount);
+				// Sort by warnings (high first), then by issues (high first), then by filename A-Z
+				sortedFiles.sort((a, b) => {
+					const warningsCompare = b.warningsCount - a.warningsCount;
+					if (warningsCompare !== 0) return warningsCompare;
+					const issuesCompare = b.issuesCount - a.issuesCount;
+					if (issuesCompare !== 0) return issuesCompare;
+					const aFileName = a.file.split('/').pop() || '';
+					const bFileName = b.file.split('/').pop() || '';
+					return aFileName.localeCompare(bFileName);
+				});
 				break;
 			case 'warnings-asc':
-				sortedFiles.sort((a, b) => a.warningsCount - b.warningsCount);
+				// Sort by warnings (low first), then by issues (low first), then by filename A-Z
+				sortedFiles.sort((a, b) => {
+					const warningsCompare = a.warningsCount - b.warningsCount;
+					if (warningsCompare !== 0) return warningsCompare;
+					const issuesCompare = a.issuesCount - b.issuesCount;
+					if (issuesCompare !== 0) return issuesCompare;
+					const aFileName = a.file.split('/').pop() || '';
+					const bFileName = b.file.split('/').pop() || '';
+					return aFileName.localeCompare(bFileName);
+				});
 				break;
 			case 'issues-desc':
-				sortedFiles.sort((a, b) => b.issuesCount - a.issuesCount);
+				// Sort by issues (high first), then by warnings (high first), then by filename A-Z
+				sortedFiles.sort((a, b) => {
+					const issuesCompare = b.issuesCount - a.issuesCount;
+					if (issuesCompare !== 0) return issuesCompare;
+					const warningsCompare = b.warningsCount - a.warningsCount;
+					if (warningsCompare !== 0) return warningsCompare;
+					const aFileName = a.file.split('/').pop() || '';
+					const bFileName = b.file.split('/').pop() || '';
+					return aFileName.localeCompare(bFileName);
+				});
 				break;
 			case 'issues-asc':
-				sortedFiles.sort((a, b) => a.issuesCount - b.issuesCount);
+				// Sort by issues (low first), then by warnings (low first), then by filename A-Z
+				sortedFiles.sort((a, b) => {
+					const issuesCompare = a.issuesCount - b.issuesCount;
+					if (issuesCompare !== 0) return issuesCompare;
+					const warningsCompare = a.warningsCount - b.warningsCount;
+					if (warningsCompare !== 0) return warningsCompare;
+					const aFileName = a.file.split('/').pop() || '';
+					const bFileName = b.file.split('/').pop() || '';
+					return aFileName.localeCompare(bFileName);
+				});
 				break;
 			case 'filename-asc':
 				sortedFiles.sort((a, b) => {
@@ -296,5 +364,31 @@ export class ResultsDisplay {
 		}
 		
 		return sortedFiles;
+	}
+	
+	private toggleChecksVisibility(): void {
+		const checksContainer = this.container.querySelector('.seo-checks') as HTMLElement;
+		if (!checksContainer) return;
+		
+		// Get all individual collapse headers and force them to the appropriate state
+		const allHeaders = checksContainer.querySelectorAll('.seo-check-header');
+		allHeaders.forEach((header) => {
+			const htmlHeader = header as HTMLElement;
+			const resultsList = htmlHeader.parentElement?.querySelector('.seo-results') as HTMLElement;
+			const collapseIcon = htmlHeader.querySelector('.seo-collapse-icon svg') as HTMLElement;
+			
+			if (resultsList && collapseIcon) {
+				// Force to the state based on main toggle
+				if (this.isCollapsed) {
+					// Force all to collapsed
+					resultsList.style.display = 'none';
+					collapseIcon.style.transform = 'rotate(-90deg)';
+				} else {
+					// Force all to expanded
+					resultsList.style.display = 'block';
+					collapseIcon.style.transform = 'rotate(0deg)';
+				}
+			}
+		});
 	}
 }
