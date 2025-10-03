@@ -12,7 +12,7 @@ interface CacheEntry {
 
 const cache = new Map<string, CacheEntry>();
 const CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
-import { 
+import {
 	checkAltText, 
 	checkNakedLinks, 
 	checkHeadingOrder, 
@@ -25,7 +25,8 @@ import {
 	checkImageNaming,
 	checkDuplicateContent,
 	checkReadingLevel,
-	checkNotices
+	checkNotices,
+	checkKeywordInTitle
 } from "./checks";
 
 export async function runSEOCheck(plugin: SEOPlugin, files: TFile[]): Promise<SEOResults[]> {
@@ -66,6 +67,7 @@ async function checkFile(plugin: SEOPlugin, file: TFile, content: string): Promi
 		potentiallyBrokenLinks: await checkPotentiallyBrokenLinks(content, file, plugin.settings, plugin.app),
 		metaDescription: await checkMetaDescription(content, file, plugin.settings),
 		titleLength: await checkTitleLength(content, file, plugin.settings),
+		keywordInTitle: await checkKeywordInTitle(content, file, plugin.settings),
 		contentLength: await checkContentLength(content, file, plugin.settings),
 		imageNaming: await checkImageNaming(content, file, plugin.settings),
 		duplicateContent: await checkDuplicateContent(content, file, plugin.settings),

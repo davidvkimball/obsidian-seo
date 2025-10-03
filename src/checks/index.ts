@@ -797,10 +797,16 @@ export async function checkNotices(content: string, file: TFile, settings: SEOSe
 	// Check for wikilinks that might not render on web
 	const wikilinks = content.match(/\[\[([^\]]+)\]\]/g);
 	if (wikilinks) {
+		// Extract just the link text for display
+		const wikilinkTexts = wikilinks.map(link => {
+			const match = link.match(/\[\[([^\]]+)\]\]/);
+			return match ? match[1] : link;
+		});
+		
 		results.push({
 			passed: false,
 			message: `Found ${wikilinks.length} wikilink(s) that may not render on web`,
-			suggestion: "Consider converting to markdown links for web publishing",
+			suggestion: `Consider converting to markdown links for web publishing:<br><br>${wikilinkTexts.map(text => `• ${text}`).join('<br>')}`,
 			severity: 'warning'
 		});
 	}
@@ -808,10 +814,16 @@ export async function checkNotices(content: string, file: TFile, settings: SEOSe
 	// Check for embedded images that might not work on web
 	const embeddedImages = content.match(/!\[[^\]]*\]\([^)]+\)/g);
 	if (embeddedImages) {
+		// Extract image paths for display
+		const imagePaths = embeddedImages.map(img => {
+			const match = img.match(/!\[[^\]]*\]\(([^)]+)\)/);
+			return match ? match[1] : img;
+		});
+		
 		results.push({
 			passed: false,
 			message: `Found ${embeddedImages.length} embedded image(s) that may not work on web`,
-			suggestion: "Ensure images are properly linked and accessible",
+			suggestion: `Ensure images are properly linked and accessible:<br><br>${imagePaths.map(path => `• ${path}`).join('<br>')}`,
 			severity: 'warning'
 		});
 	}
@@ -856,4 +868,71 @@ function getReadingLevelDescription(level: number): string {
 	if (level < 10) return 'High School';
 	if (level < 12) return 'College Prep';
 	return 'College';
+}
+
+export async function checkKeywordInTitle(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+	const results: SEOCheckResult[] = [];
+	
+	// Skip if no title property or keyword property is configured
+	if (!settings.titleProperty || !settings.keywordProperty) {
+		return [];
+	}
+	
+	let title = '';
+	let keyword = '';
+	
+	// Get title from frontmatter
+	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+	if (frontmatterMatch) {
+		const frontmatter = frontmatterMatch[1];
+		
+		// Extract title
+		const titleMatch = frontmatter.match(new RegExp(`^${settings.titleProperty}:\\s*(.+)$`, 'm'));
+		if (titleMatch) {
+			title = titleMatch[1].trim();
+		}
+		
+		// Extract keyword
+		const keywordMatch = frontmatter.match(new RegExp(`^${settings.keywordProperty}:\\s*(.+)$`, 'm'));
+		if (keywordMatch) {
+			keyword = keywordMatch[1].trim();
+		}
+	}
+	
+	// Fall back to filename if no frontmatter title and setting is enabled
+	if (!title && settings.useFilenameAsTitle) {
+		title = file.basename;
+	}
+	
+	// Skip check if no title or keyword found
+	if (!title || !keyword) {
+		return [];
+	}
+	
+	// Check if keyword appears in title (case-insensitive, generous matching)
+	const titleLower = title.toLowerCase();
+	const keywordLower = keyword.toLowerCase();
+	
+	// Split keyword into words for more flexible matching
+	const keywordWords = keywordLower.split(/\s+/).filter(word => word.length > 0);
+	
+	// Check if all keyword words appear in the title
+	const allWordsFound = keywordWords.every(word => titleLower.includes(word));
+	
+	if (allWordsFound) {
+		results.push({
+			passed: true,
+			message: `Target keyword "${keyword}" found in title`,
+			severity: 'info'
+		});
+	} else {
+		results.push({
+			passed: false,
+			message: `Target keyword "${keyword}" not found in title`,
+			suggestion: "Include your target keyword in the title for better SEO",
+			severity: 'warning'
+		});
+	}
+	
+	return results;
 }

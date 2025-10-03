@@ -13,7 +13,7 @@ export class ResultsDisplay {
 		// Overall score
 		const scoreEl = this.container.createEl('div', { cls: 'seo-score' });
 		const scoreText = scoreEl.createEl('span', { text: 'Score: ' });
-		const scoreNumber = scoreEl.createEl('span', { text: `${results.overallScore}%` });
+		const scoreNumber = scoreEl.createEl('span', { text: `${Math.round(results.overallScore)}%` });
 		
 		// Apply color coding to the score
 		if (results.overallScore >= 80) {
