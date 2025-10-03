@@ -5,8 +5,8 @@ import { getDisplayPath } from "./panel-utils";
 export class ResultsDisplay {
 	constructor(
 		private container: HTMLElement,
-		private onFileClick: (filePath: string) => void,
-		private onFileAudit: (filePath: string) => void
+		private onFileClick: (filePath: string) => Promise<void>,
+		private onFileAudit: (filePath: string) => Promise<void>
 	) {}
 
 	renderResults(results: SEOResults): void {
@@ -214,9 +214,9 @@ export class ResultsDisplay {
 				cls: 'seo-file-link',
 				href: '#'
 			});
-			fileLink.addEventListener('click', (e) => {
+			fileLink.addEventListener('click', async (e) => {
 				e.preventDefault();
-				this.onFileClick(result.file);
+				await this.onFileClick(result.file);
 			});
 			
 			// Stats and audit button container
@@ -234,10 +234,10 @@ export class ResultsDisplay {
 				attr: { 'aria-label': 'Audit this note' }
 			});
 			setIcon(auditBtn, 'search-check');
-			auditBtn.addEventListener('click', (e) => {
+			auditBtn.addEventListener('click', async (e) => {
 				e.preventDefault();
 				e.stopPropagation();
-				this.onFileAudit(result.file);
+				await this.onFileAudit(result.file);
 			});
 		});
 

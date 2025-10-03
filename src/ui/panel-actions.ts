@@ -95,7 +95,7 @@ export class PanelActions {
 		}
 	}
 
-	openFile(filePath: string): void {
+	async openFile(filePath: string): Promise<void> {
 		const file = this.app.vault.getAbstractFileByPath(filePath);
 		if (file) {
 			// Check if file is already open, if so switch to it, otherwise open new tab
@@ -105,13 +105,23 @@ export class PanelActions {
 			if (existingLeaf) {
 				this.app.workspace.setActiveLeaf(existingLeaf);
 			} else {
+				// Open the file in a new tab and make it active
 				this.app.workspace.openLinkText(filePath, '', true);
+				// Wait a bit for the file to open, then find and focus it
+				setTimeout(() => {
+					const newLeaf = this.app.workspace.getLeavesOfType('markdown').find(leaf => 
+						leaf.view.getState().file === filePath
+					);
+					if (newLeaf) {
+						this.app.workspace.setActiveLeaf(newLeaf);
+					}
+				}, 100);
 			}
 		}
 	}
 
-	openFileAndAudit(filePath: string): void {
-		this.openFile(filePath);
+	async openFileAndAudit(filePath: string): Promise<void> {
+		await this.openFile(filePath);
 		
 		// Open current note panel and run audit
 		this.plugin.openCurrentPanel();
@@ -271,10 +281,10 @@ export class PanelActions {
 				attr: { 'aria-label': 'Audit this note' }
 			});
 			setIcon(auditBtn, 'search-check');
-			auditBtn.addEventListener('click', (e) => {
+			auditBtn.addEventListener('click', async (e) => {
 				e.preventDefault();
 				e.stopPropagation();
-				this.openFileAndAudit(result.file);
+				await this.openFileAndAudit(result.file);
 			});
 		});
 	}

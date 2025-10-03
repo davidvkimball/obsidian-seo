@@ -26,8 +26,8 @@ export class SEOSidePanel extends ItemView {
 		this.actions = new PanelActions(this.app, this.plugin, this.panelType);
 		this.resultsDisplay = new ResultsDisplay(
 			this.containerEl,
-			(filePath: string) => this.actions.openFile(filePath),
-			(filePath: string) => this.actions.openFileAndAudit(filePath)
+			async (filePath: string) => await this.actions.openFile(filePath),
+			async (filePath: string) => await this.actions.openFileAndAudit(filePath)
 		);
 	}
 
