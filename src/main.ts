@@ -42,8 +42,31 @@ export default class SEOPlugin extends Plugin {
 		this.realTimeChecker.registerRealTimeChecking();
 
 		// Add ribbon icon for easy access (default to global)
-		this.addRibbonIcon('search-check', 'Open SEO audit panel', () => {
+		this.addRibbonIcon('search-check', 'Open SEO audit panel', async () => {
+			// Check if panel already exists
+			const existingPanels = this.app.workspace.getLeavesOfType('seo-global-panel');
+			const isFirstRun = existingPanels.length === 0;
+			
 			this.openGlobalPanel();
+			
+			// Only trigger manual refresh if panel already existed (not first run)
+			if (!isFirstRun) {
+				setTimeout(async () => {
+					const globalPanels = this.app.workspace.getLeavesOfType('seo-global-panel');
+					if (globalPanels.length > 0) {
+						const panel = globalPanels[0];
+						if (panel.view) {
+							// Cast to SEOSidePanel and trigger refresh
+							const seoPanel = panel.view as any;
+							// Trigger the refresh logic (same as clicking the refresh button)
+							await seoPanel.actions.refreshGlobalResults();
+							// Update the panel display with new results
+							seoPanel.render();
+						}
+					}
+				}, 500);
+			}
+			// If first run, let the panel's onOpen() handle the initial scan automatically
 		});
 	}
 

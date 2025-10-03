@@ -20,6 +20,7 @@ export class PanelManager {
 	private openPanel(viewType: string, panelType: 'current' | 'global') {
 		// Try to find existing panel first
 		const existingLeaf = this.app.workspace.getLeavesOfType(viewType)[0];
+		
 		if (existingLeaf) {
 			// If panel exists, just reveal it and make it active
 			this.app.workspace.revealLeaf(existingLeaf);
@@ -30,14 +31,21 @@ export class PanelManager {
 				setTimeout(() => (existingLeaf.view as SEOSidePanel).forceIconRefresh(), 100);
 			}
 		} else {
-			// Create new panel in the right side
+			// Create new panel in the right side - use the simple, direct approach
 			const leaf = this.app.workspace.getRightLeaf(false);
+			
 			if (leaf) {
+				// Create the panel manually - this is the most reliable approach
 				const panel = new SEOSidePanel(this.plugin, panelType, leaf);
-				// Ensure icon is correct before opening
-				panel.forceIconRefresh();
 				leaf.open(panel);
 				this.app.workspace.setActiveLeaf(leaf);
+				
+				// Ensure icon loads properly after opening
+				setTimeout(() => {
+					if (leaf.view instanceof SEOSidePanel) {
+						(leaf.view as SEOSidePanel).forceIconRefresh();
+					}
+				}, 100);
 			}
 		}
 	}

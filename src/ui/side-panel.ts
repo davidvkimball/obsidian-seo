@@ -171,8 +171,10 @@ export class SEOSidePanel extends ItemView {
 					cls: 'mod-cta seo-btn seo-top-btn'
 				});
 				auditCurrentBtn.addEventListener('click', async () => {
-					auditCurrentBtn.textContent = 'Auditing...';
+					// Use a more subtle loading state to avoid flickering
+					const originalText = auditCurrentBtn.textContent;
 					auditCurrentBtn.disabled = true;
+					auditCurrentBtn.style.opacity = '0.7';
 					
 					try {
 						const result = await this.actions.checkCurrentNote();
@@ -181,8 +183,8 @@ export class SEOSidePanel extends ItemView {
 							this.render();
 						}
 					} finally {
-						auditCurrentBtn.textContent = 'Audit current note';
 						auditCurrentBtn.disabled = false;
+						auditCurrentBtn.style.opacity = '1';
 					}
 				});
 			}
