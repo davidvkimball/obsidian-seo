@@ -59,18 +59,18 @@ export async function runSEOCheck(plugin: SEOPlugin, files: TFile[]): Promise<SE
 
 async function checkFile(plugin: SEOPlugin, file: TFile, content: string): Promise<SEOResults> {
 	const checks = {
-		altText: await checkAltText(content, file, plugin.settings),
-		nakedLinks: await checkNakedLinks(content, file, plugin.settings),
-		headingOrder: await checkHeadingOrder(content, file, plugin.settings),
+		titleLength: await checkTitleLength(content, file, plugin.settings),
+		metaDescription: await checkMetaDescription(content, file, plugin.settings),
+		keywordInTitle: await checkKeywordInTitle(content, file, plugin.settings),
 		keywordDensity: await checkKeywordDensity(content, file, plugin.settings),
+		headingOrder: await checkHeadingOrder(content, file, plugin.settings),
+		contentLength: await checkContentLength(content, file, plugin.settings),
+		duplicateContent: await checkDuplicateContent(content, file, plugin.settings),
+		altText: await checkAltText(content, file, plugin.settings),
+		imageNaming: await checkImageNaming(content, file, plugin.settings),
 		brokenLinks: await checkBrokenLinks(content, file, plugin.settings, plugin.app),
 		potentiallyBrokenLinks: await checkPotentiallyBrokenLinks(content, file, plugin.settings, plugin.app),
-		metaDescription: await checkMetaDescription(content, file, plugin.settings),
-		titleLength: await checkTitleLength(content, file, plugin.settings),
-		keywordInTitle: await checkKeywordInTitle(content, file, plugin.settings),
-		contentLength: await checkContentLength(content, file, plugin.settings),
-		imageNaming: await checkImageNaming(content, file, plugin.settings),
-		duplicateContent: await checkDuplicateContent(content, file, plugin.settings),
+		nakedLinks: await checkNakedLinks(content, file, plugin.settings),
 		readingLevel: await checkReadingLevel(content, file, plugin.settings),
 		notices: await checkNotices(content, file, plugin.settings)
 	};
