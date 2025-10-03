@@ -90,16 +90,6 @@ export default class SEOPlugin extends Plugin {
 		return this.panelManager.getFilesToCheck();
 	}
 
-	// Cache management
-	clearCache() {
-		const { clearCache } = require("./seo-checker");
-		clearCache();
-	}
-
-	getCacheStats() {
-		const { getCacheStats } = require("./seo-checker");
-		return getCacheStats();
-	}
 
 
 	// Proper icon refresh using Obsidian's onLayoutReady API

@@ -1,94 +1,87 @@
-# Obsidian Sample Plugin
+# SEO Plugin for Obsidian 
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+**Ensure your public-facing notes are optimized for search engines and AI.**
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+A comprehensive SEO analysis tool for Obsidian that helps you optimize your notes for better discoverability and search engine ranking.
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+## Features
 
-## First time developing plugins?
+### **SEO Auditing**
+- **Current Note Check** - Analyze the currently open note
+- **Vault-wide Scan** - Check all notes in specified directories
 
-Quick starting guide for new plugin devs:
+### **Comprehensive SEO Checks**
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+#### **Content Quality**
+- **Content Length** - Ensures minimum word count (default: 300 words)
+- **Reading Level** - Analyzes readability and complexity
+- **Keyword Density** - Optimal keyword usage (1-2% range)
+- **Duplicate Content** - Detects similar content across notes
 
-## Releasing new releases
+#### **Technical SEO**
+- **Title Optimization** - Proper title length and structure
+- **Meta Description** - Frontmatter description validation
+- **Heading Structure** - Proper H1-H6 hierarchy
+- **Image Alt Text** - Missing alt text detection
+- **Image Naming** - SEO-friendly image filename patterns
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+#### **Link Management**
+- **Broken Links** - Detects non-existent internal links
+- **Naked Links** - Identifies unformatted URLs
+- **Link Validation** - Checks link accessibility
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+### **User Experience**
+- **Ribbon Icon** - Quick access to vault-wide analysis
+- **Side Panels** - Dedicated current note and global analysis views
+- **Flexible Sorting** - Sort by issues, warnings, or filename
+- **One-click Navigation** - Jump directly to problematic files
 
-## Adding your plugin to the community plugin list
+## Commands
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+| Command | Description |
+|---------|-------------|
+| **Open current note check** | Audit the currently open note |
+| **Open vault check** | Audit all notes in configured directories |
 
-## How to use
+## SEO Score System
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+The plugin uses a weighted scoring system that prioritizes critical SEO factors:
 
-## Manually installing the plugin
+- **Critical Issues** (10x weight): Broken links, missing titles
+- **Important Issues** (5x weight): Missing alt text, meta descriptions  
+- **Moderate Issues** (3x weight): Content length, readability
+- **Minor Issues** (1x weight): Warnings and suggestions
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+**Score Range**: 40-100 (40 = needs work, 100 = excellent)
 
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint ./src/`
+## Usage Examples
 
-## Funding URL
+### **Quick Current Note Check**
+1. Open any markdown file
+2. Use command "Open current note check" or click ribbon icon
+3. Click "Check current note" button
+4. Review issues and warnings
 
-You can include funding URLs where people who use your plugin can financially support it.
+### **Vault-wide Analysis**
+1. Configure scan directories in settings
+2. Use command "Open vault check"
+3. Click "Check all notes" for comprehensive analysis
+4. Sort results by issues, warnings, or filename
+5. Click any file to open and fix issues
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+### **Performance Optimization**
+- First scan builds cache (slower)
+- Subsequent scans use cache (much faster)
+- Cache automatically expires after 24 hours
+- Use "Clear SEO cache" for fresh analysis
 
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
-```
+## Installation
 
-If you have multiple URLs, you can also do:
+1. Clone or download this plugin into your Obsidian vault’s `.obsidian/plugins/` directory.
+2. Ensure `manifest.json`, `main.js`, and `styles.css` are in the `seo` folder.
+3. In Obsidian, go to **Settings > Community Plugins**, enable "Community Plugins" if not already enabled, and then enable "SEO."
+4. Click the settings icon next to "SEO" to configure options.
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
-```
+## Contributing
 
-## API Documentation
-
-See https://github.com/obsidianmd/obsidian-api
+Submit issues or pull requests on the [GitHub repository](https://github.com/davidvkimball/obsidian-seo). Contributions to enhance features, improve documentation, or fix bugs are welcome!
