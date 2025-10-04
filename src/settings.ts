@@ -17,6 +17,9 @@ export interface SEOSettings {
 	checkReadingLevel: boolean;
 	showNotices: boolean;
 	
+	// Publishing settings
+	publishMode: boolean;
+	
 	// UI settings
 	defaultSort: 'issues-desc' | 'issues-asc' | 'warnings-desc' | 'warnings-asc' | 'filename-asc' | 'filename-desc';
 	
@@ -41,9 +44,10 @@ export const DEFAULT_SETTINGS: SEOSettings = {
 	useFilenameAsSlug: false,
 	checkContentLength: true,
 	checkImageNaming: true,
-	checkDuplicateContent: true,
+	checkDuplicateContent: false,
 	checkReadingLevel: true,
 	showNotices: true,
+	publishMode: false,
 	defaultSort: 'issues-desc',
 	minContentLength: 300,
 	keywordDensityMin: 1,

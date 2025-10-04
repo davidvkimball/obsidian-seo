@@ -9,7 +9,8 @@ function removeCodeBlocks(content: string): string {
 		.replace(/~~~[\s\S]*?~~~/g, '') // Remove code blocks with ~~~
 		.replace(/`[^`\n]+`/g, '') // Remove inline code
 		.replace(/<[^>]*>/g, '') // Remove HTML tags (but keep text content)
-		.replace(/^---\n[\s\S]*?\n---\n/, ''); // Remove frontmatter
+		.replace(/^---\n[\s\S]*?\n---\n/, '') // Remove frontmatter
+		.replace(/::\w+\{[^}]*\}/g, ''); // Remove Obsidian callout-style blocks like ::link{url="..."}
 }
 
 // Helper function specifically for naked links - removes HTML attributes
@@ -19,7 +20,8 @@ function removeHtmlAttributes(content: string): string {
 		.replace(/~~~[\s\S]*?~~~/g, '') // Remove code blocks with ~~~
 		.replace(/`[^`\n]+`/g, '') // Remove inline code
 		.replace(/<[^>]*>/g, '') // Remove HTML tags completely
-		.replace(/^---\n[\s\S]*?\n---\n/, ''); // Remove frontmatter
+		.replace(/^---\n[\s\S]*?\n---\n/, '') // Remove frontmatter
+		.replace(/::\w+\{[^}]*\}/g, ''); // Remove Obsidian callout-style blocks like ::link{url="..."}
 }
 
 export async function checkAltText(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
@@ -302,6 +304,14 @@ export async function checkBrokenLinks(content: string, file: TFile, settings: S
 			// Check if it's a wikilink or embedded image first
 			const isWikilink = link.startsWith('[[');
 			const isEmbeddedImage = linkTarget.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i);
+			const isRelativePath = linkTarget.startsWith('/') && !linkTarget.startsWith('//');
+			
+			// In publish mode, treat relative paths as potentially broken (warning) instead of broken (error)
+			if (settings.publishMode && isRelativePath && !isEmbeddedImage) {
+				// Add to potentially broken links instead of broken links
+				// This will be handled in the checkPotentiallyBrokenLinks function
+				continue;
+			}
 			
 			if (isWikilink || isEmbeddedImage) {
 				// For wikilinks and embedded images, use Obsidian's link resolution
@@ -372,6 +382,18 @@ export async function checkPotentiallyBrokenLinks(content: string, file: TFile, 
 			// Check if it's a wikilink or embedded image first
 			const isWikilink = link.startsWith('[[');
 			const isEmbeddedImage = linkTarget.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i);
+			const isRelativePath = linkTarget.startsWith('/') && !linkTarget.startsWith('//');
+			
+			// In publish mode, show relative paths as potentially broken (warning)
+			if (settings.publishMode && isRelativePath && !isEmbeddedImage) {
+				results.push({
+					passed: false,
+					message: `Potentially broken link: ${linkTarget}`,
+					suggestion: "Relative path that may be resolved by your site generator. Verify the target page will resolve on your published site.",
+					severity: 'warning'
+				});
+				continue;
+			}
 			
 			if (isWikilink || isEmbeddedImage) {
 				// For wikilinks and embedded images, use Obsidian's link resolution

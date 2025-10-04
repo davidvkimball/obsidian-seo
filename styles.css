@@ -513,3 +513,48 @@
 }
 
 /* Ensure consistent spacing - removed problematic overflow hidden */
+
+/* Text overflow handling for long strings */
+.seo-result {
+	word-wrap: break-word;
+	word-break: break-word;
+	overflow-wrap: break-word;
+	hyphens: auto;
+}
+
+.seo-suggestion {
+	word-wrap: break-word;
+	word-break: break-word;
+	overflow-wrap: break-word;
+	hyphens: auto;
+}
+
+/* Specific handling for long URLs and links */
+.seo-result:has([href*="http"]) {
+	word-break: break-all;
+}
+
+/* Handle long text in check results */
+.seo-check .seo-results {
+	max-width: 100%;
+	overflow: hidden;
+}
+
+.seo-check .seo-result {
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* Ensure containers don't overflow */
+.seo-panel {
+	overflow-x: hidden;
+}
+
+.seo-section {
+	overflow-x: hidden;
+}
+
+.seo-check {
+	overflow-x: hidden;
+}

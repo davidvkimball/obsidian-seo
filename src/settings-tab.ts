@@ -95,6 +95,19 @@ export class SEOSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
+		// Publishing settings
+		containerEl.createEl('h2', { text: 'Publishing' });
+
+		new Setting(containerEl)
+			.setName('Publish mode')
+			.setDesc('Enable when publishing to static site generators (Astro, Jekyll, etc.). Uses flexible validation for relative paths like /page that will be resolved by your site generator.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.publishMode)
+				.onChange(async (value) => {
+					this.plugin.settings.publishMode = value;
+					await this.plugin.saveSettings();
+				}));
+
 		// Check toggles
 		containerEl.createEl('h2', { text: 'Check Options' });
 
@@ -119,6 +132,17 @@ export class SEOSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
+			.setName('Check reading level')
+			.setDesc('Enable reading level analysis')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.checkReadingLevel)
+				.onChange(async (value) => {
+					this.plugin.settings.checkReadingLevel = value;
+					await this.plugin.saveSettings();
+				}));
+
+		// Duplicate content check with performance warning
+		const duplicateContentSetting = new Setting(containerEl)
 			.setName('Check duplicate content')
 			.setDesc('Enable duplicate content detection')
 			.addToggle(toggle => toggle
@@ -128,15 +152,14 @@ export class SEOSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		new Setting(containerEl)
-			.setName('Check reading level')
-			.setDesc('Enable reading level analysis')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.checkReadingLevel)
-				.onChange(async (value) => {
-					this.plugin.settings.checkReadingLevel = value;
-					await this.plugin.saveSettings();
-				}));
+		// Add performance warning
+		const warningEl = duplicateContentSetting.descEl.createEl('div', {
+			text: '⚠️ WARNING: This feature can be very resource-intensive with large vaults and many notes. Disable for faster audits.',
+			cls: 'setting-item-description'
+		});
+		warningEl.style.color = '#ff6b6b';
+		warningEl.style.fontWeight = 'bold';
+		warningEl.style.marginTop = '4px';
 
 		new Setting(containerEl)
 			.setName('Show notices')
