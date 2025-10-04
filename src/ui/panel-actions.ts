@@ -1,7 +1,7 @@
 import { App, Notice, setIcon, Menu } from "obsidian";
 import { SEOResults } from "../types";
-import { SEOCurrentPanelViewType } from "./panel-constants";
 import { sortFiles } from "./panel-utils";
+import { SEOCurrentPanelViewType } from "./panel-constants";
 
 export class PanelActions {
 	constructor(
@@ -162,7 +162,7 @@ export class PanelActions {
 			item.setTitle('Issues (high to low)')
 				.onClick(() => {
 					onSortChange('issues-desc');
-					this.sortAndRenderFiles(issuesFiles, issuesList, (a, b) => b.issuesCount - a.issuesCount);
+					this.sortAndRenderFiles(issuesFiles, issuesList, 'issues-desc');
 				});
 			if (currentSort === 'issues-desc') {
 				item.setIcon('check');
@@ -174,7 +174,7 @@ export class PanelActions {
 			item.setTitle('Issues (low to high)')
 				.onClick(() => {
 					onSortChange('issues-asc');
-					this.sortAndRenderFiles(issuesFiles, issuesList, (a, b) => a.issuesCount - b.issuesCount);
+					this.sortAndRenderFiles(issuesFiles, issuesList, 'issues-asc');
 				});
 			if (currentSort === 'issues-asc') {
 				item.setIcon('check');
@@ -189,7 +189,7 @@ export class PanelActions {
 			item.setTitle('Warnings (high to low)')
 				.onClick(() => {
 					onSortChange('warnings-desc');
-					this.sortAndRenderFiles(issuesFiles, issuesList, (a, b) => b.warningsCount - a.warningsCount);
+					this.sortAndRenderFiles(issuesFiles, issuesList, 'warnings-desc');
 				});
 			if (currentSort === 'warnings-desc') {
 				item.setIcon('check');
@@ -201,7 +201,7 @@ export class PanelActions {
 			item.setTitle('Warnings (low to high)')
 				.onClick(() => {
 					onSortChange('warnings-asc');
-					this.sortAndRenderFiles(issuesFiles, issuesList, (a, b) => a.warningsCount - b.warningsCount);
+					this.sortAndRenderFiles(issuesFiles, issuesList, 'warnings-asc');
 				});
 			if (currentSort === 'warnings-asc') {
 				item.setIcon('check');
@@ -216,13 +216,7 @@ export class PanelActions {
 			item.setTitle('File name (A to Z)')
 				.onClick(() => {
 					onSortChange('filename-asc');
-					this.sortAndRenderFiles(issuesFiles, issuesList, (a, b) => {
-						const aFileName = a.file.split('/').pop() || '';
-						const bFileName = b.file.split('/').pop() || '';
-						const fileNameCompare = aFileName.localeCompare(bFileName);
-						if (fileNameCompare !== 0) return fileNameCompare;
-						return a.file.localeCompare(b.file);
-					});
+					this.sortAndRenderFiles(issuesFiles, issuesList, 'filename-asc');
 				});
 			if (currentSort === 'filename-asc') {
 				item.setIcon('check');
@@ -234,25 +228,19 @@ export class PanelActions {
 			item.setTitle('File name (Z to A)')
 				.onClick(() => {
 					onSortChange('filename-desc');
-					this.sortAndRenderFiles(issuesFiles, issuesList, (a, b) => {
-						const aFileName = a.file.split('/').pop() || '';
-						const bFileName = b.file.split('/').pop() || '';
-						const fileNameCompare = bFileName.localeCompare(aFileName);
-						if (fileNameCompare !== 0) return fileNameCompare;
-						return b.file.localeCompare(a.file);
-					});
+					this.sortAndRenderFiles(issuesFiles, issuesList, 'filename-desc');
 				});
 			if (currentSort === 'filename-desc') {
-					item.setIcon('check');
-				}
+				item.setIcon('check');
+			}
 		});
 		
 		menu.showAtPosition({ x: event.clientX, y: event.clientY });
 	}
 
-	private sortAndRenderFiles(issuesFiles: SEOResults[], issuesList: HTMLElement, sortFn: (a: SEOResults, b: SEOResults) => number): void {
-		// Sort the array
-		const sortedFiles = [...issuesFiles].sort(sortFn);
+	private sortAndRenderFiles(issuesFiles: SEOResults[], issuesList: HTMLElement, sortType: string): void {
+		// Sort the array using the proper sorting function
+		const sortedFiles = sortFiles([...issuesFiles], sortType);
 		
 		// Find the files list container
 		const filesListContainer = issuesList.querySelector('.seo-files-list-container');

@@ -214,10 +214,10 @@ export class ResultsDisplay {
 		const issuesList = this.container.createEl('div', { cls: 'seo-issues-list' });
 		
 		// Header with sorting buttons and collapse functionality
-		const issuesHeader = issuesList.createEl('div', { cls: 'seo-issues-header-container seo-collapsible-header' });
+		const issuesHeader = issuesList.createEl('div', { cls: 'seo-issues-header-container' });
 		
-		// Collapse icon
-		const collapseIcon = issuesHeader.createEl('span', { cls: 'seo-collapse-icon' });
+		// Collapse icon (only this should be clickable)
+		const collapseIcon = issuesHeader.createEl('span', { cls: 'seo-collapse-icon seo-collapsible-header' });
 		collapseIcon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6,9 12,15 18,9"/></svg>';
 		
 		issuesHeader.createEl('h4', { text: 'Files with issues', cls: 'seo-issues-header' });
@@ -273,13 +273,8 @@ export class ResultsDisplay {
 			});
 		});
 
-		// Add collapse functionality to the header
-		issuesHeader.addEventListener('click', (e) => {
-			// Don't collapse if clicking on the sort button
-			if ((e.target as HTMLElement).closest('.seo-sort-btn')) {
-				return;
-			}
-			
+		// Add collapse functionality to only the arrow icon
+		collapseIcon.addEventListener('click', (e) => {
 			const isCollapsed = filesListContainer.style.display === 'none';
 			filesListContainer.style.display = isCollapsed ? 'block' : 'none';
 			

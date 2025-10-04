@@ -22,34 +22,66 @@ export function sortFiles(files: SEOResults[], sortType: string): SEOResults[] {
 	
 	switch (sortType) {
 		case 'warnings-desc':
-			sortedFiles.sort((a, b) => b.warningsCount - a.warningsCount);
-			break;
-		case 'warnings-asc':
-			sortedFiles.sort((a, b) => a.warningsCount - b.warningsCount);
-			break;
-		case 'issues-desc':
-			sortedFiles.sort((a, b) => b.issuesCount - a.issuesCount);
-			break;
-		case 'issues-asc':
-			sortedFiles.sort((a, b) => a.issuesCount - b.issuesCount);
-			break;
-		case 'filename-asc':
 			sortedFiles.sort((a, b) => {
-				const aFileName = a.file.split('/').pop() || '';
-				const bFileName = b.file.split('/').pop() || '';
-				const fileNameCompare = aFileName.localeCompare(bFileName);
-				if (fileNameCompare !== 0) return fileNameCompare;
+				// Primary: warnings (high first)
+				if (b.warningsCount !== a.warningsCount) {
+					return b.warningsCount - a.warningsCount;
+				}
+				// Secondary: issues (high first)
+				if (b.issuesCount !== a.issuesCount) {
+					return b.issuesCount - a.issuesCount;
+				}
+				// Tertiary: filename A-Z
 				return a.file.localeCompare(b.file);
 			});
 			break;
-		case 'filename-desc':
+		case 'warnings-asc':
 			sortedFiles.sort((a, b) => {
-				const aFileName = a.file.split('/').pop() || '';
-				const bFileName = b.file.split('/').pop() || '';
-				const fileNameCompare = bFileName.localeCompare(aFileName);
-				if (fileNameCompare !== 0) return fileNameCompare;
-				return b.file.localeCompare(a.file);
+				// Primary: warnings (low first)
+				if (a.warningsCount !== b.warningsCount) {
+					return a.warningsCount - b.warningsCount;
+				}
+				// Secondary: issues (low first)
+				if (a.issuesCount !== b.issuesCount) {
+					return a.issuesCount - b.issuesCount;
+				}
+				// Tertiary: filename A-Z
+				return a.file.localeCompare(b.file);
 			});
+			break;
+		case 'issues-desc':
+			sortedFiles.sort((a, b) => {
+				// Primary: issues (high first)
+				if (b.issuesCount !== a.issuesCount) {
+					return b.issuesCount - a.issuesCount;
+				}
+				// Secondary: warnings (high first)
+				if (b.warningsCount !== a.warningsCount) {
+					return b.warningsCount - a.warningsCount;
+				}
+				// Tertiary: filename A-Z
+				return a.file.localeCompare(b.file);
+			});
+			break;
+		case 'issues-asc':
+			sortedFiles.sort((a, b) => {
+				// Primary: issues (low first)
+				if (a.issuesCount !== b.issuesCount) {
+					return a.issuesCount - b.issuesCount;
+				}
+				// Secondary: warnings (low first)
+				if (a.warningsCount !== b.warningsCount) {
+					return a.warningsCount - b.warningsCount;
+				}
+				// Tertiary: filename A-Z
+				return a.file.localeCompare(b.file);
+			});
+			break;
+		case 'filename-asc':
+			sortedFiles.sort((a, b) => a.file.localeCompare(b.file));
+			break;
+		case 'filename-desc':
+			sortedFiles.sort((a, b) => b.file.localeCompare(a.file));
 			break;
 	}
 	

@@ -495,16 +495,16 @@
 }
 
 /* Collapsible header for files with issues */
-.seo-issues-header-container.seo-collapsible-header {
-	cursor: pointer;
-	user-select: none;
+.seo-issues-header-container {
 	padding: 0.5rem;
 	border-radius: 4px;
-	transition: background-color 0.2s ease;
+	cursor: default;
 }
 
-.seo-issues-header-container.seo-collapsible-header:hover {
-	/* Remove hover background */
+/* Only the collapse icon should be clickable */
+.seo-collapse-icon.seo-collapsible-header {
+	cursor: default;
+	user-select: none;
 }
 
 /* Prevent layout shifts */
