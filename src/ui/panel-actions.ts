@@ -291,6 +291,6 @@ export class PanelActions {
 		if (parts.length <= 2) {
 			return fullPath; // Return as-is if no parent folder
 		}
-		return parts.slice(-2).join('/'); // Return last two parts (parent folder + filename)
+		return parts.slice(-2).join('/'); // Return last two parts (parent folder + file name)
 	}
 }

@@ -186,7 +186,7 @@ export class SEOSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Check image file names')
-			.setDesc('Enable image filename checking')
+			.setDesc('Enable image file name checking')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.checkImageNaming)
 				.onChange(async (value) => {

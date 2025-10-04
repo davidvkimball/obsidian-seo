@@ -142,9 +142,18 @@ export async function checkNakedLinks(content: string, file: TFile, settings: SE
 	const cleanContent = removeHtmlAttributes(content);
 	
 	// Find naked links (URLs without markdown link syntax)
-	const nakedLinks = cleanContent.match(/(?<!\]\()https?:\/\/[^\s\)]+/g);
+	// Use negative lookbehind to avoid matching URLs within other URLs
+	const nakedLinks = cleanContent.match(/(?<!\]\()(?<!https?:\/\/[^\s\)]*\/)https?:\/\/[^\s\)]+/g);
 	if (nakedLinks) {
 		nakedLinks.forEach((link, index) => {
+			// Skip archival URLs as they are meant to be displayed as-is
+			if (link.includes('web.archive.org/web/') || 
+				link.includes('archive.today/') ||
+				link.includes('archive.is/') ||
+				link.includes('web.archive.org/save/')) {
+				return;
+			}
+			
 			results.push({
 				passed: false,
 				message: `Naked link found: ${link}`,
@@ -525,7 +534,7 @@ export async function checkTitleLength(content: string, file: TFile, settings: S
 	
 	let title = '';
 	
-	// If useFilenameAsTitle is enabled, ignore title property and use filename
+	// If useFilenameAsTitle is enabled, ignore title property and use file name
 	if (settings.useFilenameAsTitle) {
 		title = file.basename;
 	} else {
@@ -540,7 +549,7 @@ export async function checkTitleLength(content: string, file: TFile, settings: S
 		}
 	}
 	
-	// Skip check if no title found and filename fallback is disabled
+	// Skip check if no title found and file name fallback is disabled
 	if (!title) {
 		return [];
 	}
@@ -627,14 +636,17 @@ export async function checkImageNaming(content: string, file: TFile, settings: S
 				if (fileName.includes(' ') || fileName.includes('%20')) {
 					results.push({
 						passed: false,
-						message: `Image ${index + 1} has spaces in filename: ${fileName}`,
+						message: `Image ${index + 1} has spaces in file name: ${fileName}`,
 						suggestion: "Use kebab-case or underscores instead of spaces",
 						severity: 'warning'
 					});
-				} else if (fileName.match(/^[a-f0-9]{8,}$/)) {
+				} else if (fileName.match(/^[a-f0-9]{8,}$/) || 
+						   fileName.match(/^[a-f0-9]{8,}_[A-Z0-9]+\./) ||
+						   fileName.match(/^[a-f0-9]{8,}_MD5\./) ||
+						   fileName.match(/^[a-f0-9]{20,}\./)) {
 					results.push({
 						passed: false,
-						message: `Image ${index + 1} has random filename: ${fileName}`,
+						message: `Image ${index + 1} has random file name: ${fileName}`,
 						suggestion: "Use descriptive file names",
 						severity: 'warning'
 					});
@@ -654,7 +666,7 @@ export async function checkImageNaming(content: string, file: TFile, settings: S
 				} else if (fileName.length < 5 || fileName.length > 50) {
 					results.push({
 						passed: false,
-						message: `Image ${index + 1} has inappropriate filename length: ${fileName}`,
+						message: `Image ${index + 1} exceeds suggested file name length: ${fileName}`,
 						suggestion: "Use descriptive file names between 5-50 characters",
 						severity: 'warning'
 					});
@@ -666,7 +678,7 @@ export async function checkImageNaming(content: string, file: TFile, settings: S
 	if (results.length === 0) {
 		results.push({
 			passed: true,
-			message: "All images have good filenames",
+			message: "All images have good file names",
 			severity: 'info'
 		});
 	}
@@ -925,7 +937,7 @@ export async function checkKeywordInSlug(content: string, file: TFile, settings:
 		return [];
 	}
 	
-	// If no slug property is defined and not using filename as slug, skip this check
+	// If no slug property is defined and not using file name as slug, skip this check
 	if (!settings.slugProperty.trim() && !settings.useFilenameAsSlug) {
 		return [];
 	}
@@ -944,7 +956,7 @@ export async function checkKeywordInSlug(content: string, file: TFile, settings:
 		keyword = keyword.slice(1, -1);
 	}
 	
-	// Get slug from frontmatter or use filename
+	// Get slug from frontmatter or use file name
 	const slug = getSlugFromFile(file, content, settings);
 	
 	if (!slug) {
@@ -952,7 +964,14 @@ export async function checkKeywordInSlug(content: string, file: TFile, settings:
 	}
 	
 	// Check if keyword appears in slug (case-insensitive)
-	const keywordInSlug = slug.toLowerCase().includes(keyword.toLowerCase());
+	// Convert keyword to kebab-case for comparison
+	const keywordKebabCase = keyword.toLowerCase()
+		.replace(/[^a-z0-9\s-]/g, '') // Remove special characters except spaces and hyphens
+		.replace(/\s+/g, '-') // Replace spaces with hyphens
+		.replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+		.replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+	
+	const keywordInSlug = slug.toLowerCase().includes(keywordKebabCase);
 	
 	if (keywordInSlug) {
 		results.push({
@@ -975,12 +994,12 @@ export async function checkKeywordInSlug(content: string, file: TFile, settings:
 export async function checkSlugFormat(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
-	// If no slug property is defined and not using filename as slug, skip this check
+	// If no slug property is defined and not using file name as slug, skip this check
 	if (!settings.slugProperty.trim() && !settings.useFilenameAsSlug) {
 		return [];
 	}
 	
-	// Get slug from frontmatter or use filename
+	// Get slug from frontmatter or use file name
 	const slug = getSlugFromFile(file, content, settings);
 	
 	if (!slug) {
@@ -1036,23 +1055,47 @@ export async function checkSlugFormat(content: string, file: TFile, settings: SE
 // Helper functions
 export function getDisplayName(file: TFile, content: string, settings: SEOSettings): string {
 	if (settings.useNoteTitles && settings.titleProperty.trim()) {
-		// Try to get title from frontmatter
-		const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+		// Try to get title from frontmatter - handle various formats
+		let frontmatterMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+		if (!frontmatterMatch) {
+			// Try without carriage returns
+			frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+		}
+		if (!frontmatterMatch) {
+			// Try with just dashes and any whitespace
+			frontmatterMatch = content.match(/^---\s*\n([\s\S]*?)\n\s*---/);
+		}
+
 		if (frontmatterMatch) {
 			const frontmatter = frontmatterMatch[1];
-			const titleMatch = frontmatter.match(new RegExp(`^${settings.titleProperty}:\\s*(.+?)(?:\\n|$)`, 'm'));
-			if (titleMatch && titleMatch[1].trim()) {
-				// Remove surrounding quotes if present
-				let title = titleMatch[1].trim();
-				if ((title.startsWith('"') && title.endsWith('"')) || 
-					(title.startsWith("'") && title.endsWith("'"))) {
-					title = title.slice(1, -1);
+
+			// Split by lines and look for the property
+			const lines = frontmatter.split('\n');
+
+			for (const line of lines) {
+				const trimmedLine = line.trim();
+
+				if (trimmedLine.startsWith(settings.titleProperty + ':')) {
+					// Extract the value after the colon
+					const colonIndex = trimmedLine.indexOf(':');
+					if (colonIndex !== -1) {
+						let title = trimmedLine.substring(colonIndex + 1).trim();
+
+						// Remove surrounding quotes if present
+						if ((title.startsWith('"') && title.endsWith('"')) ||
+							(title.startsWith("'") && title.endsWith("'"))) {
+							title = title.slice(1, -1);
+						}
+
+						if (title) {
+							return title;
+						}
+					}
 				}
-				return title;
 			}
 		}
 	}
-	// Fallback to filename
+	// Fallback to file name
 	return file.basename;
 }
 
@@ -1067,7 +1110,7 @@ function getSlugFromFile(file: TFile, content: string, settings: SEOSettings): s
 				return pathParts[pathParts.length - 2]; // Get parent folder name
 			}
 		}
-		// Use filename without extension
+		// Use file name without extension
 		return file.basename;
 	} else if (settings.slugProperty.trim()) {
 		const slugMatch = content.match(new RegExp(`^${settings.slugProperty}:\\s*(.+)$`, 'm'));
@@ -1134,7 +1177,7 @@ export async function checkKeywordInTitle(content: string, file: TFile, settings
 		}
 	}
 	
-	// Get title - use filename if setting is enabled, otherwise use title property
+	// Get title - use file name if setting is enabled, otherwise use title property
 	if (settings.useFilenameAsTitle) {
 		title = file.basename;
 	} else if (settings.titleProperty.trim()) {

@@ -5,7 +5,7 @@ export function getDisplayPath(fullPath: string): string {
 	if (parts.length <= 2) {
 		return fullPath; // Return as-is if no parent folder
 	}
-	return parts.slice(-2).join('/'); // Return last two parts (parent folder + filename)
+	return parts.slice(-2).join('/'); // Return last two parts (parent folder + file name)
 }
 
 export function getVaultFoldersInfo(scanDirectories: string): string {
@@ -31,7 +31,7 @@ export function sortFiles(files: SEOResults[], sortType: string): SEOResults[] {
 				if (b.issuesCount !== a.issuesCount) {
 					return b.issuesCount - a.issuesCount;
 				}
-				// Tertiary: filename A-Z
+				// Tertiary: file name A-Z
 				return a.file.localeCompare(b.file);
 			});
 			break;
@@ -45,7 +45,7 @@ export function sortFiles(files: SEOResults[], sortType: string): SEOResults[] {
 				if (a.issuesCount !== b.issuesCount) {
 					return a.issuesCount - b.issuesCount;
 				}
-				// Tertiary: filename A-Z
+				// Tertiary: file name A-Z
 				return a.file.localeCompare(b.file);
 			});
 			break;
@@ -59,7 +59,7 @@ export function sortFiles(files: SEOResults[], sortType: string): SEOResults[] {
 				if (b.warningsCount !== a.warningsCount) {
 					return b.warningsCount - a.warningsCount;
 				}
-				// Tertiary: filename A-Z
+				// Tertiary: file name A-Z
 				return a.file.localeCompare(b.file);
 			});
 			break;
@@ -73,7 +73,7 @@ export function sortFiles(files: SEOResults[], sortType: string): SEOResults[] {
 				if (a.warningsCount !== b.warningsCount) {
 					return a.warningsCount - b.warningsCount;
 				}
-				// Tertiary: filename A-Z
+				// Tertiary: file name A-Z
 				return a.file.localeCompare(b.file);
 			});
 			break;

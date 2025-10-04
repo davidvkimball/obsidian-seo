@@ -72,7 +72,7 @@ async function checkFile(plugin: SEOPlugin, file: TFile, content: string): Promi
 		contentLength: await checkContentLength(content, file, plugin.settings),
 		duplicateContent: await checkDuplicateContent(content, file, plugin.settings),
 		altText: await checkAltText(content, file, plugin.settings),
-		imageNaming: await checkImageNaming(content, file, plugin.settings),
+		imageFileNames: await checkImageNaming(content, file, plugin.settings),
 		brokenLinks: await checkBrokenLinks(content, file, plugin.settings, plugin.app),
 		nakedLinks: await checkNakedLinks(content, file, plugin.settings),
 		readingLevel: await checkReadingLevel(content, file, plugin.settings),

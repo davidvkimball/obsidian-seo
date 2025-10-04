@@ -291,7 +291,7 @@ export class ResultsDisplay {
 		
 		switch (sortType) {
 			case 'warnings-desc':
-				// Sort by warnings (high first), then by issues (high first), then by filename A-Z
+				// Sort by warnings (high first), then by issues (high first), then by file name A-Z
 				sortedFiles.sort((a, b) => {
 					const warningsCompare = b.warningsCount - a.warningsCount;
 					if (warningsCompare !== 0) return warningsCompare;
@@ -303,7 +303,7 @@ export class ResultsDisplay {
 				});
 				break;
 			case 'warnings-asc':
-				// Sort by warnings (low first), then by issues (low first), then by filename A-Z
+				// Sort by warnings (low first), then by issues (low first), then by file name A-Z
 				sortedFiles.sort((a, b) => {
 					const warningsCompare = a.warningsCount - b.warningsCount;
 					if (warningsCompare !== 0) return warningsCompare;
@@ -315,7 +315,7 @@ export class ResultsDisplay {
 				});
 				break;
 			case 'issues-desc':
-				// Sort by issues (high first), then by warnings (high first), then by filename A-Z
+				// Sort by issues (high first), then by warnings (high first), then by file name A-Z
 				sortedFiles.sort((a, b) => {
 					const issuesCompare = b.issuesCount - a.issuesCount;
 					if (issuesCompare !== 0) return issuesCompare;
@@ -327,7 +327,7 @@ export class ResultsDisplay {
 				});
 				break;
 			case 'issues-asc':
-				// Sort by issues (low first), then by warnings (low first), then by filename A-Z
+				// Sort by issues (low first), then by warnings (low first), then by file name A-Z
 				sortedFiles.sort((a, b) => {
 					const issuesCompare = a.issuesCount - b.issuesCount;
 					if (issuesCompare !== 0) return issuesCompare;

@@ -21,7 +21,7 @@ export interface SEOResults {
 		metaDescription: SEOCheckResult[];
 		titleLength: SEOCheckResult[];
 		contentLength: SEOCheckResult[];
-		imageNaming: SEOCheckResult[];
+		imageFileNames: SEOCheckResult[];
 		duplicateContent: SEOCheckResult[];
 		readingLevel: SEOCheckResult[];
 		potentiallyBrokenEmbeds: SEOCheckResult[];
