@@ -31,17 +31,14 @@ export function registerCommands(plugin: SEOPlugin) {
 			const existingPanels = plugin.app.workspace.getLeavesOfType('seo-global-panel');
 			const isFirstRun = existingPanels.length === 0;
 			
-			console.log('Vault command: isFirstRun =', isFirstRun);
 			
 			plugin.openGlobalPanel();
 			
 			// Always check if panel opened successfully
 			setTimeout(async () => {
 				const globalPanels = plugin.app.workspace.getLeavesOfType('seo-global-panel');
-				console.log('Vault command: panels found after open =', globalPanels.length);
 				
 				if (globalPanels.length === 0) {
-					console.log('ERROR: Panel did not open! Trying fallback...');
 					// Fallback: try to open again
 					plugin.openGlobalPanel();
 					return;
@@ -53,13 +50,10 @@ export function registerCommands(plugin: SEOPlugin) {
 					
 					// If first run, let onOpen() handle it automatically
 					if (isFirstRun) {
-						console.log('First run: panel will handle loading state automatically');
 						// Force the panel to be visible
 						plugin.app.workspace.revealLeaf(panel);
 						plugin.app.workspace.setActiveLeaf(panel);
-						console.log('Panel forced to be active');
 					} else {
-						console.log('Subsequent run: triggering refresh');
 						// Trigger the refresh logic (same as clicking the refresh button)
 						await seoPanel.actions.refreshGlobalResults();
 						// Update the panel display with new results
