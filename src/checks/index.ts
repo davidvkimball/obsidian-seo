@@ -27,6 +27,10 @@ function removeHtmlAttributes(content: string): string {
 export async function checkAltText(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
+	if (!settings.checkAltText) {
+		return [];
+	}
+	
 	// Remove code blocks to avoid false positives
 	const cleanContent = removeCodeBlocks(content);
 	
@@ -130,6 +134,10 @@ export async function checkAltText(content: string, file: TFile, settings: SEOSe
 export async function checkNakedLinks(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
+	if (!settings.checkNakedLinks) {
+		return [];
+	}
+	
 	// Remove code blocks and HTML content to avoid false positives
 	const cleanContent = removeHtmlAttributes(content);
 	
@@ -159,6 +167,10 @@ export async function checkNakedLinks(content: string, file: TFile, settings: SE
 
 export async function checkHeadingOrder(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
+	
+	if (!settings.checkHeadingOrder) {
+		return [];
+	}
 	
 	// Remove frontmatter
 	let bodyContent = content.replace(/^---\n[\s\S]*?\n---\n/, '');
@@ -237,7 +249,12 @@ export async function checkKeywordDensity(content: string, file: TFile, settings
 		return [];
 	}
 	
-	const keyword = keywordMatch[1].trim();
+	let keyword = keywordMatch[1].trim();
+	// Strip surrounding quotes if present
+	if ((keyword.startsWith('"') && keyword.endsWith('"')) ||
+		(keyword.startsWith("'") && keyword.endsWith("'"))) {
+		keyword = keyword.slice(1, -1);
+	}
 	const bodyContent = content.replace(/^---\n[\s\S]*?\n---\n/, '');
 	const wordCount = bodyContent.split(/\s+/).filter(word => word.length > 0).length;
 	const keywordCount = (bodyContent.toLowerCase().match(new RegExp(keyword.toLowerCase(), 'g')) || []).length;
@@ -277,6 +294,10 @@ export async function checkKeywordDensity(content: string, file: TFile, settings
 
 export async function checkBrokenLinks(content: string, file: TFile, settings: SEOSettings, app?: any): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
+	
+	if (!settings.checkBrokenLinks) {
+		return [];
+	}
 	
 	// Remove code blocks to avoid false positives
 	const cleanContent = removeCodeBlocks(content);
@@ -356,6 +377,10 @@ export async function checkBrokenLinks(content: string, file: TFile, settings: S
 
 export async function checkPotentiallyBrokenLinks(content: string, file: TFile, settings: SEOSettings, app?: any): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
+	
+	if (!settings.checkPotentiallyBrokenContent) {
+		return [];
+	}
 	
 	// Remove code blocks to avoid false positives
 	const cleanContent = removeCodeBlocks(content);
@@ -490,6 +515,10 @@ export async function checkMetaDescription(content: string, file: TFile, setting
 export async function checkTitleLength(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
+	if (!settings.checkTitleLength) {
+		return [];
+	}
+	
 	if (!settings.titleProperty) {
 		return [];
 	}
@@ -547,11 +576,7 @@ export async function checkContentLength(content: string, file: TFile, settings:
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.checkContentLength) {
-		return [{
-			passed: true,
-			message: "Content length check disabled",
-			severity: 'info'
-		}];
+		return [];
 	}
 	
 	// Remove only frontmatter and code blocks - count everything a reader would see
@@ -584,11 +609,7 @@ export async function checkImageNaming(content: string, file: TFile, settings: S
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.checkImageNaming) {
-		return [{
-			passed: true,
-			message: "Image naming check disabled",
-			severity: 'info'
-		}];
+		return [];
 	}
 	
 	// Remove code blocks to avoid false positives
@@ -614,7 +635,7 @@ export async function checkImageNaming(content: string, file: TFile, settings: S
 					results.push({
 						passed: false,
 						message: `Image ${index + 1} has random filename: ${fileName}`,
-						suggestion: "Use descriptive filenames",
+						suggestion: "Use descriptive file names",
 						severity: 'warning'
 					});
 				} else if (fileName.toLowerCase().includes('pasted') || 
@@ -626,15 +647,15 @@ export async function checkImageNaming(content: string, file: TFile, settings: S
 						   fileName.match(/^screenshot\d*\.(png|jpg|jpeg|gif|webp)$/i)) {
 					results.push({
 						passed: false,
-						message: `Image ${index + 1} has generic filename: ${fileName}`,
-						suggestion: "Use descriptive filenames",
+						message: `Image ${index + 1} has a potentially generic file name: ${fileName}`,
+						suggestion: "Use descriptive file names",
 						severity: 'warning'
 					});
 				} else if (fileName.length < 5 || fileName.length > 50) {
 					results.push({
 						passed: false,
 						message: `Image ${index + 1} has inappropriate filename length: ${fileName}`,
-						suggestion: "Use descriptive filenames between 5-50 characters",
+						suggestion: "Use descriptive file names between 5-50 characters",
 						severity: 'warning'
 					});
 				}
@@ -762,11 +783,7 @@ export async function checkReadingLevel(content: string, file: TFile, settings: 
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.checkReadingLevel) {
-		return [{
-			passed: true,
-			message: "Reading level check disabled",
-			severity: 'info'
-		}];
+		return [];
 	}
 	
 	// Simple Flesch-Kincaid reading level calculation
@@ -838,44 +855,54 @@ export async function checkReadingLevel(content: string, file: TFile, settings: 
 export async function checkNotices(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
-	if (!settings.showNotices) {
-		return [{
-			passed: true,
-			message: "Notices check disabled",
-			severity: 'info'
-		}];
+	if (!settings.checkPotentiallyBrokenContent) {
+		return [];
 	}
 	
-	// Check for wikilinks that might not render on web
-	const wikilinks = content.match(/\[\[([^\]]+)\]\]/g);
-	if (wikilinks) {
-		// Extract just the link text for display
-		const wikilinkTexts = wikilinks.map(link => {
-			const match = link.match(/\[\[([^\]]+)\]\]/);
-			return match ? match[1] : link;
-		});
-		
-		results.push({
-			passed: false,
-			message: `Found ${wikilinks.length} wikilink(s) that may not render on web`,
-			suggestion: `Consider converting to markdown links for web publishing:<br><br>${wikilinkTexts.map(text => `• ${text}`).join('<br>')}`,
-			severity: 'warning'
-		});
-	}
+	// Check for embedded media that might not work on web publishing
+	const embeddedMedia: string[] = [];
 	
-	// Check for embedded images that might not work on web
-	const embeddedImages = content.match(/!\[[^\]]*\]\([^)]+\)/g);
-	if (embeddedImages) {
-		// Extract image paths for display
-		const imagePaths = embeddedImages.map(img => {
+	// Check for markdown embedded images ![alt](src)
+	const markdownImages = content.match(/!\[[^\]]*\]\([^)]+\)/g);
+	if (markdownImages) {
+		embeddedMedia.push(...markdownImages.map(img => {
 			const match = img.match(/!\[[^\]]*\]\(([^)]+)\)/);
 			return match ? match[1] : img;
-		});
-		
+		}));
+	}
+	
+	// Check for wikilink embedded images ![[image.png]]
+	const wikilinkImages = content.match(/!\[\[([^\]]+)\]\]/g);
+	if (wikilinkImages) {
+		embeddedMedia.push(...wikilinkImages.map(img => {
+			const match = img.match(/!\[\[([^\]]+)\]\]/);
+			return match ? match[1] : img;
+		}));
+	}
+	
+	// Check for embedded videos (common formats)
+	const videoEmbeds = content.match(/!\[[^\]]*\]\([^)]+\.(mp4|webm|ogg|mov|avi|mkv)(\?[^)]*)?\)/gi);
+	if (videoEmbeds) {
+		embeddedMedia.push(...videoEmbeds.map(video => {
+			const match = video.match(/!\[[^\]]*\]\(([^)]+)\)/);
+			return match ? match[1] : video;
+		}));
+	}
+	
+	// Check for embedded audio (common formats)
+	const audioEmbeds = content.match(/!\[[^\]]*\]\([^)]+\.(mp3|wav|ogg|m4a|flac|aac)(\?[^)]*)?\)/gi);
+	if (audioEmbeds) {
+		embeddedMedia.push(...audioEmbeds.map(audio => {
+			const match = audio.match(/!\[[^\]]*\]\(([^)]+)\)/);
+			return match ? match[1] : audio;
+		}));
+	}
+	
+	if (embeddedMedia.length > 0) {
 		results.push({
 			passed: false,
-			message: `Found ${embeddedImages.length} embedded image(s) that may not work on web`,
-			suggestion: `Ensure images are properly linked and accessible:<br><br>${imagePaths.map(path => `• ${path}`).join('<br>')}`,
+			message: `Found ${embeddedMedia.length} embedded media file(s) that may not work on web publishing`,
+			suggestion: `Verify these media files will be accessible on your published site:<br><br>${embeddedMedia.map(path => `• ${path}`).join('<br>')}`,
 			severity: 'warning'
 		});
 	}
@@ -883,7 +910,7 @@ export async function checkNotices(content: string, file: TFile, settings: SEOSe
 	if (results.length === 0) {
 		results.push({
 			passed: true,
-			message: "No web compatibility issues found",
+			message: "No embedded media compatibility issues found",
 			severity: 'info'
 		});
 	}
@@ -898,27 +925,30 @@ export async function checkKeywordInSlug(content: string, file: TFile, settings:
 		return [];
 	}
 	
+	// If no slug property is defined and not using filename as slug, skip this check
+	if (!settings.slugProperty.trim() && !settings.useFilenameAsSlug) {
+		return [];
+	}
+	
 	// Get keyword from frontmatter
 	const keywordMatch = content.match(new RegExp(`^${settings.keywordProperty}:\\s*(.+)$`, 'm'));
-	const keyword = keywordMatch?.[1]?.trim();
+	let keyword = keywordMatch?.[1]?.trim();
 	
 	if (!keyword) {
-		return [{
-			passed: true,
-			message: "No keyword found in frontmatter",
-			severity: 'info'
-		}];
+		return [];
+	}
+	
+	// Strip surrounding quotes if present
+	if ((keyword.startsWith('"') && keyword.endsWith('"')) ||
+		(keyword.startsWith("'") && keyword.endsWith("'"))) {
+		keyword = keyword.slice(1, -1);
 	}
 	
 	// Get slug from frontmatter or use filename
 	const slug = getSlugFromFile(file, content, settings);
 	
 	if (!slug) {
-		return [{
-			passed: true,
-			message: "No slug found",
-			severity: 'info'
-		}];
+		return [];
 	}
 	
 	// Check if keyword appears in slug (case-insensitive)
@@ -945,15 +975,16 @@ export async function checkKeywordInSlug(content: string, file: TFile, settings:
 export async function checkSlugFormat(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
+	// If no slug property is defined and not using filename as slug, skip this check
+	if (!settings.slugProperty.trim() && !settings.useFilenameAsSlug) {
+		return [];
+	}
+	
 	// Get slug from frontmatter or use filename
 	const slug = getSlugFromFile(file, content, settings);
 	
 	if (!slug) {
-		return [{
-			passed: true,
-			message: "No slug found",
-			severity: 'info'
-		}];
+		return [];
 	}
 	
 	// Check for problematic patterns
@@ -1009,7 +1040,7 @@ export function getDisplayName(file: TFile, content: string, settings: SEOSettin
 		const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
 		if (frontmatterMatch) {
 			const frontmatter = frontmatterMatch[1];
-			const titleMatch = frontmatter.match(new RegExp(`^${settings.titleProperty}:\\s*(.+)$`, 'm'));
+			const titleMatch = frontmatter.match(new RegExp(`^${settings.titleProperty}:\\s*(.+?)(?:\\n|$)`, 'm'));
 			if (titleMatch && titleMatch[1].trim()) {
 				// Remove surrounding quotes if present
 				let title = titleMatch[1].trim();
@@ -1095,6 +1126,11 @@ export async function checkKeywordInTitle(content: string, file: TFile, settings
 		const keywordMatch = frontmatter.match(new RegExp(`^${settings.keywordProperty}:\\s*(.+)$`, 'm'));
 		if (keywordMatch) {
 			keyword = keywordMatch[1].trim();
+			// Strip surrounding quotes if present
+			if ((keyword.startsWith('"') && keyword.endsWith('"')) ||
+				(keyword.startsWith("'") && keyword.endsWith("'"))) {
+				keyword = keyword.slice(1, -1);
+			}
 		}
 	}
 	

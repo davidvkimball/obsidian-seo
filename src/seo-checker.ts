@@ -74,10 +74,10 @@ async function checkFile(plugin: SEOPlugin, file: TFile, content: string): Promi
 		altText: await checkAltText(content, file, plugin.settings),
 		imageNaming: await checkImageNaming(content, file, plugin.settings),
 		brokenLinks: await checkBrokenLinks(content, file, plugin.settings, plugin.app),
-		potentiallyBrokenLinks: await checkPotentiallyBrokenLinks(content, file, plugin.settings, plugin.app),
 		nakedLinks: await checkNakedLinks(content, file, plugin.settings),
 		readingLevel: await checkReadingLevel(content, file, plugin.settings),
-		notices: await checkNotices(content, file, plugin.settings)
+		potentiallyBrokenLinks: await checkPotentiallyBrokenLinks(content, file, plugin.settings, plugin.app),
+		potentiallyBrokenEmbeds: await checkNotices(content, file, plugin.settings)
 	};
 
 	// Calculate overall score and counts

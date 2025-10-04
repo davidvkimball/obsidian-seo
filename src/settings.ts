@@ -12,11 +12,16 @@ export interface SEOSettings {
 	parentFolderSlugFilename: string;
 	
 	// Check toggles
-	checkContentLength: boolean;
+	checkTitleLength: boolean;
+	checkHeadingOrder: boolean;
+	checkAltText: boolean;
 	checkImageNaming: boolean;
+	checkBrokenLinks: boolean;
+	checkNakedLinks: boolean;
+	checkContentLength: boolean;
 	checkDuplicateContent: boolean;
 	checkReadingLevel: boolean;
-	showNotices: boolean;
+	checkPotentiallyBrokenContent: boolean;
 	useNoteTitles: boolean;
 	
 	// Publishing settings
@@ -45,11 +50,16 @@ export const DEFAULT_SETTINGS: SEOSettings = {
 	slugProperty: "",
 	useFilenameAsSlug: false,
 	parentFolderSlugFilename: "",
-	checkContentLength: true,
+	checkTitleLength: true,
+	checkHeadingOrder: true,
+	checkAltText: true,
 	checkImageNaming: true,
+	checkBrokenLinks: true,
+	checkNakedLinks: true,
+	checkContentLength: true,
 	checkDuplicateContent: false,
 	checkReadingLevel: true,
-	showNotices: true,
+	checkPotentiallyBrokenContent: true,
 	useNoteTitles: false,
 	publishMode: false,
 	defaultSort: 'issues-desc',

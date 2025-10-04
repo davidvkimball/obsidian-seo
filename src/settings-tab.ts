@@ -14,7 +14,7 @@ export class SEOSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl('h2', { text: 'Scope' });
+		containerEl.createEl('h2', { text: 'Global' });
 
 		// Directory settings
 		new Setting(containerEl)
@@ -25,6 +25,16 @@ export class SEOSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.scanDirectories)
 				.onChange(async (value) => {
 					this.plugin.settings.scanDirectories = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Use note titles instead of file names')
+			.setDesc('Display note titles from frontmatter instead of file names in the issues list and current note audit')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.useNoteTitles)
+				.onChange(async (value) => {
+					this.plugin.settings.useNoteTitles = value;
 					await this.plugin.saveSettings();
 				}));
 
@@ -111,8 +121,28 @@ export class SEOSettingTab extends PluginSettingTab {
 					}));
 		}
 
-		// Check toggles
+		// Check toggles - in correct order
 		containerEl.createEl('h2', { text: 'Check Options' });
+
+		new Setting(containerEl)
+			.setName('Check title length')
+			.setDesc('Enable title length checking')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.checkTitleLength)
+				.onChange(async (value) => {
+					this.plugin.settings.checkTitleLength = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Check heading order')
+			.setDesc('Enable heading hierarchy checking')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.checkHeadingOrder)
+				.onChange(async (value) => {
+					this.plugin.settings.checkHeadingOrder = value;
+					await this.plugin.saveSettings();
+				}));
 
 		new Setting(containerEl)
 			.setName('Check content length')
@@ -121,26 +151,6 @@ export class SEOSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.checkContentLength)
 				.onChange(async (value) => {
 					this.plugin.settings.checkContentLength = value;
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
-			.setName('Check image naming')
-			.setDesc('Enable image filename checking')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.checkImageNaming)
-				.onChange(async (value) => {
-					this.plugin.settings.checkImageNaming = value;
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
-			.setName('Check reading level')
-			.setDesc('Enable reading level analysis')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.checkReadingLevel)
-				.onChange(async (value) => {
-					this.plugin.settings.checkReadingLevel = value;
 					await this.plugin.saveSettings();
 				}));
 
@@ -165,12 +175,62 @@ export class SEOSettingTab extends PluginSettingTab {
 		warningEl.style.marginTop = '4px';
 
 		new Setting(containerEl)
-			.setName('Show notices')
-			.setDesc('Show web compatibility notices (wikilinks, embedded images)')
+			.setName('Check alt text')
+			.setDesc('Enable alt text checking for images')
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.showNotices)
+				.setValue(this.plugin.settings.checkAltText)
 				.onChange(async (value) => {
-					this.plugin.settings.showNotices = value;
+					this.plugin.settings.checkAltText = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Check image file names')
+			.setDesc('Enable image filename checking')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.checkImageNaming)
+				.onChange(async (value) => {
+					this.plugin.settings.checkImageNaming = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Check broken links')
+			.setDesc('Enable broken link detection')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.checkBrokenLinks)
+				.onChange(async (value) => {
+					this.plugin.settings.checkBrokenLinks = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Check naked links')
+			.setDesc('Enable naked URL detection')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.checkNakedLinks)
+				.onChange(async (value) => {
+					this.plugin.settings.checkNakedLinks = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Check reading level')
+			.setDesc('Enable reading level analysis')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.checkReadingLevel)
+				.onChange(async (value) => {
+					this.plugin.settings.checkReadingLevel = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Check potentially broken content')
+			.setDesc('Check for potentially broken markdown or wikilink-based embedded media that may not work on web publishing')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.checkPotentiallyBrokenContent)
+				.onChange(async (value) => {
+					this.plugin.settings.checkPotentiallyBrokenContent = value;
 					await this.plugin.saveSettings();
 				}));
 
@@ -181,16 +241,6 @@ export class SEOSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.publishMode)
 				.onChange(async (value) => {
 					this.plugin.settings.publishMode = value;
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(containerEl)
-			.setName('Use note titles instead of file names')
-			.setDesc('Display note titles from frontmatter instead of file names in the issues list and current note audit')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.useNoteTitles)
-				.onChange(async (value) => {
-					this.plugin.settings.useNoteTitles = value;
 					await this.plugin.saveSettings();
 				}));
 

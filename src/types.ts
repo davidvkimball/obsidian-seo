@@ -24,7 +24,7 @@ export interface SEOResults {
 		imageNaming: SEOCheckResult[];
 		duplicateContent: SEOCheckResult[];
 		readingLevel: SEOCheckResult[];
-		notices: SEOCheckResult[];
+		potentiallyBrokenEmbeds: SEOCheckResult[];
 	};
 	overallScore: number;
 	issuesCount: number;

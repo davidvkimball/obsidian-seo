@@ -217,6 +217,8 @@ export class SEOSidePanel extends ItemView {
 						const result = await this.actions.checkCurrentNote();
 						if (result) {
 							this.currentNoteResults = result;
+							// Update global results if they exist
+							this.updateGlobalResultsIfExists(result);
 							this.render();
 						}
 					} finally {
@@ -246,6 +248,44 @@ export class SEOSidePanel extends ItemView {
 		} catch (error) {
 			console.error('Error rendering SEO panel:', error);
 			this.containerEl.createEl('div', { text: 'Error loading SEO panel. Please try again.' });
+		}
+	}
+
+	private updateGlobalResultsIfExists(currentResult: SEOResults): void {
+		// Only update if global results exist
+		if (this.plugin.settings.cachedGlobalResults && this.plugin.settings.cachedGlobalResults.length > 0) {
+			// Find the file in global results and update it
+			const globalResults = this.plugin.settings.cachedGlobalResults;
+			const existingIndex = globalResults.findIndex(r => r.file === currentResult.file);
+			
+			if (existingIndex !== -1) {
+				// Update existing result
+				globalResults[existingIndex] = currentResult;
+			} else {
+				// Add new result if not found (shouldn't happen normally)
+				globalResults.push(currentResult);
+			}
+			
+			// Save updated results
+			this.plugin.saveSettings();
+			
+			// Update global panel if it's open
+			this.updateGlobalPanelIfOpen();
+		}
+	}
+
+	private updateGlobalPanelIfOpen(): void {
+		// Find and update the global panel if it's open
+		const globalPanels = this.app.workspace.getLeavesOfType('seo-global-panel');
+		if (globalPanels.length > 0) {
+			const globalPanel = globalPanels[0];
+			if (globalPanel.view) {
+				const seoPanel = globalPanel.view as any;
+				// Update the global results in the panel
+				seoPanel.globalResults = [...this.plugin.settings.cachedGlobalResults];
+				// Re-render the panel
+				seoPanel.render();
+			}
 		}
 	}
 
