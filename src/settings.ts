@@ -21,7 +21,8 @@ export interface SEOSettings {
 	checkContentLength: boolean;
 	checkDuplicateContent: boolean;
 	checkReadingLevel: boolean;
-	checkPotentiallyBrokenContent: boolean;
+	checkPotentiallyBrokenLinks: boolean;
+	checkPotentiallyBrokenEmbeds: boolean;
 	useNoteTitles: boolean;
 	
 	// Publishing settings
@@ -59,7 +60,8 @@ export const DEFAULT_SETTINGS: SEOSettings = {
 	checkContentLength: true,
 	checkDuplicateContent: false,
 	checkReadingLevel: true,
-	checkPotentiallyBrokenContent: true,
+	checkPotentiallyBrokenLinks: true,
+	checkPotentiallyBrokenEmbeds: true,
 	useNoteTitles: false,
 	publishMode: false,
 	defaultSort: 'issues-desc',

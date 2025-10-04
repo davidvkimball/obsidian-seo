@@ -387,7 +387,7 @@ export async function checkBrokenLinks(content: string, file: TFile, settings: S
 export async function checkPotentiallyBrokenLinks(content: string, file: TFile, settings: SEOSettings, app?: any): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
-	if (!settings.checkPotentiallyBrokenContent) {
+	if (!settings.checkPotentiallyBrokenLinks) {
 		return [];
 	}
 	
@@ -651,12 +651,13 @@ export async function checkImageNaming(content: string, file: TFile, settings: S
 						severity: 'warning'
 					});
 				} else if (fileName.toLowerCase().includes('pasted') || 
-						   fileName.toLowerCase().includes('image') ||
 						   fileName.toLowerCase().includes('untitled') ||
 						   fileName.toLowerCase().includes('photo') ||
+						   // Only flag generic screenshots (no descriptive content)
+						   fileName.match(/^screenshot\d*\.(png|jpg|jpeg|gif|webp)$/i) ||
+						   // Flag screenshots with only random characters
 						   (fileName.toLowerCase().includes('screenshot') && 
-						    (fileName.match(/[a-f0-9]{6,}/) || fileName.includes('_') || fileName.includes('-'))) ||
-						   fileName.match(/^screenshot\d*\.(png|jpg|jpeg|gif|webp)$/i)) {
+						    fileName.match(/^screenshot[a-f0-9]{6,}\.(png|jpg|jpeg|gif|webp)$/i))) {
 					results.push({
 						passed: false,
 						message: `Image ${index + 1} has a potentially generic file name: ${fileName}`,
@@ -867,7 +868,7 @@ export async function checkReadingLevel(content: string, file: TFile, settings: 
 export async function checkNotices(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
-	if (!settings.checkPotentiallyBrokenContent) {
+	if (!settings.checkPotentiallyBrokenEmbeds) {
 		return [];
 	}
 	

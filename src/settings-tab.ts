@@ -225,12 +225,22 @@ export class SEOSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Check potentially broken content')
+			.setName('Check potentially broken links')
+			.setDesc('Check for potentially broken internal links that may not work on web publishing')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.checkPotentiallyBrokenLinks)
+				.onChange(async (value) => {
+					this.plugin.settings.checkPotentiallyBrokenLinks = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Check potentially broken embeds')
 			.setDesc('Check for potentially broken markdown or wikilink-based embedded media that may not work on web publishing')
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.checkPotentiallyBrokenContent)
+				.setValue(this.plugin.settings.checkPotentiallyBrokenEmbeds)
 				.onChange(async (value) => {
-					this.plugin.settings.checkPotentiallyBrokenContent = value;
+					this.plugin.settings.checkPotentiallyBrokenEmbeds = value;
 					await this.plugin.saveSettings();
 				}));
 
