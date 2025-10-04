@@ -148,17 +148,28 @@ export class PanelActions {
 		}, 200);
 	}
 
-	showSortMenu(event: MouseEvent, issuesFiles: SEOResults[], issuesList: HTMLElement, currentSort: string, onSortChange: (sortType: string) => void): void {
+	showSortMenu(event: MouseEvent, issuesFiles: SEOResults[], issuesList: HTMLElement, currentSort: string, onSortChange: (sortType: string) => void, settings?: any): void {
 		const menu = new Menu();
+		
+		// Check if notices should be shown (both potentially broken checks must be enabled)
+		const showNotices = settings ? 
+			(settings.checkPotentiallyBrokenLinks && settings.checkPotentiallyBrokenEmbeds) : 
+			true;
+		
+		// If current sort is notices-related but notices are disabled, fall back to issues-desc
+		// But only for display purposes - don't override the actual currentSort
+		const displaySort = (!showNotices && (currentSort === 'notices-desc' || currentSort === 'notices-asc')) 
+			? 'issues-desc' 
+			: currentSort;
 		
 		// Issues (high to low) - DEFAULT
 		menu.addItem((item) => {
 			item.setTitle('Issues (high to low)')
 				.onClick(() => {
 					onSortChange('issues-desc');
-					this.sortAndRenderFiles(issuesFiles, issuesList, 'issues-desc');
+					this.sortAndRenderFiles(issuesFiles, issuesList, 'issues-desc', settings);
 				});
-			if (currentSort === 'issues-desc') {
+			if (displaySort === 'issues-desc') {
 				item.setIcon('check');
 			}
 		});
@@ -168,9 +179,9 @@ export class PanelActions {
 			item.setTitle('Issues (low to high)')
 				.onClick(() => {
 					onSortChange('issues-asc');
-					this.sortAndRenderFiles(issuesFiles, issuesList, 'issues-asc');
+					this.sortAndRenderFiles(issuesFiles, issuesList, 'issues-asc', settings);
 				});
-			if (currentSort === 'issues-asc') {
+			if (displaySort === 'issues-asc') {
 				item.setIcon('check');
 			}
 		});
@@ -183,9 +194,9 @@ export class PanelActions {
 			item.setTitle('Warnings (high to low)')
 				.onClick(() => {
 					onSortChange('warnings-desc');
-					this.sortAndRenderFiles(issuesFiles, issuesList, 'warnings-desc');
+					this.sortAndRenderFiles(issuesFiles, issuesList, 'warnings-desc', settings);
 				});
-			if (currentSort === 'warnings-desc') {
+			if (displaySort === 'warnings-desc') {
 				item.setIcon('check');
 			}
 		});
@@ -195,9 +206,9 @@ export class PanelActions {
 			item.setTitle('Warnings (low to high)')
 				.onClick(() => {
 					onSortChange('warnings-asc');
-					this.sortAndRenderFiles(issuesFiles, issuesList, 'warnings-asc');
+					this.sortAndRenderFiles(issuesFiles, issuesList, 'warnings-asc', settings);
 				});
-			if (currentSort === 'warnings-asc') {
+			if (displaySort === 'warnings-asc') {
 				item.setIcon('check');
 			}
 		});
@@ -205,14 +216,44 @@ export class PanelActions {
 		// Divider
 		menu.addSeparator();
 		
+		// Notices sorting options (only show if notices are enabled)
+		if (showNotices) {
+			// Notices (high to low)
+			menu.addItem((item) => {
+				item.setTitle('Notices (high to low)')
+					.onClick(() => {
+						onSortChange('notices-desc');
+						this.sortAndRenderFiles(issuesFiles, issuesList, 'notices-desc', settings);
+					});
+				if (displaySort === 'notices-desc') {
+					item.setIcon('check');
+				}
+			});
+			
+			// Notices (low to high)
+			menu.addItem((item) => {
+				item.setTitle('Notices (low to high)')
+					.onClick(() => {
+						onSortChange('notices-asc');
+						this.sortAndRenderFiles(issuesFiles, issuesList, 'notices-asc', settings);
+					});
+				if (displaySort === 'notices-asc') {
+					item.setIcon('check');
+				}
+			});
+			
+			// Divider
+			menu.addSeparator();
+		}
+		
 		// File name (A to Z)
 		menu.addItem((item) => {
 			item.setTitle('File name (A to Z)')
 				.onClick(() => {
 					onSortChange('filename-asc');
-					this.sortAndRenderFiles(issuesFiles, issuesList, 'filename-asc');
+					this.sortAndRenderFiles(issuesFiles, issuesList, 'filename-asc', settings);
 				});
-			if (currentSort === 'filename-asc') {
+			if (displaySort === 'filename-asc') {
 				item.setIcon('check');
 			}
 		});
@@ -222,9 +263,9 @@ export class PanelActions {
 			item.setTitle('File name (Z to A)')
 				.onClick(() => {
 					onSortChange('filename-desc');
-					this.sortAndRenderFiles(issuesFiles, issuesList, 'filename-desc');
+					this.sortAndRenderFiles(issuesFiles, issuesList, 'filename-desc', settings);
 				});
-			if (currentSort === 'filename-desc') {
+			if (displaySort === 'filename-desc') {
 				item.setIcon('check');
 			}
 		});
@@ -232,7 +273,7 @@ export class PanelActions {
 		menu.showAtPosition({ x: event.clientX, y: event.clientY });
 	}
 
-	private sortAndRenderFiles(issuesFiles: SEOResults[], issuesList: HTMLElement, sortType: string): void {
+	private sortAndRenderFiles(issuesFiles: SEOResults[], issuesList: HTMLElement, sortType: string, settings?: any): void {
 		// Sort the array using the proper sorting function
 		const sortedFiles = sortFiles([...issuesFiles], sortType);
 		
@@ -244,10 +285,10 @@ export class PanelActions {
 		filesListContainer.querySelectorAll('.seo-file-issue').forEach(el => el.remove());
 		
 		// Re-render sorted files
-		this.renderFilesList(sortedFiles, filesListContainer as HTMLElement);
+		this.renderFilesList(sortedFiles, filesListContainer as HTMLElement, settings);
 	}
 
-	private renderFilesList(files: SEOResults[], container: HTMLElement): void {
+	private renderFilesList(files: SEOResults[], container: HTMLElement, settings?: any): void {
 		files.forEach(result => {
 			const fileEl = container.createEl('div', { cls: 'seo-file-issue' });
 			fileEl.setAttribute('data-file-path', result.file);
@@ -266,9 +307,19 @@ export class PanelActions {
 			// Stats and audit button container
 			const statsContainer = fileEl.createEl('div', { cls: 'seo-stats-container' });
 			
-			// Issues and warnings text
+			// Check if notices should be shown
+			const showNotices = settings ? 
+				(settings.checkPotentiallyBrokenLinks && settings.checkPotentiallyBrokenEmbeds) : 
+				true;
+			
+			// Issues, warnings, and notices text
+			const statsText = [];
+			if (result.issuesCount > 0) statsText.push(`${result.issuesCount} issues`);
+			if (result.warningsCount > 0) statsText.push(`${result.warningsCount} warnings`);
+			if (showNotices && result.noticesCount > 0) statsText.push(`${result.noticesCount} notices`);
+			
 			statsContainer.createEl('span', { 
-				text: `${result.issuesCount} issues, ${result.warningsCount} warnings`,
+				text: statsText.join(', '),
 				cls: 'seo-file-stats'
 			});
 			

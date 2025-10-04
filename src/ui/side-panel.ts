@@ -11,7 +11,7 @@ export class SEOSidePanel extends ItemView {
 	currentNoteResults: SEOResults | null = null;
 	globalResults: SEOResults[] = [];
 	panelType: 'current' | 'global' = 'current';
-	currentSort: 'issues-desc' | 'issues-asc' | 'warnings-desc' | 'warnings-asc' | 'filename-asc' | 'filename-desc';
+	currentSort: 'issues-desc' | 'issues-asc' | 'warnings-desc' | 'warnings-asc' | 'notices-desc' | 'notices-asc' | 'filename-asc' | 'filename-desc';
 	hasRunInitialScan: boolean = false;
 	
 	private actions: PanelActions;
@@ -196,7 +196,8 @@ export class SEOSidePanel extends ItemView {
 				}
 			} else {
 				// Show vault folders information for global panel
-				const foldersInfo = getVaultFoldersInfo(this.plugin.settings.scanDirectories);
+				const fileCount = this.globalResults.length;
+				const foldersInfo = getVaultFoldersInfo(this.plugin.settings.scanDirectories, fileCount);
 				const foldersEl = header.createEl('div', { cls: 'seo-filename' });
 				foldersEl.textContent = foldersInfo;
 			}
@@ -291,7 +292,7 @@ export class SEOSidePanel extends ItemView {
 
 	private renderGlobalResults(container: HTMLElement) {
 		// Render summary stats
-		this.resultsDisplay.renderGlobalResults(this.globalResults);
+		this.resultsDisplay.renderGlobalResults(this.globalResults, this.plugin.settings);
 
 		// Add refresh button below stats
 		const refreshBtn = container.createEl('button', { 
@@ -324,13 +325,21 @@ export class SEOSidePanel extends ItemView {
 				this.plugin.saveSettings();
 			},
 			(event: MouseEvent) => {
-				const issuesFiles = this.globalResults.filter(r => r.issuesCount > 0 || r.warningsCount > 0);
+				// Check if notices should be shown
+				const showNotices = this.plugin.settings.checkPotentiallyBrokenLinks && this.plugin.settings.checkPotentiallyBrokenEmbeds;
+				const issuesFiles = this.globalResults.filter(r => {
+					const hasIssues = r.issuesCount > 0;
+					const hasWarnings = r.warningsCount > 0;
+					const hasNotices = showNotices && r.noticesCount > 0;
+					return hasIssues || hasWarnings || hasNotices;
+				});
 				this.actions.showSortMenu(event, issuesFiles, container, this.currentSort, (sortType: string) => {
 					this.currentSort = sortType as any;
 					this.plugin.settings.defaultSort = sortType as any;
 					this.plugin.saveSettings();
-				});
-			}
+				}, this.plugin.settings);
+			},
+			this.plugin.settings
 		);
 	}
 }

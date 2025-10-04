@@ -254,6 +254,16 @@ export class SEOSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
+		new Setting(containerEl)
+			.setName('Skip H1 check')
+			.setDesc('For when your notes don\'t start with an H1, or H1 is hardcoded from the title for your published note. If enabled, won\'t require an H1, but will still flag H1s that appear after other heading levels.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.skipH1Check)
+				.onChange(async (value) => {
+					this.plugin.settings.skipH1Check = value;
+					await this.plugin.saveSettings();
+				}));
+
 		// Thresholds
 		containerEl.createEl('h2', { text: 'Thresholds' });
 

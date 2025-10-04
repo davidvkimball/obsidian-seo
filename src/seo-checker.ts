@@ -84,6 +84,7 @@ async function checkFile(plugin: SEOPlugin, file: TFile, content: string): Promi
 	const allResults = Object.values(checks).flat();
 	const issuesCount = allResults.filter(r => r.severity === 'error').length;
 	const warningsCount = allResults.filter(r => r.severity === 'warning').length;
+	const noticesCount = allResults.filter(r => r.severity === 'notice').length;
 	
 	// Improved SEO scoring system with weighted checks and no double penalties
 	let overallScore: number;
@@ -95,8 +96,13 @@ async function checkFile(plugin: SEOPlugin, file: TFile, content: string): Promi
 		let weightedScore = 0;
 		let totalWeight = 0;
 		
-		// Weight checks by SEO importance
+		// Weight checks by SEO importance (exclude notices from scoring)
 		allResults.forEach(result => {
+			// Skip notices - they don't affect the score
+			if (result.severity === 'notice') {
+				return;
+			}
+			
 			let weight = 1; // Default weight
 			let points = 0;
 			
@@ -173,7 +179,8 @@ async function checkFile(plugin: SEOPlugin, file: TFile, content: string): Promi
 		checks,
 		overallScore,
 		issuesCount,
-		warningsCount
+		warningsCount,
+		noticesCount
 	};
 }
 

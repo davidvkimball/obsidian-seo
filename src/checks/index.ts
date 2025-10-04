@@ -42,20 +42,23 @@ export async function checkAltText(content: string, file: TFile, settings: SEOSe
 			return !altText || altText.trim() === '';
 		});
 		if (missingAltText.length > 0) {
-			const count = missingAltText.length;
-			const isPlural = count > 1;
-			
-			// Extract image paths for display
-			const imagePaths = missingAltText.map(match => {
+			// Create individual results for each missing alt text image
+			missingAltText.forEach((match, index) => {
 				const pathMatch = match.match(/!\[[^\]]*\]\(([^)]+)\)/);
-				return pathMatch ? pathMatch[1] : match;
-			});
-			
-			results.push({
-				passed: false,
-				message: `${count} image${isPlural ? 's are' : ' is'} missing alt text`,
-				suggestion: `Add descriptive alt text for accessibility:<br><br>${imagePaths.map(path => `• ${path}`).join('<br>')}`,
-				severity: 'error'
+				const imagePath = pathMatch ? pathMatch[1] : match;
+				const lineNumber = findLineNumberForImage(content, match);
+				
+				results.push({
+					passed: false,
+					message: `Image missing alt text: ${imagePath}`,
+					suggestion: "Add descriptive alt text for accessibility",
+					severity: 'error',
+					position: {
+						line: lineNumber,
+						searchText: match,
+						context: getContextAroundLine(content, lineNumber)
+					}
+				});
 			});
 		}
 	}
@@ -65,20 +68,23 @@ export async function checkAltText(content: string, file: TFile, settings: SEOSe
 		if (wikilinkImages) {
 			const missingAltText = wikilinkImages.filter(match => !match.includes('|'));
 		if (missingAltText.length > 0) {
-			const count = missingAltText.length;
-			const isPlural = count > 1;
-			
-			// Extract image paths for display
-			const imagePaths = missingAltText.map(match => {
+			// Create individual results for each missing alt text wikilink image
+			missingAltText.forEach((match, index) => {
 				const pathMatch = match.match(/!\[\[([^\]]+)\]\]/);
-				return pathMatch ? pathMatch[1] : match;
-			});
-			
-			results.push({
-				passed: false,
-				message: `${count} wikilink image${isPlural ? 's are' : ' is'} missing alt text`,
-				suggestion: `Add alt text using ![[image.png|alt text]] syntax or consider using standard markdown image syntax:<br><br>${imagePaths.map(path => `• ${path}`).join('<br>')}`,
-				severity: 'error'
+				const imagePath = pathMatch ? pathMatch[1] : match;
+				const lineNumber = findLineNumberForImage(content, match);
+				
+				results.push({
+					passed: false,
+					message: `Wikilink image missing alt text: ${imagePath}`,
+					suggestion: "Add alt text using ![[image.png|alt text]] syntax or consider using standard markdown image syntax",
+					severity: 'error',
+					position: {
+						line: lineNumber,
+						searchText: match,
+						context: getContextAroundLine(content, lineNumber)
+					}
+				});
 			});
 		}
 		}
@@ -92,20 +98,23 @@ export async function checkAltText(content: string, file: TFile, settings: SEOSe
 			return !altMatch || altMatch[1].trim() === '';
 		});
 		if (missingAlt.length > 0) {
-			const count = missingAlt.length;
-			const isPlural = count > 1;
-			
-			// Extract src attributes for display
-			const imagePaths = missingAlt.map(img => {
+			// Create individual results for each missing alt attribute
+			missingAlt.forEach((img, index) => {
 				const srcMatch = img.match(/src\s*=\s*["']([^"']*)["']/);
-				return srcMatch ? srcMatch[1] : 'HTML img tag';
-			});
-			
-			results.push({
-				passed: false,
-				message: `${count} HTML image${isPlural ? 's are' : ' is'} missing alt attribute`,
-				suggestion: `Add alt attribute to HTML img tags:<br><br>${imagePaths.map(path => `• ${path}`).join('<br>')}`,
-				severity: 'error'
+				const imagePath = srcMatch ? srcMatch[1] : 'HTML img tag';
+				const lineNumber = findLineNumberForImage(content, img);
+				
+				results.push({
+					passed: false,
+					message: `HTML image missing alt attribute: ${imagePath}`,
+					suggestion: "Add alt attribute to HTML img tag",
+					severity: 'error',
+					position: {
+						line: lineNumber,
+						searchText: img,
+						context: getContextAroundLine(content, lineNumber)
+					}
+				});
 			});
 		}
 	}
@@ -154,11 +163,18 @@ export async function checkNakedLinks(content: string, file: TFile, settings: SE
 				return;
 			}
 			
+			const lineNumber = findLineNumberForImage(content, link);
+			
 			results.push({
 				passed: false,
 				message: `Naked link found: ${link}`,
 				suggestion: "Convert to markdown link format: [link text](url)",
-				severity: 'warning'
+				severity: 'warning',
+				position: {
+					line: lineNumber,
+					searchText: link,
+					context: getContextAroundLine(content, lineNumber)
+				}
 			});
 		});
 	}
@@ -181,29 +197,32 @@ export async function checkHeadingOrder(content: string, file: TFile, settings: 
 		return [];
 	}
 	
-	// Remove frontmatter
-	let bodyContent = content.replace(/^---\n[\s\S]*?\n---\n/, '');
-	
-	// Remove code blocks (both ``` and ~~~)
-	bodyContent = bodyContent.replace(/```[\s\S]*?```/g, '');
-	bodyContent = bodyContent.replace(/~~~[\s\S]*?~~~/g, '');
-	
-	const lines = bodyContent.split('\n');
+	// Work with original content for accurate line numbers
+	const originalLines = content.split('\n');
 	let lastHeadingLevel = null;
 	let hasHeading = false;
+	let hasH1 = false;
+	let firstHeadingLine = 0;
 	
-	for (let i = 0; i < lines.length; i++) {
-		const line = lines[i];
+	for (let i = 0; i < originalLines.length; i++) {
+		const line = originalLines[i];
 		const headingMatch = line.match(/^(#{1,6})\s+(.+)/);
 		
 		if (headingMatch) {
 			hasHeading = true;
 			const currentLevel = headingMatch[1].length;
 			const headingText = headingMatch[2].trim();
+			const lineNumber = i + 1; // 1-based line number from original content
 			
-			// If this is the first heading, don't check for violations
+			// Track if we have an H1
+			if (currentLevel === 1) {
+				hasH1 = true;
+			}
+			
+			// If this is the first heading, don't check for violations yet
 			if (lastHeadingLevel === null) {
 				lastHeadingLevel = currentLevel;
+				firstHeadingLine = lineNumber;
 				continue;
 			}
 			
@@ -213,12 +232,43 @@ export async function checkHeadingOrder(content: string, file: TFile, settings: 
 					passed: false,
 					message: `"${headingText}" (H${currentLevel}) skips heading level(s) after H${lastHeadingLevel}`,
 					suggestion: "Use heading levels in order (H1 → H2 → H3, etc.)",
-					severity: 'warning'
+					severity: 'warning',
+					position: {
+						line: lineNumber,
+						searchText: line,
+						context: getContextAroundLine(content, lineNumber)
+					}
+				});
+			}
+			
+			// If H1 appears after other heading levels, flag it
+			if (currentLevel === 1 && lastHeadingLevel > 1) {
+				results.push({
+					passed: false,
+					message: `"${headingText}" (H1) appears after H${lastHeadingLevel}`,
+					suggestion: "H1 should be the first heading or not used at all",
+					severity: 'warning',
+					position: {
+						line: lineNumber,
+						searchText: line,
+						context: getContextAroundLine(content, lineNumber)
+					}
 				});
 			}
 			
 			lastHeadingLevel = currentLevel;
 		}
+	}
+	
+	// Check for missing H1 if skipH1Check is false - add this FIRST if it exists
+	if (hasHeading && !settings.skipH1Check && !hasH1) {
+		results.unshift({
+			passed: false,
+			message: "No H1 heading found",
+			suggestion: "Add an H1 heading at the beginning of your content",
+			severity: 'warning'
+			// No position info since there's no H1 to jump to
+		});
 	}
 	
 	if (!hasHeading) {
@@ -331,6 +381,9 @@ export async function checkBrokenLinks(content: string, file: TFile, settings: S
 		}
 		
 		if (linkTarget && !linkTarget.startsWith('http')) {
+			// Find line number for this link
+			const lineNumber = findLineNumberForImage(content, link);
+			
 			// Check if it's a wikilink or embedded image first
 			const isWikilink = link.startsWith('[[');
 			const isEmbeddedImage = linkTarget.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i);
@@ -355,7 +408,12 @@ export async function checkBrokenLinks(content: string, file: TFile, settings: S
 						suggestion: isEmbeddedImage 
 							? "Verify the image path exists or check if it's a relative path"
 							: "Check if the wikilink target exists or create the target note",
-						severity: 'error'
+						severity: 'error',
+						position: {
+							line: lineNumber,
+							searchText: link,
+							context: getContextAroundLine(content, lineNumber)
+						}
 					});
 				}
 			} else {
@@ -366,7 +424,12 @@ export async function checkBrokenLinks(content: string, file: TFile, settings: S
 						passed: false,
 						message: `Broken internal link: ${linkTarget}`,
 						suggestion: "Check the link path or create the target file",
-						severity: 'error'
+						severity: 'error',
+						position: {
+							line: lineNumber,
+							searchText: link,
+							context: getContextAroundLine(content, lineNumber)
+						}
 					});
 				}
 			}
@@ -414,6 +477,9 @@ export async function checkPotentiallyBrokenLinks(content: string, file: TFile, 
 		}
 		
 		if (linkTarget && !linkTarget.startsWith('http')) {
+			// Find line number for this link
+			const lineNumber = findLineNumberForImage(content, link);
+			
 			// Check if it's a wikilink or embedded image first
 			const isWikilink = link.startsWith('[[');
 			const isEmbeddedImage = linkTarget.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i);
@@ -427,7 +493,12 @@ export async function checkPotentiallyBrokenLinks(content: string, file: TFile, 
 					passed: false,
 					message: `Potentially broken link: ${linkTarget}`,
 					suggestion: `${linkType.charAt(0).toUpperCase() + linkType.slice(1)} that may be resolved by your site generator. Verify the target will resolve on your published site.`,
-					severity: 'warning'
+					severity: 'notice',
+					position: {
+						line: lineNumber,
+						searchText: link,
+						context: getContextAroundLine(content, lineNumber)
+					}
 				});
 				continue;
 			}
@@ -443,7 +514,12 @@ export async function checkPotentiallyBrokenLinks(content: string, file: TFile, 
 							passed: false,
 							message: `Potentially broken link: ${linkTarget}`,
 							suggestion: "Wikilinks may not work on the web - consider converting to standard markdown links",
-							severity: 'warning'
+							severity: 'notice',
+							position: {
+								line: lineNumber,
+								searchText: link,
+								context: getContextAroundLine(content, lineNumber)
+							}
 						});
 					}
 				}
@@ -624,7 +700,8 @@ export async function checkImageNaming(content: string, file: TFile, settings: S
 	// Remove code blocks to avoid false positives
 	const cleanContent = removeCodeBlocks(content);
 	
-	// Find image references
+	// Find image references with line numbers
+	const lines = content.split('\n');
 	const imageMatches = cleanContent.match(/!\[[^\]]*\]\(([^)]+)\)/g);
 	if (imageMatches) {
 		imageMatches.forEach((match, index) => {
@@ -632,13 +709,21 @@ export async function checkImageNaming(content: string, file: TFile, settings: S
 			if (imagePath) {
 				const fileName = imagePath.split('/').pop() || '';
 				
+				// Find the line number for this image
+				const lineNumber = findLineNumberForImage(content, match);
+				
 				// Check for problematic patterns
 				if (fileName.includes(' ') || fileName.includes('%20')) {
 					results.push({
 						passed: false,
 						message: `Image ${index + 1} has spaces in file name: ${fileName}`,
 						suggestion: "Use kebab-case or underscores instead of spaces",
-						severity: 'warning'
+						severity: 'warning',
+						position: {
+							line: lineNumber,
+							searchText: match,
+							context: getContextAroundLine(content, lineNumber)
+						}
 					});
 				} else if (fileName.match(/^[a-f0-9]{8,}$/) || 
 						   fileName.match(/^[a-f0-9]{8,}_[A-Z0-9]+\./) ||
@@ -648,7 +733,12 @@ export async function checkImageNaming(content: string, file: TFile, settings: S
 						passed: false,
 						message: `Image ${index + 1} has random file name: ${fileName}`,
 						suggestion: "Use descriptive file names",
-						severity: 'warning'
+						severity: 'warning',
+						position: {
+							line: lineNumber,
+							searchText: match,
+							context: getContextAroundLine(content, lineNumber)
+						}
 					});
 				} else if (fileName.toLowerCase().includes('pasted') || 
 						   fileName.toLowerCase().includes('untitled') ||
@@ -662,14 +752,24 @@ export async function checkImageNaming(content: string, file: TFile, settings: S
 						passed: false,
 						message: `Image ${index + 1} has a potentially generic file name: ${fileName}`,
 						suggestion: "Use descriptive file names",
-						severity: 'warning'
+						severity: 'warning',
+						position: {
+							line: lineNumber,
+							searchText: match,
+							context: getContextAroundLine(content, lineNumber)
+						}
 					});
 				} else if (fileName.length < 5 || fileName.length > 50) {
 					results.push({
 						passed: false,
 						message: `Image ${index + 1} exceeds suggested file name length: ${fileName}`,
 						suggestion: "Use descriptive file names between 5-50 characters",
-						severity: 'warning'
+						severity: 'warning',
+						position: {
+							line: lineNumber,
+							searchText: match,
+							context: getContextAroundLine(content, lineNumber)
+						}
 					});
 				}
 			}
@@ -873,50 +973,66 @@ export async function checkNotices(content: string, file: TFile, settings: SEOSe
 	}
 	
 	// Check for embedded media that might not work on web publishing
-	const embeddedMedia: string[] = [];
+	const embeddedMedia: { path: string; match: string; line: number }[] = [];
 	
 	// Check for markdown embedded images ![alt](src)
 	const markdownImages = content.match(/!\[[^\]]*\]\([^)]+\)/g);
 	if (markdownImages) {
-		embeddedMedia.push(...markdownImages.map(img => {
+		markdownImages.forEach(img => {
 			const match = img.match(/!\[[^\]]*\]\(([^)]+)\)/);
-			return match ? match[1] : img;
-		}));
+			const path = match ? match[1] : img;
+			const lineNumber = findLineNumberForImage(content, img);
+			embeddedMedia.push({ path, match: img, line: lineNumber });
+		});
 	}
 	
 	// Check for wikilink embedded images ![[image.png]]
 	const wikilinkImages = content.match(/!\[\[([^\]]+)\]\]/g);
 	if (wikilinkImages) {
-		embeddedMedia.push(...wikilinkImages.map(img => {
+		wikilinkImages.forEach(img => {
 			const match = img.match(/!\[\[([^\]]+)\]\]/);
-			return match ? match[1] : img;
-		}));
+			const path = match ? match[1] : img;
+			const lineNumber = findLineNumberForImage(content, img);
+			embeddedMedia.push({ path, match: img, line: lineNumber });
+		});
 	}
 	
 	// Check for embedded videos (common formats)
 	const videoEmbeds = content.match(/!\[[^\]]*\]\([^)]+\.(mp4|webm|ogg|mov|avi|mkv)(\?[^)]*)?\)/gi);
 	if (videoEmbeds) {
-		embeddedMedia.push(...videoEmbeds.map(video => {
+		videoEmbeds.forEach(video => {
 			const match = video.match(/!\[[^\]]*\]\(([^)]+)\)/);
-			return match ? match[1] : video;
-		}));
+			const path = match ? match[1] : video;
+			const lineNumber = findLineNumberForImage(content, video);
+			embeddedMedia.push({ path, match: video, line: lineNumber });
+		});
 	}
 	
 	// Check for embedded audio (common formats)
 	const audioEmbeds = content.match(/!\[[^\]]*\]\([^)]+\.(mp3|wav|ogg|m4a|flac|aac)(\?[^)]*)?\)/gi);
 	if (audioEmbeds) {
-		embeddedMedia.push(...audioEmbeds.map(audio => {
+		audioEmbeds.forEach(audio => {
 			const match = audio.match(/!\[[^\]]*\]\(([^)]+)\)/);
-			return match ? match[1] : audio;
-		}));
+			const path = match ? match[1] : audio;
+			const lineNumber = findLineNumberForImage(content, audio);
+			embeddedMedia.push({ path, match: audio, line: lineNumber });
+		});
 	}
 	
 	if (embeddedMedia.length > 0) {
-		results.push({
-			passed: false,
-			message: `Found ${embeddedMedia.length} embedded media file(s) that may not work on web publishing`,
-			suggestion: `Verify these media files will be accessible on your published site:<br><br>${embeddedMedia.map(path => `• ${path}`).join('<br>')}`,
-			severity: 'warning'
+		// Create individual results for each embedded media item
+		embeddedMedia.forEach((media, index) => {
+			results.push({
+				passed: false,
+				message: `Potentially broken embed: ${media.path}`,
+				suggestion: "Verify this media file will be accessible on your published site",
+				severity: 'notice',
+				position: {
+					line: media.line,
+					searchText: media.match,
+					context: getContextAroundLine(content, media.line)
+				}
+			});
 		});
 	}
 	
@@ -1148,6 +1264,25 @@ function getReadingLevelDescription(level: number): string {
 	if (level < 10) return 'High School';
 	if (level < 12) return 'College Prep';
 	return 'College';
+}
+
+// Helper functions for position tracking
+function findLineNumberForImage(content: string, imageMatch: string): number {
+	const lines = content.split('\n');
+	for (let i = 0; i < lines.length; i++) {
+		if (lines[i].includes(imageMatch)) {
+			return i + 1; // 1-based line numbers
+		}
+	}
+	return 1; // Fallback to first line
+}
+
+function getContextAroundLine(content: string, lineNumber: number, contextLines: number = 2): string {
+	const lines = content.split('\n');
+	const startLine = Math.max(0, lineNumber - contextLines - 1);
+	const endLine = Math.min(lines.length, lineNumber + contextLines);
+	
+	return lines.slice(startLine, endLine).join('\n');
 }
 
 export async function checkKeywordInTitle(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {

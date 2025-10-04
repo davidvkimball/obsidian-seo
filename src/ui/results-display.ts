@@ -11,6 +11,109 @@ export class ResultsDisplay {
 		private onFileAudit: (filePath: string) => Promise<void>
 	) {}
 
+	// Navigation method to jump to specific positions in the note
+	private async navigateToPosition(position: { line: number; searchText?: string; context?: string }): Promise<void> {
+		try {
+			// Get the app instance
+			const app = (window as any).app;
+			if (!app) {
+				console.warn('Obsidian app not found');
+				return;
+			}
+
+			// Get the current active file
+			const activeFile = app.workspace.getActiveFile();
+			if (!activeFile) {
+				console.warn('No active file found for navigation');
+				return;
+			}
+
+			// Open the file if it's not already open
+			await this.onFileClick(activeFile.path);
+
+			// Get the markdown view - try different approaches
+			let markdownView: any = null;
+			let editor: any = null;
+			
+			// Try direct access to active leaf
+			if (app.workspace.activeLeaf) {
+				markdownView = app.workspace.activeLeaf.view;
+			}
+			
+			// Try getting leaves of type markdown
+			if (!markdownView && app.workspace.getLeavesOfType) {
+				const leaves = app.workspace.getLeavesOfType('markdown');
+				if (leaves.length > 0) {
+					markdownView = leaves[0].view;
+				}
+			}
+			
+			// Try getting all leaves
+			if (!markdownView && app.workspace.getLeaves) {
+				const allLeaves = app.workspace.getLeaves();
+				for (const leaf of allLeaves) {
+					if (leaf.view && leaf.view.editor) {
+						markdownView = leaf.view;
+						break;
+					}
+				}
+			}
+			
+			if (!markdownView) {
+				console.warn('No markdown view found');
+				return;
+			}
+
+			editor = markdownView.editor;
+			if (!editor) {
+				console.warn('No editor found in markdown view');
+				return;
+			}
+
+			// Navigate to the specific line
+			if (position.line) {
+				const lineIndex = Math.max(0, position.line - 1);
+				
+				// Set cursor position
+				editor.setCursor({ line: lineIndex, ch: 0 });
+				
+				// Simple scroll to line - no fancy stuff
+				try {
+					editor.scrollIntoView({ line: lineIndex, ch: 0 });
+				} catch (error) {
+					// If that fails, try with just the line number
+					try {
+						editor.scrollIntoView(lineIndex);
+					} catch (error2) {
+						// If all else fails, just set the cursor (already done above)
+					}
+				}
+				
+				// Highlight the line briefly
+				try {
+					const lineLength = editor.getLine(lineIndex).length;
+					editor.addHighlights([{
+						from: { line: lineIndex, ch: 0 },
+						to: { line: lineIndex, ch: lineLength }
+					}]);
+					
+					// Remove highlight after 2 seconds
+					setTimeout(() => {
+						try {
+							editor.removeHighlights();
+						} catch (highlightError) {
+							// Ignore highlight removal errors
+						}
+					}, 2000);
+				} catch (highlightError) {
+					// Ignore highlight errors
+				}
+			}
+		} catch (error) {
+			console.error('Error navigating to position:', error);
+		}
+	}
+
 	renderResults(results: SEOResults): void {
 		// Overall score with collapsible toggle
 		const scoreEl = this.container.createEl('div', { cls: 'seo-score-header' });
@@ -31,7 +134,7 @@ export class ResultsDisplay {
 			scoreNumber.addClass('seo-score-poor');
 		}
 		
-		if (results.issuesCount > 0 || results.warningsCount > 0) {
+		if (results.issuesCount > 0 || results.warningsCount > 0 || results.noticesCount > 0) {
 			scoreText.createEl('span', { text: ` (` });
 			const issuesCount = scoreText.createEl('span', { 
 				text: `${results.issuesCount} issues`,
@@ -42,6 +145,13 @@ export class ResultsDisplay {
 				text: `${results.warningsCount} warnings`,
 				cls: 'seo-warnings-count-text'
 			});
+			if (results.noticesCount > 0) {
+				scoreText.createEl('span', { text: ', ' });
+				const noticesCount = scoreText.createEl('span', { 
+					text: `${results.noticesCount} notices`,
+					cls: 'seo-notices-count-text'
+				});
+			}
 			scoreText.createEl('span', { text: ')' });
 		} else {
 			scoreText.createEl('span', { 
@@ -74,6 +184,7 @@ export class ResultsDisplay {
 			// Determine the check status for color coding
 			const checkHasErrors = checkResults.some(r => r.severity === 'error');
 			const checkHasWarnings = checkResults.some(r => r.severity === 'warning');
+			const checkHasNotices = checkResults.some(r => r.severity === 'notice');
 			const checkHasOnlyInfo = checkResults.every(r => r.severity === 'info');
 			
 			let statusClass = 'seo-passed'; // Default to green for passed checks
@@ -81,6 +192,8 @@ export class ResultsDisplay {
 				statusClass = 'seo-error';
 			} else if (checkHasWarnings) {
 				statusClass = 'seo-warning';
+			} else if (checkHasNotices) {
+				statusClass = 'seo-notice';
 			} else if (checkHasOnlyInfo) {
 				statusClass = 'seo-passed';
 			}
@@ -101,12 +214,15 @@ export class ResultsDisplay {
 			const statusIcon = header.createEl('span', { cls: 'seo-status' });
 			const hasErrors = checkResults.some(r => r.severity === 'error');
 			const hasWarnings = checkResults.some(r => r.severity === 'warning');
+			const hasNotices = checkResults.some(r => r.severity === 'notice');
 			
 			// Use Lucide icons instead of emojis
 			if (hasErrors) {
 				statusIcon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
 			} else if (hasWarnings) {
 				statusIcon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+			} else if (hasNotices) {
+				statusIcon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>';
 			} else {
 				statusIcon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>';
 			}
@@ -117,9 +233,34 @@ export class ResultsDisplay {
 			resultsList.style.display = 'block';
 			checkResults.forEach(result => {
 				const li = resultsList.createEl('li', { 
-					cls: `seo-result seo-${result.severity}`,
-					text: result.message
+					cls: `seo-result seo-${result.severity}`
 				});
+				
+				// Create clickable message if position info is available
+				if (result.position) {
+					const messageEl = li.createEl('span', { 
+						text: result.message,
+						cls: 'seo-result-message seo-clickable'
+					});
+					
+					// Add click handler for navigation
+					messageEl.addEventListener('click', async (e) => {
+						e.preventDefault();
+						e.stopPropagation();
+						await this.navigateToPosition(result.position!);
+					});
+					
+					// Add visual indicator that it's clickable
+					messageEl.style.cursor = 'pointer';
+					messageEl.style.textDecoration = 'underline';
+					messageEl.title = 'Click to jump to this issue in the note';
+				} else {
+					// Non-clickable message for results without position info
+					li.createEl('span', { 
+						text: result.message,
+						cls: 'seo-result-message'
+					});
+				}
 				
 				if (result.suggestion) {
 					const suggestionEl = li.createEl('div', { 
@@ -153,42 +294,38 @@ export class ResultsDisplay {
 		});
 	}
 
-	renderGlobalResults(results: SEOResults[]): void {
+	renderGlobalResults(results: SEOResults[], settings?: any): void {
 		const summary = this.container.createEl('div', { cls: 'seo-vault-summary' });
 		
 		const totalFiles = results.length;
 		const totalIssues = results.reduce((sum, r) => sum + r.issuesCount, 0);
 		const totalWarnings = results.reduce((sum, r) => sum + r.warningsCount, 0);
+		const totalNotices = results.reduce((sum, r) => sum + r.noticesCount, 0);
 		const avgScore = Math.round(
 			results.reduce((sum, r) => sum + r.overallScore, 0) / totalFiles
 		);
+		
+		// Check if notices should be shown (both potentially broken checks must be enabled)
+		const showNotices = settings ? 
+			(settings.checkPotentiallyBrokenLinks && settings.checkPotentiallyBrokenEmbeds) : 
+			true;
 
 		// Create stats grid
 		const statsGrid = summary.createEl('div', { cls: 'seo-stats-grid' });
 		
-		// Files analyzed
-		const filesStat = statsGrid.createEl('div', { cls: 'seo-stat-item' });
-		filesStat.createEl('div', { cls: 'seo-stat-number', text: totalFiles.toString() });
-		filesStat.createEl('div', { cls: 'seo-stat-label', text: 'Files analyzed' });
-		
-		// Average score with color coding
+		// Overall score first with color coding
 		const scoreStat = statsGrid.createEl('div', { cls: 'seo-stat-item' });
 		const scoreNumber = scoreStat.createEl('div', { cls: 'seo-stat-number', text: `${avgScore}%` });
-		let scoreLabel = 'Average score';
 		if (avgScore >= 80) {
 			scoreNumber.addClass('seo-score-excellent');
-			scoreLabel = 'Excellent';
 		} else if (avgScore >= 60) {
 			scoreNumber.addClass('seo-score-good');
-			scoreLabel = 'Good';
 		} else if (avgScore >= 40) {
 			scoreNumber.addClass('seo-score-fair');
-			scoreLabel = 'Fair';
 		} else {
 			scoreNumber.addClass('seo-score-poor');
-			scoreLabel = 'Poor';
 		}
-		scoreStat.createEl('div', { cls: 'seo-stat-label', text: scoreLabel });
+		scoreStat.createEl('div', { cls: 'seo-stat-label', text: 'Average Score' });
 		
 		// Issues count with color coding
 		const issuesStat = statsGrid.createEl('div', { cls: 'seo-stat-item' });
@@ -205,10 +342,30 @@ export class ResultsDisplay {
 			warningsNumber.addClass('seo-warnings-count');
 		}
 		warningsStat.createEl('div', { cls: 'seo-stat-label', text: 'Warnings' });
+		
+		// Notices count with color coding (only show if notices are enabled)
+		if (showNotices) {
+			const noticesStat = statsGrid.createEl('div', { cls: 'seo-stat-item' });
+			const noticesNumber = noticesStat.createEl('div', { cls: 'seo-stat-number', text: totalNotices.toString() });
+			if (totalNotices > 0) {
+				noticesNumber.addClass('seo-notices-count');
+			}
+			noticesStat.createEl('div', { cls: 'seo-stat-label', text: 'Notices' });
+		}
 	}
 
-	renderIssuesList(results: SEOResults[], currentSort: string, onSortChange: (sortType: string) => void, onShowSortMenu: (event: MouseEvent) => void): void {
-		const issuesFiles = results.filter(r => r.issuesCount > 0 || r.warningsCount > 0);
+	renderIssuesList(results: SEOResults[], currentSort: string, onSortChange: (sortType: string) => void, onShowSortMenu: (event: MouseEvent) => void, settings?: any): void {
+		// Check if notices should be shown (both potentially broken checks must be enabled)
+		const showNotices = settings ? 
+			(settings.checkPotentiallyBrokenLinks && settings.checkPotentiallyBrokenEmbeds) : 
+			true;
+		
+		const issuesFiles = results.filter(r => {
+			const hasIssues = r.issuesCount > 0;
+			const hasWarnings = r.warningsCount > 0;
+			const hasNotices = showNotices && r.noticesCount > 0;
+			return hasIssues || hasWarnings || hasNotices;
+		});
 		if (issuesFiles.length === 0) return;
 
 		const issuesList = this.container.createEl('div', { cls: 'seo-issues-list' });
@@ -220,7 +377,7 @@ export class ResultsDisplay {
 		const collapseIcon = issuesHeader.createEl('span', { cls: 'seo-collapse-icon seo-collapsible-header' });
 		collapseIcon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6,9 12,15 18,9"/></svg>';
 		
-		issuesHeader.createEl('h4', { text: 'Files with issues', cls: 'seo-issues-header' });
+		issuesHeader.createEl('h4', { text: 'Files with results', cls: 'seo-issues-header' });
 		
 		// Sort button
 		const sortBtn = issuesHeader.createEl('button', {
@@ -254,9 +411,14 @@ export class ResultsDisplay {
 			// Stats and audit button container
 			const statsContainer = fileEl.createEl('div', { cls: 'seo-stats-container' });
 			
-			// Issues and warnings text
+			// Issues, warnings, and notices text
+			const statsText = [];
+			if (result.issuesCount > 0) statsText.push(`${result.issuesCount} issues`);
+			if (result.warningsCount > 0) statsText.push(`${result.warningsCount} warnings`);
+			if (showNotices && result.noticesCount > 0) statsText.push(`${result.noticesCount} notices`);
+			
 			statsContainer.createEl('span', { 
-				text: `${result.issuesCount} issues, ${result.warningsCount} warnings`,
+				text: statsText.join(', '),
 				cls: 'seo-file-stats'
 			});
 			

@@ -24,6 +24,7 @@ export interface SEOSettings {
 	checkPotentiallyBrokenLinks: boolean;
 	checkPotentiallyBrokenEmbeds: boolean;
 	useNoteTitles: boolean;
+	skipH1Check: boolean;
 	
 	// Publishing settings
 	publishMode: boolean;
@@ -63,6 +64,7 @@ export const DEFAULT_SETTINGS: SEOSettings = {
 	checkPotentiallyBrokenLinks: true,
 	checkPotentiallyBrokenEmbeds: true,
 	useNoteTitles: false,
+	skipH1Check: false,
 	publishMode: false,
 	defaultSort: 'issues-desc',
 	minContentLength: 300,

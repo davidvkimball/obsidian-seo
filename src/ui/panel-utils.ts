@@ -8,13 +8,20 @@ export function getDisplayPath(fullPath: string): string {
 	return parts.slice(-2).join('/'); // Return last two parts (parent folder + file name)
 }
 
-export function getVaultFoldersInfo(scanDirectories: string): string {
+export function getVaultFoldersInfo(scanDirectories: string, fileCount?: number): string {
+	let baseText = 'Vault folders: ';
 	if (!scanDirectories || scanDirectories.trim() === '') {
-		return 'Vault folders: all';
+		baseText += 'all';
+	} else {
+		const folders = scanDirectories.split(',').map(f => f.trim()).filter(f => f.length > 0);
+		baseText += folders.join(', ');
 	}
 	
-	const folders = scanDirectories.split(',').map(f => f.trim()).filter(f => f.length > 0);
-	return `Vault folders: ${folders.join(', ')}`;
+	if (fileCount !== undefined) {
+		baseText += `; ${fileCount} files analyzed`;
+	}
+	
+	return baseText;
 }
 
 export function sortFiles(files: SEOResults[], sortType: string): SEOResults[] {
@@ -31,7 +38,11 @@ export function sortFiles(files: SEOResults[], sortType: string): SEOResults[] {
 				if (b.issuesCount !== a.issuesCount) {
 					return b.issuesCount - a.issuesCount;
 				}
-				// Tertiary: file name A-Z
+				// Tertiary: notices (high first)
+				if (b.noticesCount !== a.noticesCount) {
+					return b.noticesCount - a.noticesCount;
+				}
+				// Quaternary: file name A-Z
 				return a.file.localeCompare(b.file);
 			});
 			break;
@@ -45,7 +56,11 @@ export function sortFiles(files: SEOResults[], sortType: string): SEOResults[] {
 				if (a.issuesCount !== b.issuesCount) {
 					return a.issuesCount - b.issuesCount;
 				}
-				// Tertiary: file name A-Z
+				// Tertiary: notices (low first)
+				if (a.noticesCount !== b.noticesCount) {
+					return a.noticesCount - b.noticesCount;
+				}
+				// Quaternary: file name A-Z
 				return a.file.localeCompare(b.file);
 			});
 			break;
@@ -59,7 +74,11 @@ export function sortFiles(files: SEOResults[], sortType: string): SEOResults[] {
 				if (b.warningsCount !== a.warningsCount) {
 					return b.warningsCount - a.warningsCount;
 				}
-				// Tertiary: file name A-Z
+				// Tertiary: notices (high first)
+				if (b.noticesCount !== a.noticesCount) {
+					return b.noticesCount - a.noticesCount;
+				}
+				// Quaternary: file name A-Z
 				return a.file.localeCompare(b.file);
 			});
 			break;
@@ -73,15 +92,83 @@ export function sortFiles(files: SEOResults[], sortType: string): SEOResults[] {
 				if (a.warningsCount !== b.warningsCount) {
 					return a.warningsCount - b.warningsCount;
 				}
-				// Tertiary: file name A-Z
+				// Tertiary: notices (low first)
+				if (a.noticesCount !== b.noticesCount) {
+					return a.noticesCount - b.noticesCount;
+				}
+				// Quaternary: file name A-Z
+				return a.file.localeCompare(b.file);
+			});
+			break;
+		case 'notices-desc':
+			sortedFiles.sort((a, b) => {
+				// Primary: notices (high first)
+				if (b.noticesCount !== a.noticesCount) {
+					return b.noticesCount - a.noticesCount;
+				}
+				// Secondary: issues (high first)
+				if (b.issuesCount !== a.issuesCount) {
+					return b.issuesCount - a.issuesCount;
+				}
+				// Tertiary: warnings (high first)
+				if (b.warningsCount !== a.warningsCount) {
+					return b.warningsCount - a.warningsCount;
+				}
+				// Quaternary: file name A-Z
+				return a.file.localeCompare(b.file);
+			});
+			break;
+		case 'notices-asc':
+			sortedFiles.sort((a, b) => {
+				// Primary: notices (low first)
+				if (a.noticesCount !== b.noticesCount) {
+					return a.noticesCount - b.noticesCount;
+				}
+				// Secondary: issues (low first)
+				if (a.issuesCount !== b.issuesCount) {
+					return a.issuesCount - b.issuesCount;
+				}
+				// Tertiary: warnings (low first)
+				if (a.warningsCount !== b.warningsCount) {
+					return a.warningsCount - b.warningsCount;
+				}
+				// Quaternary: file name A-Z
 				return a.file.localeCompare(b.file);
 			});
 			break;
 		case 'filename-asc':
-			sortedFiles.sort((a, b) => a.file.localeCompare(b.file));
+			sortedFiles.sort((a, b) => {
+				// Primary: file name A-Z
+				const nameCompare = a.file.localeCompare(b.file);
+				if (nameCompare !== 0) return nameCompare;
+				// Secondary: issues (high first)
+				if (b.issuesCount !== a.issuesCount) {
+					return b.issuesCount - a.issuesCount;
+				}
+				// Tertiary: warnings (high first)
+				if (b.warningsCount !== a.warningsCount) {
+					return b.warningsCount - a.warningsCount;
+				}
+				// Quaternary: notices (high first)
+				return b.noticesCount - a.noticesCount;
+			});
 			break;
 		case 'filename-desc':
-			sortedFiles.sort((a, b) => b.file.localeCompare(a.file));
+			sortedFiles.sort((a, b) => {
+				// Primary: file name Z-A
+				const nameCompare = b.file.localeCompare(a.file);
+				if (nameCompare !== 0) return nameCompare;
+				// Secondary: issues (high first)
+				if (b.issuesCount !== a.issuesCount) {
+					return b.issuesCount - a.issuesCount;
+				}
+				// Tertiary: warnings (high first)
+				if (b.warningsCount !== a.warningsCount) {
+					return b.warningsCount - a.warningsCount;
+				}
+				// Quaternary: notices (high first)
+				return b.noticesCount - a.noticesCount;
+			});
 			break;
 	}
 	

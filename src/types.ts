@@ -6,7 +6,14 @@ export interface SEOCheckResult {
 	message: string;
 	suggestion?: string;
 	line?: number;
-	severity: 'info' | 'warning' | 'error';
+	severity: 'info' | 'warning' | 'error' | 'notice';
+	// Enhanced position information for navigation
+	position?: {
+		line: number;
+		column?: number;
+		searchText?: string; // Text to search for to find the issue
+		context?: string; // Surrounding context for better identification
+	};
 }
 
 export interface SEOResults {
@@ -29,6 +36,7 @@ export interface SEOResults {
 	overallScore: number;
 	issuesCount: number;
 	warningsCount: number;
+	noticesCount: number;
 }
 
 export interface SEOCheck {
