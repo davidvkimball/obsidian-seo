@@ -85,28 +85,31 @@ export class SEOSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		new Setting(containerEl)
-			.setName('Use file name as slug')
-			.setDesc('Use file name as slug instead of a property')
+		const useFilenameAsSlugSetting = new Setting(containerEl)
+			.setName('Use file/folder name as slug')
+			.setDesc('Use file/folder name as slug instead of a property')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.useFilenameAsSlug)
 				.onChange(async (value) => {
 					this.plugin.settings.useFilenameAsSlug = value;
 					await this.plugin.saveSettings();
+					// Re-render to show/hide the parent folder option
+					this.display();
 				}));
 
-		// Publishing settings
-		containerEl.createEl('h2', { text: 'Publishing' });
-
-		new Setting(containerEl)
-			.setName('Publish mode')
-			.setDesc('Enable when publishing to static site generators (Astro, Jekyll, etc.). Uses flexible validation for relative paths like /page that will be resolved by your site generator.')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.publishMode)
-				.onChange(async (value) => {
-					this.plugin.settings.publishMode = value;
-					await this.plugin.saveSettings();
-				}));
+		// Show parent folder option only when useFilenameAsSlug is enabled
+		if (this.plugin.settings.useFilenameAsSlug) {
+			new Setting(containerEl)
+				.setName('Use parent folder name instead when specified file name is used')
+				.setDesc('If a markdown file matches this file name, use the parent folder name as the slug instead')
+				.addText(text => text
+					.setPlaceholder('index')
+					.setValue(this.plugin.settings.parentFolderSlugFilename)
+					.onChange(async (value) => {
+						this.plugin.settings.parentFolderSlugFilename = value;
+						await this.plugin.saveSettings();
+					}));
+		}
 
 		// Check toggles
 		containerEl.createEl('h2', { text: 'Check Options' });
@@ -168,6 +171,26 @@ export class SEOSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.showNotices)
 				.onChange(async (value) => {
 					this.plugin.settings.showNotices = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Flexible relative link check')
+			.setDesc('Uses flexible validation for relative paths like /page that can be resolved by a static site generator, but may be considered broken by typical Obsidian validation')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.publishMode)
+				.onChange(async (value) => {
+					this.plugin.settings.publishMode = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Use note titles instead of file names')
+			.setDesc('Display note titles from frontmatter instead of file names in the issues list and current note audit')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.useNoteTitles)
+				.onChange(async (value) => {
+					this.plugin.settings.useNoteTitles = value;
 					await this.plugin.saveSettings();
 				}));
 

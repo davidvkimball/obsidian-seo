@@ -190,7 +190,9 @@ export class SEOSidePanel extends ItemView {
 				const activeFile = this.app.workspace.getActiveFile();
 				if (activeFile && activeFile.path.endsWith('.md')) {
 					const filenameEl = header.createEl('div', { cls: 'seo-filename' });
-					filenameEl.textContent = `Target note: ${activeFile.path}`;
+					// Use display name from current note results if available, otherwise use file path
+					const displayName = this.currentNoteResults?.displayName || activeFile.path;
+					filenameEl.textContent = `Target note: ${displayName}`;
 				}
 			} else {
 				// Show vault folders information for global panel

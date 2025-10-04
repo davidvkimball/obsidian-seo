@@ -106,27 +106,21 @@ export class PanelActions {
 	}
 
 	async openFile(filePath: string): Promise<void> {
-		const file = this.app.vault.getAbstractFileByPath(filePath);
-		if (file) {
-			// Check if file is already open, if so switch to it, otherwise open new tab
-			const existingLeaf = this.app.workspace.getLeavesOfType('markdown').find(leaf => 
-				leaf.view.getState().file === filePath
-			);
-			if (existingLeaf) {
-				this.app.workspace.setActiveLeaf(existingLeaf);
-			} else {
-				// Open the file in a new tab and make it active
-				this.app.workspace.openLinkText(filePath, '', true);
-				// Wait a bit for the file to open, then find and focus it
-				setTimeout(() => {
-					const newLeaf = this.app.workspace.getLeavesOfType('markdown').find(leaf => 
-						leaf.view.getState().file === filePath
-					);
-					if (newLeaf) {
-						this.app.workspace.setActiveLeaf(newLeaf);
-					}
-				}, 100);
+		try {
+			const file = this.app.vault.getAbstractFileByPath(filePath);
+			if (file) {
+				// Try different methods to work around plugin conflicts
+				try {
+					// Method 1: Use getLeaf and open
+					const leaf = this.app.workspace.getLeaf();
+					await leaf.openFile(file as any);
+				} catch (error) {
+					// Method 2: Fallback to openLinkText
+					await this.app.workspace.openLinkText(filePath, '', true);
+				}
 			}
+		} catch (error) {
+			console.error(`Error opening file ${filePath}:`, error);
 		}
 	}
 
@@ -260,7 +254,7 @@ export class PanelActions {
 			
 			// Make file path clickable
 			const fileLink = fileEl.createEl('a', { 
-				text: this.getDisplayPath(result.file),
+				text: result.displayName || this.getDisplayPath(result.file),
 				cls: 'seo-file-link',
 				href: '#'
 			});

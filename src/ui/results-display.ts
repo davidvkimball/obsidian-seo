@@ -242,7 +242,7 @@ export class ResultsDisplay {
 			
 			// Make file path clickable
 			const fileLink = fileEl.createEl('a', { 
-				text: getDisplayPath(result.file),
+				text: result.displayName || getDisplayPath(result.file),
 				cls: 'seo-file-link',
 				href: '#'
 			});

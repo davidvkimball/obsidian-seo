@@ -305,9 +305,10 @@ export async function checkBrokenLinks(content: string, file: TFile, settings: S
 			const isWikilink = link.startsWith('[[');
 			const isEmbeddedImage = linkTarget.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i);
 			const isRelativePath = linkTarget.startsWith('/') && !linkTarget.startsWith('//');
+			const isAnchorLink = linkTarget.startsWith('#');
 			
-			// In publish mode, treat relative paths as potentially broken (warning) instead of broken (error)
-			if (settings.publishMode && isRelativePath && !isEmbeddedImage) {
+			// In publish mode, treat relative paths and anchor links as potentially broken (warning) instead of broken (error)
+			if (settings.publishMode && (isRelativePath || isAnchorLink) && !isEmbeddedImage) {
 				// Add to potentially broken links instead of broken links
 				// This will be handled in the checkPotentiallyBrokenLinks function
 				continue;
@@ -383,13 +384,15 @@ export async function checkPotentiallyBrokenLinks(content: string, file: TFile, 
 			const isWikilink = link.startsWith('[[');
 			const isEmbeddedImage = linkTarget.match(/\.(png|jpg|jpeg|gif|svg|webp)$/i);
 			const isRelativePath = linkTarget.startsWith('/') && !linkTarget.startsWith('//');
+			const isAnchorLink = linkTarget.startsWith('#');
 			
-			// In publish mode, show relative paths as potentially broken (warning)
-			if (settings.publishMode && isRelativePath && !isEmbeddedImage) {
+			// In publish mode, show relative paths and anchor links as potentially broken (warning)
+			if (settings.publishMode && (isRelativePath || isAnchorLink) && !isEmbeddedImage) {
+				const linkType = isAnchorLink ? 'anchor link' : 'relative path';
 				results.push({
 					passed: false,
 					message: `Potentially broken link: ${linkTarget}`,
-					suggestion: "Relative path that may be resolved by your site generator. Verify the target page will resolve on your published site.",
+					suggestion: `${linkType.charAt(0).toUpperCase() + linkType.slice(1)} that may be resolved by your site generator. Verify the target will resolve on your published site.`,
 					severity: 'warning'
 				});
 				continue;
@@ -611,18 +614,20 @@ export async function checkImageNaming(content: string, file: TFile, settings: S
 					results.push({
 						passed: false,
 						message: `Image ${index + 1} has random filename: ${fileName}`,
-						suggestion: "Use descriptive filenames for better SEO",
+						suggestion: "Use descriptive filenames",
 						severity: 'warning'
 					});
 				} else if (fileName.toLowerCase().includes('pasted') || 
 						   fileName.toLowerCase().includes('image') ||
 						   fileName.toLowerCase().includes('untitled') ||
-						   fileName.toLowerCase().includes('screenshot') ||
-						   fileName.toLowerCase().includes('photo')) {
+						   fileName.toLowerCase().includes('photo') ||
+						   (fileName.toLowerCase().includes('screenshot') && 
+						    (fileName.match(/[a-f0-9]{6,}/) || fileName.includes('_') || fileName.includes('-'))) ||
+						   fileName.match(/^screenshot\d*\.(png|jpg|jpeg|gif|webp)$/i)) {
 					results.push({
 						passed: false,
 						message: `Image ${index + 1} has generic filename: ${fileName}`,
-						suggestion: "Use descriptive filenames for better SEO",
+						suggestion: "Use descriptive filenames",
 						severity: 'warning'
 					});
 				} else if (fileName.length < 5 || fileName.length > 50) {
@@ -906,14 +911,7 @@ export async function checkKeywordInSlug(content: string, file: TFile, settings:
 	}
 	
 	// Get slug from frontmatter or use filename
-	let slug = '';
-	if (settings.useFilenameAsSlug) {
-		// Use filename without extension
-		slug = file.basename;
-	} else if (settings.slugProperty.trim()) {
-		const slugMatch = content.match(new RegExp(`^${settings.slugProperty}:\\s*(.+)$`, 'm'));
-		slug = slugMatch?.[1]?.trim() || '';
-	}
+	const slug = getSlugFromFile(file, content, settings);
 	
 	if (!slug) {
 		return [{
@@ -948,14 +946,7 @@ export async function checkSlugFormat(content: string, file: TFile, settings: SE
 	const results: SEOCheckResult[] = [];
 	
 	// Get slug from frontmatter or use filename
-	let slug = '';
-	if (settings.useFilenameAsSlug) {
-		// Use filename without extension
-		slug = file.basename;
-	} else if (settings.slugProperty.trim()) {
-		const slugMatch = content.match(new RegExp(`^${settings.slugProperty}:\\s*(.+)$`, 'm'));
-		slug = slugMatch?.[1]?.trim() || '';
-	}
+	const slug = getSlugFromFile(file, content, settings);
 	
 	if (!slug) {
 		return [{
@@ -1012,6 +1003,48 @@ export async function checkSlugFormat(content: string, file: TFile, settings: SE
 }
 
 // Helper functions
+export function getDisplayName(file: TFile, content: string, settings: SEOSettings): string {
+	if (settings.useNoteTitles && settings.titleProperty.trim()) {
+		// Try to get title from frontmatter
+		const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+		if (frontmatterMatch) {
+			const frontmatter = frontmatterMatch[1];
+			const titleMatch = frontmatter.match(new RegExp(`^${settings.titleProperty}:\\s*(.+)$`, 'm'));
+			if (titleMatch && titleMatch[1].trim()) {
+				// Remove surrounding quotes if present
+				let title = titleMatch[1].trim();
+				if ((title.startsWith('"') && title.endsWith('"')) || 
+					(title.startsWith("'") && title.endsWith("'"))) {
+					title = title.slice(1, -1);
+				}
+				return title;
+			}
+		}
+	}
+	// Fallback to filename
+	return file.basename;
+}
+
+function getSlugFromFile(file: TFile, content: string, settings: SEOSettings): string {
+	if (settings.useFilenameAsSlug) {
+		// Check if we should use parent folder name instead
+		if (settings.parentFolderSlugFilename.trim() && 
+			file.basename.toLowerCase() === settings.parentFolderSlugFilename.toLowerCase()) {
+			// Use parent folder name as slug
+			const pathParts = file.path.split('/');
+			if (pathParts.length > 1) {
+				return pathParts[pathParts.length - 2]; // Get parent folder name
+			}
+		}
+		// Use filename without extension
+		return file.basename;
+	} else if (settings.slugProperty.trim()) {
+		const slugMatch = content.match(new RegExp(`^${settings.slugProperty}:\\s*(.+)$`, 'm'));
+		return slugMatch?.[1]?.trim() || '';
+	}
+	return '';
+}
+
 function countSyllables(word: string): number {
 	word = word.toLowerCase();
 	if (word.length <= 3) return 1;

@@ -11,6 +11,7 @@ export interface SEOCheckResult {
 
 export interface SEOResults {
 	file: string;
+	displayName?: string;
 	checks: {
 		altText: SEOCheckResult[];
 		nakedLinks: SEOCheckResult[];

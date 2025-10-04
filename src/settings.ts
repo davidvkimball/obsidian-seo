@@ -9,6 +9,7 @@ export interface SEOSettings {
 	useFilenameAsTitle: boolean;
 	slugProperty: string;
 	useFilenameAsSlug: boolean;
+	parentFolderSlugFilename: string;
 	
 	// Check toggles
 	checkContentLength: boolean;
@@ -16,6 +17,7 @@ export interface SEOSettings {
 	checkDuplicateContent: boolean;
 	checkReadingLevel: boolean;
 	showNotices: boolean;
+	useNoteTitles: boolean;
 	
 	// Publishing settings
 	publishMode: boolean;
@@ -42,11 +44,13 @@ export const DEFAULT_SETTINGS: SEOSettings = {
 	useFilenameAsTitle: false,
 	slugProperty: "",
 	useFilenameAsSlug: false,
+	parentFolderSlugFilename: "",
 	checkContentLength: true,
 	checkImageNaming: true,
 	checkDuplicateContent: false,
 	checkReadingLevel: true,
 	showNotices: true,
+	useNoteTitles: false,
 	publishMode: false,
 	defaultSort: 'issues-desc',
 	minContentLength: 300,

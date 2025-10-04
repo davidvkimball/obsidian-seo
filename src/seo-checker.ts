@@ -28,7 +28,8 @@ import {
 	checkNotices,
 	checkKeywordInTitle,
 	checkKeywordInSlug,
-	checkSlugFormat
+	checkSlugFormat,
+	getDisplayName
 } from "./checks";
 
 export async function runSEOCheck(plugin: SEOPlugin, files: TFile[]): Promise<SEOResults[]> {
@@ -168,6 +169,7 @@ async function checkFile(plugin: SEOPlugin, file: TFile, content: string): Promi
 
 	return {
 		file: file.path,
+		displayName: getDisplayName(file, content, plugin.settings),
 		checks,
 		overallScore,
 		issuesCount,
