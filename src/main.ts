@@ -11,6 +11,7 @@ export default class SEOPlugin extends Plugin {
 	settings: SEOSettings;
 	private panelManager: PanelManager;
 	private realTimeChecker: RealTimeChecker;
+	public sidePanel: SEOSidePanel | null = null;
 
 	async onload() {
 		await this.loadSettings();
@@ -25,10 +26,12 @@ export default class SEOPlugin extends Plugin {
 		// Register the side panel views
 		this.registerView(SEOCurrentPanelViewType, (leaf) => {
 			const panel = new SEOSidePanel(this, 'current', leaf);
+			this.sidePanel = panel; // Store reference for settings updates
 			return panel;
 		});
 		this.registerView(SEOGlobalPanelViewType, (leaf) => {
 			const panel = new SEOSidePanel(this, 'global', leaf);
+			this.sidePanel = panel; // Store reference for settings updates
 			return panel;
 		});
 

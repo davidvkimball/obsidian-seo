@@ -122,7 +122,7 @@ export class SEOSettingTab extends PluginSettingTab {
 		}
 
 		// Check toggles - in correct order
-		containerEl.createEl('h2', { text: 'Check Options' });
+		containerEl.createEl('h2', { text: 'Audit Options' });
 
 		new Setting(containerEl)
 			.setName('Check title length')
@@ -195,13 +195,37 @@ export class SEOSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Check broken links')
-			.setDesc('Enable broken link detection')
+			.setName('Check broken internal links')
+			.setDesc('Enable broken internal link detection')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.checkBrokenLinks)
 				.onChange(async (value) => {
 					this.plugin.settings.checkBrokenLinks = value;
 					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Check external links')
+			.setDesc('Return a list of external links')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.checkExternalLinks)
+				.onChange(async (value) => {
+					this.plugin.settings.checkExternalLinks = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Enable broken external link check button')
+			.setDesc('Show "Check external links for 404s" button in current note panel')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.enableExternalLinkButton)
+				.onChange(async (value) => {
+					this.plugin.settings.enableExternalLinkButton = value;
+					await this.plugin.saveSettings();
+					// Refresh the side panel if it exists
+					if (this.plugin.sidePanel) {
+						this.plugin.sidePanel.refresh();
+					}
 				}));
 
 		new Setting(containerEl)
@@ -263,6 +287,29 @@ export class SEOSettingTab extends PluginSettingTab {
 					this.plugin.settings.skipH1Check = value;
 					await this.plugin.saveSettings();
 				}));
+
+		const vaultCheckSetting = new Setting(containerEl)
+			.setName('Automatically include broken external link checks in audits (not recommended)')
+			.setDesc('Include broken external link checking in vault-wide and current note audits')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.enableExternalLinkVaultCheck)
+				.onChange(async (value) => {
+					this.plugin.settings.enableExternalLinkVaultCheck = value;
+					await this.plugin.saveSettings();
+					// Refresh the side panel if it exists
+					if (this.plugin.sidePanel) {
+						this.plugin.sidePanel.refresh();
+					}
+				}));
+
+		// Add warning for vault-wide external link checking
+		const vaultWarningEl = vaultCheckSetting.descEl.createEl('div', {
+			text: '⚠️ WARNING: This will make vault audits extremely slow. Use the "Check external links" button instead for individual notes.',
+			cls: 'setting-item-description'
+		});
+		vaultWarningEl.style.color = '#ff6b6b';
+		vaultWarningEl.style.fontWeight = 'bold';
+		vaultWarningEl.style.marginTop = '4px';
 
 		// Thresholds
 		containerEl.createEl('h2', { text: 'Thresholds' });

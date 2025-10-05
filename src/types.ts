@@ -25,6 +25,7 @@ export interface SEOResults {
 		headingOrder: SEOCheckResult[];
 		keywordDensity: SEOCheckResult[];
 		brokenLinks: SEOCheckResult[];
+		externalBrokenLinks: SEOCheckResult[];
 		metaDescription: SEOCheckResult[];
 		titleLength: SEOCheckResult[];
 		contentLength: SEOCheckResult[];

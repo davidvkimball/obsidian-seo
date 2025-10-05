@@ -69,6 +69,45 @@ export class PanelActions {
 		}
 	}
 
+	async checkExternalLinks(): Promise<SEOResults | null> {
+		const activeFile = this.app.workspace.getActiveFile();
+		if (!activeFile || !activeFile.path.endsWith('.md')) {
+			new Notice('Please open a markdown file first.');
+			return null;
+		}
+
+		try {
+			// Temporarily enable external broken links checking and disable external links
+			const originalVaultSetting = this.plugin.settings.enableExternalLinkVaultCheck;
+			const originalExternalSetting = this.plugin.settings.checkExternalLinks;
+			
+			this.plugin.settings.enableExternalLinkVaultCheck = true;
+			this.plugin.settings.checkExternalLinks = false; // Disable the notice-based check
+			
+			// Clear cache first to ensure fresh results
+			const { clearCacheForFile } = await import("../seo-checker");
+			clearCacheForFile(activeFile.path);
+			
+			// Import and run SEO check directly with external broken links enabled
+			const { runSEOCheck } = await import("../seo-checker");
+			const results = await runSEOCheck(this.plugin, [activeFile]);
+			
+			// Restore original settings
+			this.plugin.settings.enableExternalLinkVaultCheck = originalVaultSetting;
+			this.plugin.settings.checkExternalLinks = originalExternalSetting;
+			
+			if (results.length > 0) {
+				new Notice('External links check complete.');
+				return results[0];
+			}
+			return null;
+		} catch (error) {
+			console.error('Error checking external links:', error);
+			new Notice('Error checking external links. Check console for details.');
+			return null;
+		}
+	}
+
 	async refreshGlobalResults(): Promise<SEOResults[]> {
 		try {
 			// Clear cache first to ensure fresh results

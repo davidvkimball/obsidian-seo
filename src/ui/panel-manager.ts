@@ -26,6 +26,11 @@ export class PanelManager {
 			this.app.workspace.revealLeaf(existingLeaf);
 			this.app.workspace.setActiveLeaf(existingLeaf);
 			
+			// Store reference for settings updates
+			if (existingLeaf.view instanceof SEOSidePanel) {
+				this.plugin.sidePanel = existingLeaf.view as SEOSidePanel;
+			}
+			
 			// Ensure icon loads properly - use setTimeout for panel timing
 			if (existingLeaf.view instanceof SEOSidePanel) {
 				setTimeout(() => (existingLeaf.view as SEOSidePanel).forceIconRefresh(), 100);
@@ -37,6 +42,7 @@ export class PanelManager {
 			if (leaf) {
 				// Create the panel manually - this is the most reliable approach
 				const panel = new SEOSidePanel(this.plugin, panelType, leaf);
+				this.plugin.sidePanel = panel; // Store reference for settings updates
 				leaf.open(panel);
 				this.app.workspace.setActiveLeaf(leaf);
 				

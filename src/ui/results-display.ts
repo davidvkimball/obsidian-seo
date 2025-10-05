@@ -201,9 +201,22 @@ export class ResultsDisplay {
 			const checkEl = checksContainer.createEl('div', { cls: `seo-check ${statusClass}` });
 			const header = checkEl.createEl('div', { cls: 'seo-check-header seo-collapsible-header' });
 			
-			// Convert camelCase to sentence case
+			// Convert camelCase to sentence case with special handling
 			let displayName = checkName.replace(/([A-Z])/g, ' $1').trim()
 				.replace(/^./, str => str.toUpperCase());
+			
+			// Special handling for external links based on content
+			if (checkName === 'externalBrokenLinks') {
+				// Check if this is notice-based (external links listing) or error-based (broken links)
+				const hasNotices = checkResults.some(r => r.severity === 'notice');
+				const hasErrors = checkResults.some(r => r.severity === 'error');
+				
+				if (hasNotices && !hasErrors) {
+					displayName = 'External Links';
+				} else {
+					displayName = 'External Broken Links';
+				}
+			}
 			
 			// Add collapse icon
 			const collapseIcon = header.createEl('span', { cls: 'seo-collapse-icon' });

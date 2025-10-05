@@ -18,6 +18,8 @@ import {
 	checkHeadingOrder, 
 	checkKeywordDensity,
 	checkBrokenLinks,
+	checkExternalLinks,
+	checkExternalBrokenLinks,
 	checkPotentiallyBrokenLinks,
 	checkMetaDescription,
 	checkTitleLength,
@@ -77,7 +79,10 @@ async function checkFile(plugin: SEOPlugin, file: TFile, content: string): Promi
 		nakedLinks: await checkNakedLinks(content, file, plugin.settings),
 		readingLevel: await checkReadingLevel(content, file, plugin.settings),
 		potentiallyBrokenLinks: await checkPotentiallyBrokenLinks(content, file, plugin.settings, plugin.app),
-		potentiallyBrokenEmbeds: await checkNotices(content, file, plugin.settings)
+		potentiallyBrokenEmbeds: await checkNotices(content, file, plugin.settings),
+		externalBrokenLinks: plugin.settings.enableExternalLinkVaultCheck 
+			? await checkExternalBrokenLinks(content, file, plugin.settings)
+			: (plugin.settings.checkExternalLinks ? await checkExternalLinks(content, file, plugin.settings) : [])
 	};
 
 	// Calculate overall score and counts

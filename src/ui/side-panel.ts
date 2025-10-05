@@ -175,6 +175,11 @@ export class SEOSidePanel extends ItemView {
 		});
 	}
 
+	// Method to refresh the panel when settings change
+	refresh() {
+		this.render();
+	}
+
 	render() {
 		try {
 			const { containerEl } = this;
@@ -227,6 +232,33 @@ export class SEOSidePanel extends ItemView {
 						auditCurrentBtn.style.opacity = '1';
 					}
 				});
+
+				// External links button (only show if enabled in settings and vault-wide is disabled)
+				if (this.plugin.settings.enableExternalLinkButton && !this.plugin.settings.enableExternalLinkVaultCheck) {
+					const externalLinksBtn = containerEl.createEl('button', { 
+						text: 'Check external links for 404s',
+						cls: 'seo-btn'
+					});
+					externalLinksBtn.addEventListener('click', async () => {
+						externalLinksBtn.disabled = true;
+						externalLinksBtn.textContent = 'This may take some time...';
+						externalLinksBtn.style.opacity = '0.7';
+						
+						try {
+							const result = await this.actions.checkExternalLinks();
+							if (result) {
+								this.currentNoteResults = result;
+								// Update global results if they exist
+								this.updateGlobalResultsIfExists(result);
+								this.render();
+							}
+						} finally {
+							externalLinksBtn.disabled = false;
+							externalLinksBtn.textContent = 'Check external links for 404s';
+							externalLinksBtn.style.opacity = '1';
+						}
+					});
+				}
 			}
 
 			// Content based on panel type

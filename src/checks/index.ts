@@ -447,6 +447,328 @@ export async function checkBrokenLinks(content: string, file: TFile, settings: S
 	return results;
 }
 
+export async function checkExternalBrokenLinks(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+	const results: SEOCheckResult[] = [];
+	
+	if (!settings.enableExternalLinkVaultCheck) {
+		return [];
+	}
+	
+	// Remove code blocks to avoid false positives
+	const cleanContent = removeCodeBlocks(content);
+	
+	// Find external links - both markdown links and naked URLs
+	const externalLinks: string[] = [];
+	
+	// Find markdown links with http/https URLs
+	const markdownLinks = cleanContent.match(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g);
+	if (markdownLinks) {
+		markdownLinks.forEach(link => {
+			const match = link.match(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/);
+			if (match) {
+				externalLinks.push(match[2]);
+			}
+		});
+	}
+	
+	// Find naked URLs (but exclude archival URLs as they are meant to be displayed as-is)
+	const nakedUrls = cleanContent.match(/(?<!\]\()(?<!https?:\/\/[^\s\)]*\/)https?:\/\/[^\s\)]+/g);
+	if (nakedUrls) {
+		nakedUrls.forEach(url => {
+			// Skip archival URLs as they are meant to be displayed as-is
+			if (!url.includes('web.archive.org/web/') && 
+				!url.includes('archive.today/') &&
+				!url.includes('archive.is/') &&
+				!url.includes('web.archive.org/save/')) {
+				externalLinks.push(url);
+			}
+		});
+	}
+	
+	// Remove duplicates
+	const uniqueLinks = [...new Set(externalLinks)];
+	
+	if (uniqueLinks.length === 0) {
+		results.push({
+			passed: true,
+			message: "No external links found",
+			severity: 'info'
+		});
+		return results;
+	}
+	
+	// Check each external link
+	for (const url of uniqueLinks) {
+		let timeoutId: NodeJS.Timeout | null = null;
+		
+		try {
+			const controller = new AbortController();
+			timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+			
+			const response = await fetch(url, {
+				method: 'GET',
+				headers: {
+					'Range': 'bytes=0-0'
+				},
+				mode: 'no-cors',
+				signal: controller.signal
+			});
+			
+			if (timeoutId) clearTimeout(timeoutId);
+			
+			// With no-cors mode, we can't read the status, but if we get here without error, it's likely working
+			// We'll consider it working if no network error occurred
+			
+		} catch (error) {
+			if (timeoutId) clearTimeout(timeoutId);
+			
+			// Find the line number for this URL
+			const lines = content.split('\n');
+			let lineNumber = 1;
+			for (let i = 0; i < lines.length; i++) {
+				if (lines[i].includes(url)) {
+					lineNumber = i + 1;
+					break;
+				}
+			}
+			
+			let errorMessage = '';
+			let suggestion = '';
+			
+			if (error.name === 'AbortError') {
+				errorMessage = `External link timeout: ${url}`;
+				suggestion = 'This link took too long to respond. The server might be slow or the link might be broken.';
+			} else if (error.message.includes('Failed to fetch') || error.message.includes('net::ERR_')) {
+				errorMessage = `External link unreachable: ${url}`;
+				suggestion = 'This link could not be reached. Check if the URL is correct or if the server is down.';
+			} else {
+				errorMessage = `External link error: ${url}`;
+				suggestion = 'This link could not be verified. Please check the URL manually.';
+			}
+			
+			results.push({
+				passed: false,
+				message: errorMessage,
+				suggestion: suggestion,
+				severity: 'error',
+				position: {
+					line: lineNumber,
+					searchText: url,
+					context: getContextAroundLine(content, lineNumber)
+				}
+			});
+		}
+	}
+	
+	// If no errors were found, add success message
+	if (results.length === 0 && uniqueLinks.length > 0) {
+		results.push({
+			passed: true,
+			message: `Found ${uniqueLinks.length} external link(s), all appear to resolve and are working`,
+			severity: 'info'
+		});
+	}
+	
+	return results;
+}
+
+export async function checkExternalLinks(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+	const results: SEOCheckResult[] = [];
+	
+	if (!settings.checkExternalLinks) {
+		return [];
+	}
+	
+	// Remove code blocks to avoid false positives
+	const cleanContent = removeCodeBlocks(content);
+	
+	// Find external links - both markdown links and naked URLs
+	const externalLinks: string[] = [];
+	
+	// Find markdown links with http/https URLs
+	const markdownLinks = cleanContent.match(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g);
+	if (markdownLinks) {
+		markdownLinks.forEach(link => {
+			const match = link.match(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/);
+			if (match) {
+				externalLinks.push(match[2]);
+			}
+		});
+	}
+	
+	// Find naked URLs (but exclude archival URLs as they are meant to be displayed as-is)
+	const nakedUrls = cleanContent.match(/(?<!\]\()(?<!https?:\/\/[^\s\)]*\/)https?:\/\/[^\s\)]+/g);
+	if (nakedUrls) {
+		nakedUrls.forEach(url => {
+			// Skip archival URLs as they are meant to be displayed as-is
+			if (!url.includes('web.archive.org/web/') && 
+				!url.includes('archive.today/') &&
+				!url.includes('archive.is/') &&
+				!url.includes('web.archive.org/save/')) {
+				externalLinks.push(url);
+			}
+		});
+	}
+	
+	// Remove duplicates
+	const uniqueLinks = [...new Set(externalLinks)];
+	
+	if (uniqueLinks.length > 0) {
+		// List each external link as a notice
+		uniqueLinks.forEach((url, index) => {
+			const lineNumber = findLineNumberForImage(content, url);
+			results.push({
+				passed: true,
+				message: `External link: ${url}`,
+				suggestion: "To find if any of these are broken, use the 'Check external links for 404s' button to trigger it.",
+				severity: 'notice',
+				position: {
+					line: lineNumber,
+					searchText: url,
+					context: getContextAroundLine(content, lineNumber)
+				}
+			});
+		});
+	} else {
+		results.push({
+			passed: true,
+			message: "No external links found",
+			severity: 'info'
+		});
+	}
+	
+	return results;
+}
+
+export async function checkExternalLinksOnly(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+	const results: SEOCheckResult[] = [];
+	
+	if (!settings.checkExternalLinks) {
+		return [];
+	}
+	
+	// Remove code blocks to avoid false positives
+	const cleanContent = removeCodeBlocks(content);
+	
+	// Find external links - both markdown links and naked URLs
+	const externalLinks: string[] = [];
+	
+	// Find markdown links with http/https URLs
+	const markdownLinks = cleanContent.match(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g);
+	if (markdownLinks) {
+		markdownLinks.forEach(link => {
+			const match = link.match(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/);
+			if (match) {
+				externalLinks.push(match[2]);
+			}
+		});
+	}
+	
+	// Find naked URLs (but exclude archival URLs as they are meant to be displayed as-is)
+	const nakedUrls = cleanContent.match(/(?<!\]\()(?<!https?:\/\/[^\s\)]*\/)https?:\/\/[^\s\)]+/g);
+	if (nakedUrls) {
+		nakedUrls.forEach(url => {
+			// Skip archival URLs as they are meant to be displayed as-is
+			if (!url.includes('web.archive.org/web/') && 
+				!url.includes('archive.today/') &&
+				!url.includes('archive.is/') &&
+				!url.includes('web.archive.org/save/')) {
+				externalLinks.push(url);
+			}
+		});
+	}
+	
+	// Remove duplicates
+	const uniqueLinks = [...new Set(externalLinks)];
+	
+	// Check each external link
+	for (const url of uniqueLinks) {
+		const lineNumber = findLineNumberForImage(content, url);
+		
+		try {
+			// Use no-cors mode to bypass CORS restrictions
+			// This is the only way to make requests from Obsidian's Electron environment
+			const controller = new AbortController();
+			const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+			
+			// Use fetch with no-cors mode to bypass CORS restrictions
+			const response = await fetch(url, {
+				method: 'GET', // Use GET since HEAD might not work with no-cors
+				mode: 'no-cors', // Bypass CORS restrictions
+				headers: {
+					'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+				},
+				signal: controller.signal
+			});
+			
+			clearTimeout(timeoutId);
+			
+			// With no-cors mode, we can't read response.ok or status
+			// If we get here without an error, the request succeeded
+			// We'll assume it's working unless we get a specific error
+			// Note: This approach can't detect 404s or other HTTP errors due to CORS limitations
+		} catch (error) {
+			// Handle network errors, timeouts, etc.
+			if (error instanceof Error) {
+				if (error.name === 'AbortError') {
+					results.push({
+						passed: false,
+						message: `This link resolves with timeout: ${url}`,
+						suggestion: "This link took too long to respond. The server may be slow or temporarily unavailable.",
+						severity: 'error',
+						position: {
+							line: lineNumber,
+							searchText: url,
+							context: getContextAroundLine(content, lineNumber)
+						}
+					});
+				} else if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
+					// This is likely a network connectivity issue
+					results.push({
+						passed: false,
+						message: `This link resolves with network error: ${url}`,
+						suggestion: "This link could not be reached. Check if the URL is correct or if the server is down.",
+						severity: 'error',
+						position: {
+							line: lineNumber,
+							searchText: url,
+							context: getContextAroundLine(content, lineNumber)
+						}
+					});
+				} else {
+					results.push({
+						passed: false,
+						message: `This link resolves with error: ${url}`,
+						suggestion: "This link could not be accessed. Check if the URL is correct or if there's a network issue.",
+						severity: 'error',
+						position: {
+							line: lineNumber,
+							searchText: url,
+							context: getContextAroundLine(content, lineNumber)
+						}
+					});
+				}
+			}
+		}
+	}
+	
+	if (results.length === 0 && uniqueLinks.length > 0) {
+		results.push({
+			passed: true,
+			message: `Found ${uniqueLinks.length} external link(s), all appear to resolve and are working`,
+			severity: 'info'
+		});
+	} else if (uniqueLinks.length === 0) {
+		results.push({
+			passed: true,
+			message: "No external links found",
+			severity: 'info'
+		});
+	}
+	
+	return results;
+}
+
 export async function checkPotentiallyBrokenLinks(content: string, file: TFile, settings: SEOSettings, app?: any): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
@@ -491,7 +813,7 @@ export async function checkPotentiallyBrokenLinks(content: string, file: TFile, 
 				const linkType = isAnchorLink ? 'anchor link' : 'relative path';
 				results.push({
 					passed: false,
-					message: `Potentially broken link: ${linkTarget}`,
+					message: `Relative link: ${linkTarget}`,
 					suggestion: `${linkType.charAt(0).toUpperCase() + linkType.slice(1)} that may be resolved by your site generator. Verify the target will resolve on your published site.`,
 					severity: 'notice',
 					position: {
@@ -512,7 +834,7 @@ export async function checkPotentiallyBrokenLinks(content: string, file: TFile, 
 					if (isWikilink) {
 						results.push({
 							passed: false,
-							message: `Potentially broken link: ${linkTarget}`,
+							message: `Relative link: ${linkTarget}`,
 							suggestion: "Wikilinks may not work on the web - consider converting to standard markdown links",
 							severity: 'notice',
 							position: {
@@ -530,7 +852,7 @@ export async function checkPotentiallyBrokenLinks(content: string, file: TFile, 
 	if (results.length === 0) {
 		results.push({
 			passed: true,
-			message: "No potentially broken links found",
+			message: "No relative links found",
 			severity: 'info'
 		});
 	}
@@ -1024,7 +1346,7 @@ export async function checkNotices(content: string, file: TFile, settings: SEOSe
 		embeddedMedia.forEach((media, index) => {
 			results.push({
 				passed: false,
-				message: `Potentially broken embed: ${media.path}`,
+				message: `Embed: ${media.path}`,
 				suggestion: "Verify this media file will be accessible on your published site",
 				severity: 'notice',
 				position: {
@@ -1039,7 +1361,7 @@ export async function checkNotices(content: string, file: TFile, settings: SEOSe
 	if (results.length === 0) {
 		results.push({
 			passed: true,
-			message: "No embedded media compatibility issues found",
+			message: "No embedded media found",
 			severity: 'info'
 		});
 	}

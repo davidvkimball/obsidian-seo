@@ -17,6 +17,9 @@ export interface SEOSettings {
 	checkAltText: boolean;
 	checkImageNaming: boolean;
 	checkBrokenLinks: boolean;
+	checkExternalLinks: boolean;
+	enableExternalLinkButton: boolean;
+	enableExternalLinkVaultCheck: boolean;
 	checkNakedLinks: boolean;
 	checkContentLength: boolean;
 	checkDuplicateContent: boolean;
@@ -57,6 +60,9 @@ export const DEFAULT_SETTINGS: SEOSettings = {
 	checkAltText: true,
 	checkImageNaming: true,
 	checkBrokenLinks: true,
+	checkExternalLinks: true,
+	enableExternalLinkButton: true,
+	enableExternalLinkVaultCheck: false,
 	checkNakedLinks: true,
 	checkContentLength: true,
 	checkDuplicateContent: false,
