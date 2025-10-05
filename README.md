@@ -13,9 +13,9 @@ A comprehensive SEO analysis tool for Obsidian that helps you optimize your note
 ### **Comprehensive SEO Checks**
 
 #### **Content Quality**
-- **Content Length** - Ensures minimum word count (default: 300 words)
+- **Content Length** - Minimum word count threshold
 - **Reading Level** - Analyzes readability and complexity
-- **Keyword Density** - Optimal keyword usage (1-2% range)
+- **Keyword Density** - Optimal keyword usage
 - **Duplicate Content** - Detects similar content across notes
 
 #### **Technical SEO**
@@ -27,21 +27,23 @@ A comprehensive SEO analysis tool for Obsidian that helps you optimize your note
 
 #### **Link Management**
 - **Broken Links** - Detects non-existent internal links
+- **Potentially Broken Links** - Identifies links that may be broken
+- **External Links** - Validates external link accessibility
 - **Naked Links** - Identifies unformatted URLs
-- **Link Validation** - Checks link accessibility
+- **Broken Embeds** - Detects potentially broken embedded content
 
 ### **User Experience**
-- **Ribbon Icon** - Quick access to vault-wide analysis
-- **Side Panels** - Dedicated current note and global analysis views
 - **Flexible Sorting** - Sort by issues, warnings, or filename
 - **One-click Navigation** - Jump directly to problematic files
+- **Caching** - Fast subsequent scans with intelligent cache management
+- **Configurable Settings** - Customize all checks and thresholds
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| **Open current note check** | Audit the currently open note |
-| **Open vault check** | Audit all notes in configured directories |
+| **Open current note audit** | Audit the currently open note |
+| **Open vault audit** | Audit all notes in configured directories |
 
 ## SEO Score System
 
@@ -54,26 +56,24 @@ The plugin uses a weighted scoring system that prioritizes critical SEO factors:
 
 **Score Range**: 40-100 (40 = needs work, 100 = excellent)
 
-## Usage Examples
+## Usage
 
 ### **Quick Current Note Check**
 1. Open any markdown file
-2. Use command "Open current note check" or click ribbon icon
-3. Click "Check current note" button
+2. Use command "Open current note audit"
+3. Click "Check current note" to run analysis
 4. Review issues and warnings
 
 ### **Vault-wide Analysis**
 1. Configure scan directories in settings
-2. Use command "Open vault check"
-3. Click "Check all notes" for comprehensive analysis
-4. Sort results by issues, warnings, or filename
-5. Click any file to open and fix issues
+2. Use command "Open vault audit"
+3. Review comprehensive analysis with sorting options
+4. Click any file to open and fix issues
 
 ### **Performance Optimization**
 - First scan builds cache (slower)
 - Subsequent scans use cache (much faster)
 - Cache automatically expires after 24 hours
-- Use "Clear SEO cache" for fresh analysis
 
 ## Installation
 
