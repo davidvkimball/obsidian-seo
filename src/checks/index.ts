@@ -81,7 +81,49 @@ export async function checkPotentiallyBrokenEmbeds(content: string, file: TFile,
 }
 
 export function getDisplayName(file: TFile, content: string, settings: SEOSettings): string {
-	// TODO: Move this to utils
+	if (settings.useNoteTitles && settings.titleProperty.trim()) {
+		// Try to get title from frontmatter - handle various formats
+		let frontmatterMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+		if (!frontmatterMatch) {
+			// Try without carriage returns
+			frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+		}
+		if (!frontmatterMatch) {
+			// Try with just dashes and any whitespace
+			frontmatterMatch = content.match(/^---\s*\n([\s\S]*?)\n\s*---/);
+		}
+
+		if (frontmatterMatch && frontmatterMatch[1]) {
+			const frontmatter = frontmatterMatch[1];
+
+			// Split by lines and look for the property
+			const lines = frontmatter.split('\n');
+
+			for (const line of lines) {
+				if (!line) continue;
+				const trimmedLine = line.trim();
+
+				if (trimmedLine.startsWith(settings.titleProperty + ':')) {
+					// Extract the value after the colon
+					const colonIndex = trimmedLine.indexOf(':');
+					if (colonIndex !== -1) {
+						let title = trimmedLine.substring(colonIndex + 1).trim();
+
+						// Remove surrounding quotes if present
+						if ((title.startsWith('"') && title.endsWith('"')) ||
+							(title.startsWith("'") && title.endsWith("'"))) {
+							title = title.slice(1, -1);
+						}
+
+						if (title) {
+							return title;
+						}
+					}
+				}
+			}
+		}
+	}
+	// Fallback to file name
 	return file.basename;
 }
 
