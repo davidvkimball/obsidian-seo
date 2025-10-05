@@ -59,7 +59,7 @@ export class PanelActions {
 			
 			if (results.length > 0) {
 				new Notice('SEO audit complete.');
-				return results[0];
+				return results[0] || null;
 			}
 			return null;
 		} catch (error) {
@@ -98,7 +98,7 @@ export class PanelActions {
 			
 			if (results.length > 0) {
 				new Notice('External links check complete.');
-				return results[0];
+				return results[0] || null;
 			}
 			return null;
 		} catch (error) {

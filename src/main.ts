@@ -6,74 +6,150 @@ import { SEOSidePanel } from "./ui/side-panel";
 import { SEOCurrentPanelViewType, SEOGlobalPanelViewType } from "./ui/panel-constants";
 import { PanelManager } from "./ui/panel-manager";
 import { RealTimeChecker } from "./real-time-checker";
+import { handleError, withErrorHandling, validateRequiredParams } from "./utils/error-handler";
+import { seoCache, clearAllCache } from "./utils/cache-manager";
 
+/**
+ * Main SEO Plugin class for Obsidian
+ * Provides SEO auditing capabilities for markdown notes
+ */
 export default class SEOPlugin extends Plugin {
-	settings: SEOSettings;
-	private panelManager: PanelManager;
-	private realTimeChecker: RealTimeChecker;
+	settings!: SEOSettings;
+	private panelManager!: PanelManager;
+	private realTimeChecker!: RealTimeChecker;
 	public sidePanel: SEOSidePanel | null = null;
 
+	/**
+	 * Plugin initialization - called when the plugin is loaded
+	 * Sets up managers, registers views, commands, and real-time checking
+	 */
 	async onload() {
-		await this.loadSettings();
+		try {
+			await this.loadSettings();
 
-		// Initialize managers
-		this.panelManager = new PanelManager(this.app, this);
-		this.realTimeChecker = new RealTimeChecker(this.app, this);
+			// Validate required parameters
+			validateRequiredParams(
+				{ app: this.app, settings: this.settings },
+				'plugin initialization'
+			);
 
-		// Ensure icons load properly using Obsidian's API
-		this.forceIconRefresh();
+			// Initialize managers with error handling
+			this.panelManager = await withErrorHandling(
+				() => Promise.resolve(new PanelManager(this.app, this)),
+				'panel manager initialization',
+				null as any
+			);
 
-		// Register the side panel views
-		this.registerView(SEOCurrentPanelViewType, (leaf) => {
-			const panel = new SEOSidePanel(this, 'current', leaf);
-			this.sidePanel = panel; // Store reference for settings updates
-			return panel;
-		});
-		this.registerView(SEOGlobalPanelViewType, (leaf) => {
-			const panel = new SEOSidePanel(this, 'global', leaf);
-			this.sidePanel = panel; // Store reference for settings updates
-			return panel;
-		});
+			this.realTimeChecker = await withErrorHandling(
+				() => Promise.resolve(new RealTimeChecker(this.app, this)),
+				'real-time checker initialization',
+				null as any
+			);
 
-		// Register commands
-		registerCommands(this);
+			// Ensure icons load properly using Obsidian's API
+			this.forceIconRefresh();
 
-		// Add settings tab
-		this.addSettingTab(new SEOSettingTab(this.app, this));
+			// Register the side panel views with error handling
+			await withErrorHandling(
+				async () => {
+					this.registerView(SEOCurrentPanelViewType, (leaf) => {
+						const panel = new SEOSidePanel(this, 'current', leaf);
+						this.sidePanel = panel; // Store reference for settings updates
+						return panel;
+					});
+					this.registerView(SEOGlobalPanelViewType, (leaf) => {
+						const panel = new SEOSidePanel(this, 'global', leaf);
+						this.sidePanel = panel; // Store reference for settings updates
+						return panel;
+					});
+				},
+				'side panel registration',
+				undefined
+			);
 
-		// Register real-time checking for current note
-		this.realTimeChecker.registerRealTimeChecking();
+			// Register commands with error handling
+			await withErrorHandling(
+				async () => {
+					registerCommands(this);
+				},
+				'command registration',
+				undefined
+			);
 
-		// Add ribbon icon for easy access (default to global)
-		this.addRibbonIcon('search-check', 'Open SEO audit panel', async () => {
-			// Check if panel already exists
-			const existingPanels = this.app.workspace.getLeavesOfType('seo-global-panel');
-			const isFirstRun = existingPanels.length === 0;
-			
-			this.openGlobalPanel();
-			
-			// Only trigger manual refresh if panel already existed (not first run)
-			if (!isFirstRun) {
-				setTimeout(async () => {
-					const globalPanels = this.app.workspace.getLeavesOfType('seo-global-panel');
-					if (globalPanels.length > 0) {
-						const panel = globalPanels[0];
-						if (panel.view) {
-							// Cast to SEOSidePanel and trigger refresh
-							const seoPanel = panel.view as any;
-							// Trigger the refresh logic (same as clicking the refresh button)
-							await seoPanel.actions.refreshGlobalResults();
-							// Update the panel display with new results
-							seoPanel.render();
-						}
+			// Add settings tab with error handling
+			await withErrorHandling(
+				async () => {
+					this.addSettingTab(new SEOSettingTab(this.app, this));
+				},
+				'settings tab registration',
+				undefined
+			);
+
+			// Register real-time checking for current note with error handling
+			await withErrorHandling(
+				async () => {
+					if (this.realTimeChecker) {
+						this.realTimeChecker.registerRealTimeChecking();
 					}
-				}, 500);
-			}
-			// If first run, let the panel's onOpen() handle the initial scan automatically
-		});
+				},
+				'real-time checking registration',
+				undefined
+			);
+
+			// Add ribbon icon for easy access (default to global) with error handling
+			await withErrorHandling(
+				async () => {
+					this.addRibbonIcon('search-check', 'Open SEO audit panel', async () => {
+						try {
+							// Check if panel already exists
+							const existingPanels = this.app.workspace.getLeavesOfType('seo-global-panel');
+							const isFirstRun = existingPanels.length === 0;
+							
+							this.openGlobalPanel();
+							
+							// Only trigger manual refresh if panel already existed (not first run)
+							if (!isFirstRun) {
+								setTimeout(async () => {
+									try {
+										const globalPanels = this.app.workspace.getLeavesOfType('seo-global-panel');
+										if (globalPanels.length > 0) {
+											const panel = globalPanels[0];
+											if (panel?.view) {
+												// Cast to SEOSidePanel and trigger refresh
+												const seoPanel = panel.view as any;
+												// Trigger the refresh logic (same as clicking the refresh button)
+												await seoPanel.actions.refreshGlobalResults();
+												// Update the panel display with new results
+												seoPanel.render();
+											}
+										}
+									} catch (error) {
+										handleError(error, 'ribbon icon panel refresh', true);
+									}
+								}, 500);
+							}
+							// If first run, let the panel's onOpen() handle the initial scan automatically
+						} catch (error) {
+							handleError(error, 'ribbon icon click handler', true);
+						}
+					});
+				},
+				'ribbon icon registration',
+				undefined
+			);
+		} catch (error) {
+			handleError(error, 'plugin initialization', true);
+		}
 	}
 
 	onunload() {
+		try {
+			// Clean up cache managers
+			seoCache.destroy();
+		} catch (error) {
+			handleError(error, 'plugin unload', false);
+		}
+		
 		// Note: Obsidian automatically cleans up:
 		// - Registered views (registerView)
 		// - Registered commands (addCommand) 
@@ -82,15 +158,32 @@ export default class SEOPlugin extends Plugin {
 		// - Registered events (registerEvent)
 	}
 
+	/**
+	 * Load plugin settings from Obsidian's data store
+	 * Merges saved settings with default values
+	 */
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		try {
+			this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		} catch (error) {
+			handleError(error, 'loading settings', true);
+			// Fallback to default settings
+			this.settings = { ...DEFAULT_SETTINGS };
+		}
 	}
 
+	/**
+	 * Save plugin settings to Obsidian's data store
+	 * Clears cache to ensure fresh results after settings changes
+	 */
 	async saveSettings() {
-		await this.saveData(this.settings);
-		// Clear cache when settings change to ensure fresh results
-		const { clearAllCache } = await import("./seo-checker");
-		clearAllCache();
+		try {
+			await this.saveData(this.settings);
+			// Clear cache when settings change to ensure fresh results
+			clearAllCache();
+		} catch (error) {
+			handleError(error, 'saving settings', true);
+		}
 	}
 
 	public addStatusBar() {
@@ -101,22 +194,69 @@ export default class SEOPlugin extends Plugin {
 		// Status bar removed
 	}
 
+	/**
+	 * Opens the current note SEO audit panel
+	 * Shows SEO analysis for the currently active note
+	 */
 	openCurrentPanel() {
-		this.panelManager.openCurrentPanel();
+		try {
+			if (this.panelManager) {
+				this.panelManager.openCurrentPanel();
+			} else {
+				throw new Error('Panel manager not initialized');
+			}
+		} catch (error) {
+			handleError(error, 'opening current panel', true);
+		}
 	}
 
+	/**
+	 * Opens the global vault SEO audit panel
+	 * Shows SEO analysis for all notes in the vault
+	 */
 	openGlobalPanel() {
-		this.panelManager.openGlobalPanel();
+		try {
+			if (this.panelManager) {
+				this.panelManager.openGlobalPanel();
+			} else {
+				throw new Error('Panel manager not initialized');
+			}
+		} catch (error) {
+			handleError(error, 'opening global panel', true);
+		}
 	}
 
-	// Public method for bulk checking
+	/**
+	 * Runs bulk SEO check across all configured files
+	 * @returns Promise that resolves when bulk check is complete
+	 */
 	async runBulkCheck() {
-		await this.realTimeChecker.runBulkCheck();
+		try {
+			if (this.realTimeChecker) {
+				await this.realTimeChecker.runBulkCheck();
+			} else {
+				throw new Error('Real-time checker not initialized');
+			}
+		} catch (error) {
+			handleError(error, 'running bulk check', true);
+		}
 	}
 
-	// Public method to get files to check
+	/**
+	 * Gets the list of files to check based on current settings
+	 * @returns Promise resolving to array of TFile objects to check
+	 */
 	async getFilesToCheck() {
-		return this.panelManager.getFilesToCheck();
+		try {
+			if (this.panelManager) {
+				return await this.panelManager.getFilesToCheck();
+			} else {
+				throw new Error('Panel manager not initialized');
+			}
+		} catch (error) {
+			handleError(error, 'getting files to check', true);
+			return [];
+		}
 	}
 
 

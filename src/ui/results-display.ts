@@ -205,8 +205,10 @@ export class ResultsDisplay {
 			let displayName = checkName.replace(/([A-Z])/g, ' $1').trim()
 				.replace(/^./, str => str.toUpperCase());
 			
-			// Special handling for external links based on content
-			if (checkName === 'externalBrokenLinks') {
+			// Special handling for specific check names
+			if (checkName === 'brokenLinks') {
+				displayName = 'Broken Internal Links';
+			} else if (checkName === 'externalBrokenLinks') {
 				// Check if this is notice-based (external links listing) or error-based (broken links)
 				const hasNotices = checkResults.some(r => r.severity === 'notice');
 				const hasErrors = checkResults.some(r => r.severity === 'error');

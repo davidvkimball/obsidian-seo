@@ -13,13 +13,6 @@ export {
 	checkPotentiallyBrokenLinks 
 } from './link-checks';
 
-// External link checks
-export { 
-	checkExternalLinks, 
-	checkExternalBrokenLinks, 
-	checkExternalLinksOnly 
-} from './external-link-checks';
-
 // Content checks
 export { 
 	checkContentLength, 
@@ -59,6 +52,20 @@ export {
 
 // Legacy functions that need to be moved or refactored
 // These are still in the original file and need to be addressed
+export async function checkExternalBrokenLinks(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+	// TODO: Move this to link-checks.ts
+	return [];
+}
+
+export async function checkExternalLinks(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+	// TODO: Move this to link-checks.ts
+	return [];
+}
+
+export async function checkExternalLinksOnly(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+	// TODO: Move this to link-checks.ts
+	return [];
+}
 
 export async function checkNotices(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	// TODO: Move this to content-checks.ts

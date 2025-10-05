@@ -2,6 +2,10 @@ import { Plugin, Notice, TFile, TFolder } from "obsidian";
 import SEOPlugin from "../main";
 import { runSEOCheck } from "../seo-checker";
 
+/**
+ * Registers all plugin commands with Obsidian
+ * @param plugin - The SEO plugin instance
+ */
 export function registerCommands(plugin: SEOPlugin) {
 	// Open SEO Current Note panel and run audit
 	plugin.addCommand({
@@ -45,7 +49,7 @@ export function registerCommands(plugin: SEOPlugin) {
 				}
 				
 				const panel = globalPanels[0];
-				if (panel.view) {
+				if (panel?.view) {
 					const seoPanel = panel.view as any;
 					
 					// If first run, let onOpen() handle it automatically
@@ -66,6 +70,11 @@ export function registerCommands(plugin: SEOPlugin) {
 
 }
 
+/**
+ * Gets the list of files to check based on plugin settings
+ * @param plugin - The SEO plugin instance
+ * @returns Promise resolving to array of files to check
+ */
 async function getFilesToCheck(plugin: SEOPlugin): Promise<TFile[]> {
 	const { vault } = plugin.app;
 	const { scanDirectories } = plugin.settings;

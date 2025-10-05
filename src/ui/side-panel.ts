@@ -312,8 +312,8 @@ export class SEOSidePanel extends ItemView {
 		const globalPanels = this.app.workspace.getLeavesOfType('seo-global-panel');
 		if (globalPanels.length > 0) {
 			const globalPanel = globalPanels[0];
-			if (globalPanel.view) {
-				const seoPanel = globalPanel.view as any;
+		if (globalPanel?.view) {
+			const seoPanel = globalPanel.view as any;
 				// Update the global results in the panel
 				seoPanel.globalResults = [...this.plugin.settings.cachedGlobalResults];
 				// Re-render the panel
