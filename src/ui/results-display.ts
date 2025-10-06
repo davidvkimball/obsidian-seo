@@ -271,15 +271,15 @@ export class ResultsDisplay {
 			const hasWarnings = checkResults.some(r => r.severity === 'warning');
 			const hasNotices = checkResults.some(r => r.severity === 'notice');
 			
-			// Use Lucide icons instead of emojis
+			// Use Lucide icons for status
 			if (hasErrors) {
-				statusIcon.appendChild(createStatusIcon('error'));
+				setIcon(statusIcon, 'x-circle');
 			} else if (hasWarnings) {
-				statusIcon.appendChild(createStatusIcon('warning'));
+				setIcon(statusIcon, 'triangle-alert');
 			} else if (hasNotices) {
-				statusIcon.appendChild(createStatusIcon('notice'));
+				setIcon(statusIcon, 'info');
 			} else {
-				statusIcon.appendChild(createStatusIcon('success'));
+				setIcon(statusIcon, 'circle-check');
 			}
 
 			// Results

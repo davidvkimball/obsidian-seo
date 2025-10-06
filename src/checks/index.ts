@@ -66,8 +66,60 @@ export async function checkNotices(content: string, file: TFile, settings: SEOSe
 }
 
 export async function checkKeywordInSlug(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
-	// TODO: Move this to meta-checks.ts
-	return [];
+	const results: SEOCheckResult[] = [];
+	
+	if (!settings.keywordProperty) {
+		return results;
+	}
+	
+	// Get keyword from frontmatter
+	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+	if (!frontmatterMatch) {
+		return results;
+	}
+	
+	const frontmatter = frontmatterMatch[1];
+	if (!frontmatter) {
+		return results;
+	}
+	
+	const keywordMatch = frontmatter.match(new RegExp(`^${settings.keywordProperty}:\\s*(.+)$`, 'm'));
+	const keyword = keywordMatch?.[1]?.trim();
+	
+	// If no keyword is defined, show as notice (not a penalty)
+	if (!keyword) {
+		results.push({
+			passed: true,
+			message: `No ${settings.keywordProperty} defined in properties`,
+			severity: 'notice'
+		});
+		return results;
+	}
+	
+	// Get the file slug (filename without extension)
+	const slug = file.basename.toLowerCase();
+	const keywordLower = keyword.toLowerCase();
+	
+	// Check if keyword appears in slug (case-insensitive, generous matching)
+	const keywordWords = keywordLower.split(/\s+/).filter(word => word.length > 0);
+	const allWordsFound = keywordWords.every(word => slug.includes(word));
+	
+	if (allWordsFound) {
+		results.push({
+			passed: true,
+			message: `Target keyword "${keyword}" found in slug`,
+			severity: 'info'
+		});
+	} else {
+		results.push({
+			passed: false,
+			message: `Target keyword "${keyword}" not found in slug`,
+			suggestion: "Include your target keyword in the filename for better SEO",
+			severity: 'warning'
+		});
+	}
+	
+	return results;
 }
 
 export async function checkSlugFormat(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {

@@ -133,9 +133,9 @@ async function checkFile(plugin: SEOPlugin, file: TFile, content: string, vaultD
 			if (result.message.includes('Broken link') && !result.passed) {
 				weight = 10;
 				points = 0; // Major penalty for broken links
-			} else if (result.message.includes('title') && !result.passed) {
+			} else if (result.message.includes('title') && !result.passed && result.message.includes('No frontmatter')) {
 				weight = 10;
-				points = 0; // Major penalty for missing titles
+				points = 0; // Major penalty for missing titles entirely
 			}
 			// Important SEO factors (5x weight)
 			else if (result.message.includes('alt text') && !result.passed) {
@@ -145,15 +145,29 @@ async function checkFile(plugin: SEOPlugin, file: TFile, content: string, vaultD
 				weight = 5;
 				points = 0; // Significant penalty for missing meta description
 			}
+			// Critical keyword factors (8x weight) - keywords are extremely important for SEO
+			// Only apply high weight to actual keyword optimization failures, not missing keyword definitions
+			else if (result.message.includes('keyword') && !result.passed && 
+				(result.message.includes('density') || result.message.includes('not found in title') || result.message.includes('not found in slug'))) {
+				weight = 8;
+				points = 0; // High penalty for keyword optimization issues
+			}
 			// Moderate SEO factors (3x weight)
 			else if (result.message.includes('content length') && !result.passed) {
 				weight = 3;
 				points = 0; // Moderate penalty for content issues
-			} else if (result.message.includes('reading level') && !result.passed) {
-				weight = 3;
-				points = 0; // Moderate penalty for readability issues
 			}
-			// Minor SEO factors (1x weight)
+			// Minor-Moderate SEO factors (2x weight) - title length issues
+			else if (result.message.includes('title') && !result.passed && (result.message.includes('too short') || result.message.includes('too long'))) {
+				weight = 2;
+				points = 0; // Minor-moderate penalty for title length issues
+			}
+			// Minor SEO factors (1x weight) - reading level moved here as it's less critical
+			else if (result.message.includes('reading level') && !result.passed) {
+				weight = 1;
+				points = 0; // Minor penalty for readability issues
+			}
+			// Other minor SEO factors (1x weight)
 			else if (result.severity === 'warning' && !result.passed) {
 				weight = 1;
 				points = 0; // Minor penalty for warnings

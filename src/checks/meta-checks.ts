@@ -196,11 +196,11 @@ export async function checkKeywordDensity(content: string, file: TFile, settings
 	const keywordMatch = frontmatter.match(new RegExp(`^${settings.keywordProperty}:\\s*(.+)$`, 'm'));
 	
 	if (!keywordMatch || !keywordMatch[1]) {
+		// Don't penalize if no keyword is defined - just show as notice
 		results.push({
-			passed: false,
-			message: `No ${settings.keywordProperty} found in frontmatter`,
-			suggestion: `Add ${settings.keywordProperty} to frontmatter`,
-			severity: 'warning'
+			passed: true,
+			message: `No ${settings.keywordProperty} defined in properties`,
+			severity: 'notice'
 		});
 		return results;
 	}
@@ -285,8 +285,18 @@ export async function checkKeywordInTitle(content: string, file: TFile, settings
 	const keyword = keywordMatch?.[1]?.trim();
 	const title = titleMatch?.[1]?.trim();
 	
-	// Skip check if no title or keyword found
-	if (!title || !keyword) {
+	// Skip check if no title found
+	if (!title) {
+		return results;
+	}
+	
+	// If no keyword is defined, show as notice (not a penalty)
+	if (!keyword) {
+		results.push({
+			passed: true,
+			message: `No ${settings.keywordProperty} defined in properties`,
+			severity: 'notice'
+		});
 		return results;
 	}
 	
