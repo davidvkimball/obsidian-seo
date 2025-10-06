@@ -28,10 +28,33 @@ export async function checkHeadingOrder(content: string, file: TFile, settings: 
 	let hasHeading = false;
 	let hasH1 = false;
 	let firstHeadingLine = 0;
+	let inCodeBlock = false;
+	let codeBlockLanguage = '';
 	
 	for (let i = 0; i < originalLines.length; i++) {
 		const line = originalLines[i];
 		if (!line) continue;
+		
+		// Track code block state
+		const codeBlockMatch = line.match(/^```(\w+)?/);
+		if (codeBlockMatch) {
+			if (inCodeBlock) {
+				// End of code block
+				inCodeBlock = false;
+				codeBlockLanguage = '';
+			} else {
+				// Start of code block
+				inCodeBlock = true;
+				codeBlockLanguage = codeBlockMatch[1] || '';
+			}
+			continue;
+		}
+		
+		// Skip headings inside code blocks
+		if (inCodeBlock) {
+			continue;
+		}
+		
 		const headingMatch = line.match(/^(#{1,6})\s+(.+)/);
 		
 		if (headingMatch && headingMatch[1] && headingMatch[2]) {

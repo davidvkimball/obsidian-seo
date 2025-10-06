@@ -29,6 +29,7 @@ import {
 	checkReadingLevel,
 	checkNotices,
 	checkKeywordInTitle,
+	checkKeywordInDescription,
 	checkKeywordInSlug,
 	checkSlugFormat,
 	getDisplayName
@@ -81,6 +82,7 @@ async function checkFile(plugin: SEOPlugin, file: TFile, content: string, vaultD
 		titleLength: await checkTitleLength(content, file, plugin.settings),
 		metaDescription: await checkMetaDescription(content, file, plugin.settings),
 		keywordInTitle: await checkKeywordInTitle(content, file, plugin.settings),
+		keywordInDescription: await checkKeywordInDescription(content, file, plugin.settings),
 		keywordInSlug: await checkKeywordInSlug(content, file, plugin.settings),
 		slugFormat: await checkSlugFormat(content, file, plugin.settings),
 		keywordDensity: await checkKeywordDensity(content, file, plugin.settings),
@@ -93,14 +95,14 @@ async function checkFile(plugin: SEOPlugin, file: TFile, content: string, vaultD
 			: await checkDuplicateContent(content, file, plugin.settings),
 		altText: await checkAltText(content, file, plugin.settings),
 		imageFileNames: await checkImageNaming(content, file, plugin.settings),
-		brokenLinks: await checkBrokenLinks(content, file, plugin.settings, plugin.app),
 		nakedLinks: await checkNakedLinks(content, file, plugin.settings),
-		readingLevel: await checkReadingLevel(content, file, plugin.settings),
+		brokenLinks: await checkBrokenLinks(content, file, plugin.settings, plugin.app),
 		potentiallyBrokenLinks: await checkPotentiallyBrokenLinks(content, file, plugin.settings, plugin.app),
 		potentiallyBrokenEmbeds: await checkNotices(content, file, plugin.settings),
 		externalBrokenLinks: plugin.settings.enableExternalLinkVaultCheck 
 			? await checkExternalBrokenLinks(content, file, plugin.settings)
-			: (plugin.settings.checkExternalLinks ? await checkExternalLinks(content, file, plugin.settings) : [])
+			: (plugin.settings.checkExternalLinks ? await checkExternalLinks(content, file, plugin.settings) : []),
+		readingLevel: await checkReadingLevel(content, file, plugin.settings)
 	};
 
 	// Calculate overall score and counts

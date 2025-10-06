@@ -215,6 +215,18 @@ export class ResultsDisplay {
 		Object.entries(results.checks).forEach(([checkName, checkResults]) => {
 			if (checkResults.length === 0) return;
 			
+			// Hide "Potentially Broken Links" if it only contains notices (no actual issues)
+			if (checkName === 'potentiallyBrokenLinks') {
+				const hasErrors = checkResults.some(r => r.severity === 'error');
+				const hasWarnings = checkResults.some(r => r.severity === 'warning');
+				const hasOnlyNotices = checkResults.every(r => r.severity === 'notice');
+				
+				// If it only has notices and no errors/warnings, hide it
+				if (hasOnlyNotices && !hasErrors && !hasWarnings) {
+					return;
+				}
+			}
+			
 			// Determine the check status for color coding
 			const checkHasErrors = checkResults.some(r => r.severity === 'error');
 			const checkHasWarnings = checkResults.some(r => r.severity === 'warning');

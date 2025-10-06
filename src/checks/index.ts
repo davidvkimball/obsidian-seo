@@ -32,7 +32,8 @@ export {
 	checkMetaDescription, 
 	checkTitleLength, 
 	checkKeywordDensity, 
-	checkKeywordInTitle 
+	checkKeywordInTitle,
+	checkKeywordInDescription
 } from './meta-checks';
 
 // Heading checks
@@ -83,14 +84,33 @@ export async function checkKeywordInSlug(content: string, file: TFile, settings:
 		return results;
 	}
 	
-	const keywordMatch = frontmatter.match(new RegExp(`^${settings.keywordProperty}:\\s*(.+)$`, 'm'));
-	const keyword = keywordMatch?.[1]?.trim();
+	// Parse line by line instead of using regex
+	const lines = frontmatter.split('\n');
+	let keyword = '';
+	let foundKeywordLine = false;
 	
-	// If no keyword is defined, show as notice (not a penalty)
-	if (!keyword) {
+	for (const line of lines) {
+		if (line.startsWith(settings.keywordProperty + ':')) {
+			foundKeywordLine = true;
+			keyword = line.substring(settings.keywordProperty.length + 1).trim();
+			break;
+		}
+	}
+	
+	if (!foundKeywordLine) {
 		results.push({
 			passed: true,
 			message: `No ${settings.keywordProperty} defined in properties`,
+			severity: 'notice'
+		});
+		return results;
+	}
+	
+	// Validate that the keyword is meaningful (not just a boolean or empty)
+	if (!keyword || keyword === 'false' || keyword === 'true' || keyword === 'null' || keyword === 'undefined') {
+		results.push({
+			passed: true,
+			message: `No valid keyword defined in properties`,
 			severity: 'notice'
 		});
 		return results;
@@ -114,7 +134,7 @@ export async function checkKeywordInSlug(content: string, file: TFile, settings:
 		results.push({
 			passed: false,
 			message: `Target keyword "${keyword}" not found in slug`,
-			suggestion: "Include your target keyword in the filename for better SEO",
+			suggestion: "Include your target keyword in the filename",
 			severity: 'warning'
 		});
 	}

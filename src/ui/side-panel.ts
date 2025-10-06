@@ -125,9 +125,6 @@ export class SEOSidePanel extends ItemView {
 			this.isRefreshing = false;
 			button.textContent = 'Refresh';
 			button.disabled = false;
-			
-			// Show completion notification
-			new Notice('SEO audit completed!');
 		}
 	}
 

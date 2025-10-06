@@ -193,10 +193,20 @@ export async function checkKeywordDensity(content: string, file: TFile, settings
 		});
 		return results;
 	}
-	const keywordMatch = frontmatter.match(new RegExp(`^${settings.keywordProperty}:\\s*(.+)$`, 'm'));
+	// Parse line by line instead of using regex
+	const lines = frontmatter.split('\n');
+	let keyword = '';
+	let foundKeywordLine = false;
 	
-	if (!keywordMatch || !keywordMatch[1]) {
-		// Don't penalize if no keyword is defined - just show as notice
+	for (const line of lines) {
+		if (line.startsWith(settings.keywordProperty + ':')) {
+			foundKeywordLine = true;
+			keyword = line.substring(settings.keywordProperty.length + 1).trim();
+			break;
+		}
+	}
+	
+	if (!foundKeywordLine) {
 		results.push({
 			passed: true,
 			message: `No ${settings.keywordProperty} defined in properties`,
@@ -205,7 +215,15 @@ export async function checkKeywordDensity(content: string, file: TFile, settings
 		return results;
 	}
 	
-	const keyword = keywordMatch[1].trim();
+	// Validate that the keyword is meaningful (not just a boolean or empty)
+	if (!keyword || keyword === 'false' || keyword === 'true' || keyword === 'null' || keyword === 'undefined') {
+		results.push({
+			passed: true,
+			message: `No valid keyword defined in properties`,
+			severity: 'notice'
+		});
+		return results;
+	}
 	
 	// Remove code blocks and frontmatter for keyword analysis
 	const cleanContent = removeCodeBlocks(content);
@@ -262,6 +280,92 @@ export async function checkKeywordDensity(content: string, file: TFile, settings
  * @param settings - Plugin settings
  * @returns Array of SEO check results
  */
+/**
+ * Checks if target keyword appears in meta description
+ * @param content - The markdown content to check
+ * @param file - The file being checked
+ * @param settings - Plugin settings
+ * @returns Array of SEO check results
+ */
+export async function checkKeywordInDescription(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+	const results: SEOCheckResult[] = [];
+	
+	if (!settings.keywordProperty || !settings.descriptionProperty) {
+		return [];
+	}
+	
+	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+	if (!frontmatterMatch) {
+		return results;
+	}
+	
+	const frontmatter = frontmatterMatch[1];
+	if (!frontmatter) {
+		return results;
+	}
+	
+	// Parse line by line instead of using regex
+	const lines = frontmatter.split('\n');
+	let keyword = '';
+	let foundKeywordLine = false;
+	
+	for (const line of lines) {
+		if (line.startsWith(settings.keywordProperty + ':')) {
+			foundKeywordLine = true;
+			keyword = line.substring(settings.keywordProperty.length + 1).trim();
+			break;
+		}
+	}
+	
+	if (!foundKeywordLine || !keyword || keyword === 'false' || keyword === 'true' || keyword === 'null' || keyword === 'undefined') {
+		// No valid keyword, skip this check
+		return results;
+	}
+	
+	// Get description from frontmatter
+	let description = '';
+	let foundDescriptionLine = false;
+	
+	for (const line of lines) {
+		if (line.startsWith(settings.descriptionProperty + ':')) {
+			foundDescriptionLine = true;
+			description = line.substring(settings.descriptionProperty.length + 1).trim();
+			break;
+		}
+	}
+	
+	if (!foundDescriptionLine) {
+		results.push({
+			passed: false,
+			message: "No description found",
+			suggestion: "Add a meta description to your frontmatter",
+			severity: 'warning'
+		});
+		return results;
+	}
+	
+	// Check if keyword appears in description (case-insensitive)
+	const keywordLower = keyword.toLowerCase();
+	const descriptionLower = description.toLowerCase();
+	
+	if (descriptionLower.includes(keywordLower)) {
+		results.push({
+			passed: true,
+			message: `Target keyword "${keyword}" found in description`,
+			severity: 'info'
+		});
+	} else {
+		results.push({
+			passed: false,
+			message: `Target keyword "${keyword}" not found in description`,
+			suggestion: "Include your target keyword in the description",
+			severity: 'warning'
+		});
+	}
+	
+	return results;
+}
+
 export async function checkKeywordInTitle(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
@@ -279,24 +383,50 @@ export async function checkKeywordInTitle(content: string, file: TFile, settings
 	if (!frontmatter) {
 		return results;
 	}
-	const keywordMatch = frontmatter.match(new RegExp(`^${settings.keywordProperty}:\\s*(.+)$`, 'm'));
-	const titleMatch = frontmatter.match(new RegExp(`^${settings.titleProperty}:\\s*(.+)$`, 'm'));
 	
-	const keyword = keywordMatch?.[1]?.trim();
-	const title = titleMatch?.[1]?.trim();
+	// Parse line by line instead of using regex
+	const lines = frontmatter.split('\n');
+	let keyword = '';
+	let foundKeywordLine = false;
+	let title = '';
+	let foundTitleLine = false;
 	
-	// Skip check if no title found
-	if (!title) {
-		return results;
+	for (const line of lines) {
+		if (line.startsWith(settings.keywordProperty + ':')) {
+			foundKeywordLine = true;
+			keyword = line.substring(settings.keywordProperty.length + 1).trim();
+			break;
+		}
 	}
 	
-	// If no keyword is defined, show as notice (not a penalty)
-	if (!keyword) {
+	for (const line of lines) {
+		if (line.startsWith(settings.titleProperty + ':')) {
+			foundTitleLine = true;
+			title = line.substring(settings.titleProperty.length + 1).trim();
+			break;
+		}
+	}
+	
+	if (!foundKeywordLine) {
 		results.push({
 			passed: true,
 			message: `No ${settings.keywordProperty} defined in properties`,
 			severity: 'notice'
 		});
+		return results;
+	}
+
+	if (!keyword || keyword === 'false' || keyword === 'true' || keyword === 'null' || keyword === 'undefined') {
+		results.push({
+			passed: true,
+			message: `No valid keyword defined in properties`,
+			severity: 'notice'
+		});
+		return results;
+	}
+	
+	// Skip check if no title found
+	if (!foundTitleLine || !title) {
 		return results;
 	}
 	
@@ -320,7 +450,7 @@ export async function checkKeywordInTitle(content: string, file: TFile, settings
 		results.push({
 			passed: false,
 			message: `Target keyword "${keyword}" not found in title`,
-			suggestion: "Include your target keyword in the title for better SEO",
+			suggestion: "Include your target keyword in the title",
 			severity: 'warning'
 		});
 	}
