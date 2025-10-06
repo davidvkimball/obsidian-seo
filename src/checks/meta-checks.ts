@@ -124,14 +124,10 @@ export async function checkTitleLength(content: string, file: TFile, settings: S
 		}
 	}
 	
+	// Only check title length if we have a title from frontmatter or filename
+	// Don't show the check at all if no title is configured
 	if (!title) {
-		results.push({
-			passed: false,
-			message: "No title found",
-			suggestion: "Add a title in frontmatter or as H1 heading",
-			severity: 'warning'
-		});
-		return results;
+		return results; // Return empty results - don't show the check
 	}
 	
 	const length = title.length;

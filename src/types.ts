@@ -60,12 +60,16 @@ export interface SEOResults {
 		contentLength: SEOCheckResult[];
 		/** Image filename validation results */
 		imageFileNames: SEOCheckResult[];
-		/** Duplicate content detection results */
-		duplicateContent: SEOCheckResult[];
-		/** Reading level analysis results */
-		readingLevel: SEOCheckResult[];
-		/** Potentially broken embed detection results */
-		potentiallyBrokenEmbeds: SEOCheckResult[];
+	/** Duplicate content detection results */
+	duplicateContent: SEOCheckResult[];
+	/** Duplicate title detection results */
+	duplicateTitles: SEOCheckResult[];
+	/** Duplicate description detection results */
+	duplicateDescriptions: SEOCheckResult[];
+	/** Reading level analysis results */
+	readingLevel: SEOCheckResult[];
+	/** Potentially broken embed detection results */
+	potentiallyBrokenEmbeds: SEOCheckResult[];
 	};
 	/** Overall SEO score (0-100) */
 	overallScore: number;

@@ -33,9 +33,23 @@ import {
 	checkSlugFormat,
 	getDisplayName
 } from "./checks";
+import { 
+	checkDuplicateTitles, 
+	checkDuplicateDescriptions, 
+	checkVaultDuplicateContent 
+} from "./checks/content-checks";
+import { VaultDuplicateDetector } from "./checks/duplicate-detection";
 
 export async function runSEOCheck(plugin: SEOPlugin, files: TFile[]): Promise<SEOResults[]> {
 	const results: SEOResults[] = [];
+	
+	// Create vault detector for duplicate detection
+	const vaultDetector = new VaultDuplicateDetector(plugin.app, plugin.settings);
+	
+	// Collect vault data if duplicate detection is enabled
+	if (plugin.settings.checkDuplicateContent) {
+		await vaultDetector.collectVaultData();
+	}
 	
 	for (const file of files) {
 		try {
@@ -48,7 +62,7 @@ export async function runSEOCheck(plugin: SEOPlugin, files: TFile[]): Promise<SE
 			
 			// Run fresh check
 			const content = await plugin.app.vault.read(file);
-			const result = await checkFile(plugin, file, content);
+			const result = await checkFile(plugin, file, content, vaultDetector);
 			
 			// Cache the result
 			cacheResult(file, result, plugin);
@@ -62,7 +76,7 @@ export async function runSEOCheck(plugin: SEOPlugin, files: TFile[]): Promise<SE
 	return results;
 }
 
-async function checkFile(plugin: SEOPlugin, file: TFile, content: string): Promise<SEOResults> {
+async function checkFile(plugin: SEOPlugin, file: TFile, content: string, vaultDetector: VaultDuplicateDetector): Promise<SEOResults> {
 	const checks = {
 		titleLength: await checkTitleLength(content, file, plugin.settings),
 		metaDescription: await checkMetaDescription(content, file, plugin.settings),
@@ -72,7 +86,11 @@ async function checkFile(plugin: SEOPlugin, file: TFile, content: string): Promi
 		keywordDensity: await checkKeywordDensity(content, file, plugin.settings),
 		headingOrder: await checkHeadingOrder(content, file, plugin.settings),
 		contentLength: await checkContentLength(content, file, plugin.settings),
-		duplicateContent: await checkDuplicateContent(content, file, plugin.settings),
+		duplicateTitles: await checkDuplicateTitles(content, file, plugin.settings, vaultDetector),
+		duplicateDescriptions: await checkDuplicateDescriptions(content, file, plugin.settings, vaultDetector),
+		duplicateContent: plugin.settings.checkDuplicateContent 
+			? await checkVaultDuplicateContent(content, file, plugin.settings, vaultDetector)
+			: await checkDuplicateContent(content, file, plugin.settings),
 		altText: await checkAltText(content, file, plugin.settings),
 		imageFileNames: await checkImageNaming(content, file, plugin.settings),
 		brokenLinks: await checkBrokenLinks(content, file, plugin.settings, plugin.app),

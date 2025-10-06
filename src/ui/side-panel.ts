@@ -50,14 +50,16 @@ export class SEOSidePanel extends ItemView {
 					return;
 				}
 				
-				// Don't re-render if we already have current note results for the active file
+				// Always update when switching files
 				const activeFile = this.app.workspace.getActiveFile();
-				if (activeFile && this.currentNoteResults && this.currentNoteResults?.file === activeFile?.path) {
+				if (!activeFile) {
 					return;
 				}
 				
-				// Only update the display name, don't re-render the entire panel
-				this.updateDisplayName();
+				// Update the panel with results for the new file
+				if (activeFile) {
+					this.updateCurrentNoteResults(activeFile);
+				}
 			}));
 			
 			// Listen for file modifications to update current note panel
@@ -72,8 +74,8 @@ export class SEOSidePanel extends ItemView {
 						
 						// Clear current note results when the active file is modified
 						this.currentNoteResults = null;
-						// Only update the display name, don't re-render the entire panel
-						this.updateDisplayName();
+						// Update the panel with results for the modified file
+						this.updateCurrentNoteResults(activeFile);
 					}
 				}
 			}));
@@ -100,7 +102,7 @@ export class SEOSidePanel extends ItemView {
 				this.currentNoteResults = result;
 				
 				// Clear ALL existing results more aggressively
-				const existingResults = this.containerEl.querySelectorAll('.seo-results-container, .seo-file-issue, .seo-issue, .seo-warning, .seo-notice, .seo-info-note, .seo-check, .seo-result, .seo-score-header, .seo-score-text, .seo-score-number, .seo-collapse-toggle, .seo-collapse-icon');
+				const existingResults = this.containerEl.querySelectorAll('.seo-results-container, .seo-file-issue, .seo-issue, .seo-warning, .seo-notice, .seo-info-note, .seo-check, .seo-result, .seo-score-header, .seo-score-text, .seo-score-number, .seo-toggle-icon, .seo-collapse-icon');
 				existingResults.forEach(el => el.remove());
 				
 				// Create a new results container and render results
@@ -224,11 +226,56 @@ export class SEOSidePanel extends ItemView {
 		if (!file || !file.path.endsWith('.md')) return;
 
 		try {
-			const content = await this.app.vault.read(file);
-			// Run checks for current note
-			// This would be similar to the checkFile function in seo-checker.ts
-			// For now, we'll just update the display
-			this.render();
+			// Clear current note results when switching files
+			// This ensures we show cached results for the new file
+			this.currentNoteResults = null;
+			
+			// Check if we have cached results for this file
+			let currentFileResults: SEOResults | null = null;
+			
+			if (this.plugin.settings.cachedGlobalResults) {
+				// Find results for the current file in the global results
+				currentFileResults = this.plugin.settings.cachedGlobalResults.find(
+					result => result.file === file.path
+				) || null;
+			}
+			
+			// Show results if we have them (either from current note audit or global audit)
+			// If we're switching files, prioritize cached results for the new file
+			const resultsToShow = currentFileResults || this.currentNoteResults;
+			
+			
+			// Clear existing results
+			const existingResults = this.containerEl.querySelectorAll('.seo-results-container, .seo-file-issue, .seo-issue, .seo-warning, .seo-notice, .seo-info-note, .seo-check, .seo-result, .seo-score-header, .seo-score-text, .seo-score-number, .seo-toggle-icon, .seo-collapse-icon');
+			existingResults.forEach(el => el.remove());
+			
+			if (resultsToShow) {
+				// Create a new results container and render results
+				const newResultsContainer = this.containerEl.createEl('div', { cls: 'seo-results-container' });
+				
+				// Create a new results display instance for this container
+				const tempResultsDisplay = new ResultsDisplay(
+					newResultsContainer,
+					async (filePath: string) => await this.actions.openFile(filePath),
+					async (filePath: string) => await this.actions.openFileAndAudit(filePath)
+				);
+				tempResultsDisplay.renderResults(resultsToShow);
+				
+				// Panel is ready for interactions without stealing focus
+				
+			} else {
+				// No results available, show message
+				const noResultsEl = this.containerEl.createEl('div', { 
+					cls: 'seo-info-note',
+					text: 'No SEO results available for this file. Click "Refresh" to run an audit.'
+				});
+				noResultsEl.style.marginTop = '10px';
+				noResultsEl.style.padding = '8px';
+				noResultsEl.style.backgroundColor = 'var(--background-secondary)';
+				noResultsEl.style.borderRadius = '4px';
+				noResultsEl.style.fontSize = '12px';
+				noResultsEl.style.color = 'var(--text-muted)';
+			}
 		} catch (error) {
 			console.error('Error updating current note results:', error);
 		}
@@ -377,21 +424,17 @@ export class SEOSidePanel extends ItemView {
 				// Show results if we have them (either from current note audit or global audit)
 				const resultsToShow = this.currentNoteResults || currentFileResults;
 				if (resultsToShow) {
-					this.resultsDisplay.renderResults(resultsToShow);
+					// Create a new results container and render results
+					const newResultsContainer = this.containerEl.createEl('div', { cls: 'seo-results-container' });
 					
-					// Show a note if these are from global audit
-					if (!this.currentNoteResults && currentFileResults) {
-						const note = containerEl.createEl('div', { 
-							cls: 'seo-info-note',
-							text: 'Showing results from vault-wide audit. Click "Refresh" to re-audit this file specifically.'
-						});
-						note.style.marginTop = '10px';
-						note.style.padding = '8px';
-						note.style.backgroundColor = 'var(--background-secondary)';
-						note.style.borderRadius = '4px';
-						note.style.fontSize = '12px';
-						note.style.color = 'var(--text-muted)';
-					}
+					// Create a new results display instance for this container
+					const tempResultsDisplay = new ResultsDisplay(
+						newResultsContainer,
+						async (filePath: string) => await this.actions.openFile(filePath),
+						async (filePath: string) => await this.actions.openFileAndAudit(filePath)
+					);
+					tempResultsDisplay.renderResults(resultsToShow);
+					
 				} else {
 					const noResults = containerEl.createEl('div', { cls: 'seo-no-results' });
 					noResults.createEl('p', { text: 'Open a markdown file and click "Refresh" to audit it.' });
@@ -510,27 +553,21 @@ export class SEOSidePanel extends ItemView {
 		const resultsToShow = this.currentNoteResults || currentFileResults;
 		
 		// Clear existing results
-		const existingResults = this.containerEl.querySelectorAll('.seo-results-container, .seo-file-issue, .seo-issue, .seo-warning, .seo-notice, .seo-info-note, .seo-check, .seo-result, .seo-score-header, .seo-score-text, .seo-score-number, .seo-collapse-toggle, .seo-collapse-icon');
+		const existingResults = this.containerEl.querySelectorAll('.seo-results-container, .seo-file-issue, .seo-issue, .seo-warning, .seo-notice, .seo-info-note, .seo-check, .seo-result, .seo-score-header, .seo-score-text, .seo-score-number, .seo-toggle-icon, .seo-collapse-icon');
 		existingResults.forEach(el => el.remove());
 		
 		if (resultsToShow) {
 			// Create a new results container and render results
 			const newResultsContainer = this.containerEl.createEl('div', { cls: 'seo-results-container' });
-			this.resultsDisplay.renderResults(resultsToShow);
 			
-			// Show a note if these are from global audit
-			if (!this.currentNoteResults && currentFileResults) {
-				const note = this.containerEl.createEl('div', { 
-					cls: 'seo-info-note',
-					text: 'Showing results from vault-wide audit. Click "Refresh" to re-audit this file specifically.'
-				});
-				note.style.marginTop = '10px';
-				note.style.padding = '8px';
-				note.style.backgroundColor = 'var(--background-secondary)';
-				note.style.borderRadius = '4px';
-				note.style.fontSize = '12px';
-				note.style.color = 'var(--text-muted)';
-			}
+			// Create a new results display instance for this container
+			const tempResultsDisplay = new ResultsDisplay(
+				newResultsContainer,
+				async (filePath: string) => await this.actions.openFile(filePath),
+				async (filePath: string) => await this.actions.openFileAndAudit(filePath)
+			);
+			tempResultsDisplay.renderResults(resultsToShow);
+			
 		} else {
 			// No results available, show prompt
 			const noResults = this.containerEl.createEl('div', { cls: 'seo-no-results' });
@@ -541,8 +578,10 @@ export class SEOSidePanel extends ItemView {
 	private updateGlobalPanelIfOpen(): void {
 		// Find and update the global panel if it's open
 		const globalPanels = this.app.workspace.getLeavesOfType('seo-global-panel');
+		
 		if (globalPanels.length > 0) {
 			const globalPanel = globalPanels[0];
+			
 			if (globalPanel?.view) {
 				const seoPanel = globalPanel.view as unknown as SEOPanelView;
 				// Update the global results in the panel

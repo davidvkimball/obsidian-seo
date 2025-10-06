@@ -182,6 +182,7 @@ export class SEOSettingTab extends PluginSettingTab {
 		});
 		warningEl.style.color = '#ff6b6b';
 		warningEl.style.fontWeight = 'bold';
+
 		warningEl.style.marginTop = '4px';
 
 		new Setting(containerEl)

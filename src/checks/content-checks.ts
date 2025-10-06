@@ -8,6 +8,7 @@ import { SEOSettings } from "../settings";
 import { SEOCheckResult } from "../types";
 import { removeCodeBlocks } from "./utils/content-parser";
 import { countSyllables, getReadingLevelDescription } from "./utils/reading-level";
+import { VaultDuplicateDetector } from "./duplicate-detection";
 
 /**
  * Checks content length against minimum requirements
@@ -35,7 +36,7 @@ export async function checkContentLength(content: string, file: TFile, settings:
 		results.push({
 			passed: false,
 			message: `Content too short: ${wordCount} words`,
-			suggestion: `Aim for at least ${settings.minContentLength} words for better SEO`,
+			suggestion: `Aim for at least ${settings.minContentLength} words`,
 			severity: 'warning'
 		});
 	} else {
@@ -185,4 +186,55 @@ function calculateSimilarity(text1: string, text2: string): number {
 	const union = new Set([...set1, ...set2]);
 	
 	return (intersection.size / union.size) * 100;
+}
+
+/**
+ * Check for duplicate titles across the vault
+ * @param content - The markdown content to check
+ * @param file - The file being checked
+ * @param settings - Plugin settings
+ * @param vaultDetector - Vault duplicate detector instance
+ * @returns Array of SEO check results
+ */
+export async function checkDuplicateTitles(
+	content: string, 
+	file: TFile, 
+	settings: SEOSettings, 
+	vaultDetector: VaultDuplicateDetector
+): Promise<SEOCheckResult[]> {
+	return await vaultDetector.checkDuplicateTitles(file, settings);
+}
+
+/**
+ * Check for duplicate descriptions across the vault
+ * @param content - The markdown content to check
+ * @param file - The file being checked
+ * @param settings - Plugin settings
+ * @param vaultDetector - Vault duplicate detector instance
+ * @returns Array of SEO check results
+ */
+export async function checkDuplicateDescriptions(
+	content: string, 
+	file: TFile, 
+	settings: SEOSettings, 
+	vaultDetector: VaultDuplicateDetector
+): Promise<SEOCheckResult[]> {
+	return await vaultDetector.checkDuplicateDescriptions(file, settings);
+}
+
+/**
+ * Enhanced duplicate content detection using vault-wide analysis
+ * @param content - The markdown content to check
+ * @param file - The file being checked
+ * @param settings - Plugin settings
+ * @param vaultDetector - Vault duplicate detector instance
+ * @returns Array of SEO check results
+ */
+export async function checkVaultDuplicateContent(
+	content: string, 
+	file: TFile, 
+	settings: SEOSettings, 
+	vaultDetector: VaultDuplicateDetector
+): Promise<SEOCheckResult[]> {
+	return await vaultDetector.checkDuplicateContent(file, settings);
 }

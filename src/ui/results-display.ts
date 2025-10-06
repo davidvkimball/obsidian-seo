@@ -252,6 +252,12 @@ export class ResultsDisplay {
 				} else {
 					displayName = 'External Broken Links';
 				}
+			} else if (checkName === 'duplicateTitles') {
+				displayName = 'Duplicate Titles';
+			} else if (checkName === 'duplicateDescriptions') {
+				displayName = 'Duplicate Descriptions';
+			} else if (checkName === 'duplicateContent') {
+				displayName = 'Duplicate Content';
 			}
 			
 			// Add collapse icon
@@ -310,9 +316,28 @@ export class ResultsDisplay {
 				
 				if (result.suggestion) {
 					const suggestionEl = li.createEl('div', { 
-						cls: 'seo-suggestion',
-						text: result.suggestion
+						cls: 'seo-suggestion'
 					});
+					
+					// Check if suggestion contains HTML (file links)
+					if (result.suggestion.includes('<a href="#" data-file-path=')) {
+						suggestionEl.innerHTML = result.suggestion;
+						
+						// Use event delegation on the suggestion element
+						suggestionEl.addEventListener('click', async (e) => {
+							const target = e.target as HTMLElement;
+							if (target && target.tagName === 'A' && target.hasAttribute('data-file-path')) {
+								e.preventDefault();
+								e.stopPropagation();
+								const filePath = target.getAttribute('data-file-path');
+								if (filePath) {
+									await this.onFileClick(filePath);
+								}
+							}
+						});
+					} else {
+						suggestionEl.textContent = result.suggestion;
+					}
 				}
 			});
 			
