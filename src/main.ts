@@ -9,6 +9,11 @@ import { RealTimeChecker } from "./real-time-checker";
 import { handleError, withErrorHandling, validateRequiredParams } from "./utils/error-handler";
 import { seoCache, clearAllCache } from "./utils/cache-manager";
 
+interface SEOPanelView {
+	actions: any;
+	render(): void;
+}
+
 /**
  * Main SEO Plugin class for Obsidian
  * Provides SEO auditing capabilities for markdown notes
@@ -116,7 +121,7 @@ export default class SEOPlugin extends Plugin {
 											const panel = globalPanels[0];
 											if (panel?.view) {
 												// Cast to SEOSidePanel and trigger refresh
-												const seoPanel = panel.view as any;
+												const seoPanel = panel.view as unknown as SEOPanelView;
 												// Trigger the refresh logic (same as clicking the refresh button)
 												await seoPanel.actions.refreshGlobalResults();
 												// Update the panel display with new results

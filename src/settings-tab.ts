@@ -38,6 +38,16 @@ export class SEOSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
+		new Setting(containerEl)
+			.setName('Ignores files with an underscore prefix')
+			.setDesc('Don\'t process files that begin with an underscore, like _example.md')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.ignoreUnderscoreFiles)
+				.onChange(async (value) => {
+					this.plugin.settings.ignoreUnderscoreFiles = value;
+					await this.plugin.saveSettings();
+				}));
+
 		// Property names
 		containerEl.createEl('h2', { text: 'Property Names' });
 

@@ -6,12 +6,19 @@ import { getVaultFoldersInfo } from "./panel-utils";
 import { PanelActions } from "./panel-actions";
 import { ResultsDisplay } from "./results-display";
 
+interface SEOPanelView {
+	globalResults: SEOResults[];
+	render(): void;
+}
+
+type SortType = 'issues-desc' | 'issues-asc' | 'warnings-desc' | 'warnings-asc' | 'notices-desc' | 'notices-asc' | 'filename-asc' | 'filename-desc';
+
 export class SEOSidePanel extends ItemView {
 	plugin: SEOPlugin;
 	currentNoteResults: SEOResults | null = null;
 	globalResults: SEOResults[] = [];
 	panelType: 'current' | 'global' = 'current';
-	currentSort: 'issues-desc' | 'issues-asc' | 'warnings-desc' | 'warnings-asc' | 'notices-desc' | 'notices-asc' | 'filename-asc' | 'filename-desc';
+	currentSort: SortType;
 	hasRunInitialScan: boolean = false;
 	
 	private actions: PanelActions;
@@ -217,7 +224,7 @@ export class SEOSidePanel extends ItemView {
 					// Use a more subtle loading state to avoid flickering
 					const originalText = auditCurrentBtn.textContent;
 					auditCurrentBtn.disabled = true;
-					auditCurrentBtn.style.opacity = '0.7';
+					auditCurrentBtn.addClass('seo-btn-disabled');
 					
 					try {
 						const result = await this.actions.checkCurrentNote();
@@ -229,7 +236,8 @@ export class SEOSidePanel extends ItemView {
 						}
 					} finally {
 						auditCurrentBtn.disabled = false;
-						auditCurrentBtn.style.opacity = '1';
+						auditCurrentBtn.removeClass('seo-btn-disabled');
+						auditCurrentBtn.addClass('seo-btn-enabled');
 					}
 				});
 
@@ -242,7 +250,7 @@ export class SEOSidePanel extends ItemView {
 					externalLinksBtn.addEventListener('click', async () => {
 						externalLinksBtn.disabled = true;
 						externalLinksBtn.textContent = 'This may take some time...';
-						externalLinksBtn.style.opacity = '0.7';
+						externalLinksBtn.addClass('seo-btn-disabled');
 						
 						try {
 							const result = await this.actions.checkExternalLinks();
@@ -255,7 +263,8 @@ export class SEOSidePanel extends ItemView {
 						} finally {
 							externalLinksBtn.disabled = false;
 							externalLinksBtn.textContent = 'Check external links for 404s';
-							externalLinksBtn.style.opacity = '1';
+							externalLinksBtn.removeClass('seo-btn-disabled');
+							externalLinksBtn.addClass('seo-btn-enabled');
 						}
 					});
 				}
@@ -284,9 +293,37 @@ export class SEOSidePanel extends ItemView {
 		}
 	}
 
+	private shouldIncludeFileInGlobalResults(filePath: string): boolean {
+		// Check if file should be excluded based on underscore prefix setting
+		if (this.plugin.settings.ignoreUnderscoreFiles) {
+			const fileName = filePath.split('/').pop() || '';
+			const basename = fileName.replace(/\.[^/.]+$/, ''); // Remove extension
+			if (basename.startsWith('_')) {
+				return false; // Exclude files with underscore prefix
+			}
+		}
+		
+		// Check if file should be excluded based on directory settings
+		const { scanDirectories } = this.plugin.settings;
+		if (scanDirectories.trim()) {
+			const directories = scanDirectories.split(',').map(dir => dir.trim());
+			const isInConfiguredDirectory = directories.some(dir => 
+				filePath.startsWith(dir + '/') || filePath === dir
+			);
+			return isInConfiguredDirectory;
+		}
+		
+		return true; // Include file if no restrictions apply
+	}
+
 	private updateGlobalResultsIfExists(currentResult: SEOResults): void {
 		// Only update if global results exist
 		if (this.plugin.settings.cachedGlobalResults && this.plugin.settings.cachedGlobalResults.length > 0) {
+			// Check if this file should be included in global results
+			if (!this.shouldIncludeFileInGlobalResults(currentResult.file)) {
+				return; // Don't update global results for files that should be excluded
+			}
+			
 			// Find the file in global results and update it
 			const globalResults = this.plugin.settings.cachedGlobalResults;
 			const existingIndex = globalResults.findIndex(r => r.file === currentResult.file);
@@ -312,8 +349,8 @@ export class SEOSidePanel extends ItemView {
 		const globalPanels = this.app.workspace.getLeavesOfType('seo-global-panel');
 		if (globalPanels.length > 0) {
 			const globalPanel = globalPanels[0];
-		if (globalPanel?.view) {
-			const seoPanel = globalPanel.view as any;
+			if (globalPanel?.view) {
+				const seoPanel = globalPanel.view as unknown as SEOPanelView;
 				// Update the global results in the panel
 				seoPanel.globalResults = [...this.plugin.settings.cachedGlobalResults];
 				// Re-render the panel
@@ -352,8 +389,8 @@ export class SEOSidePanel extends ItemView {
 			this.globalResults,
 			this.currentSort,
 			(sortType: string) => {
-				this.currentSort = sortType as any;
-				this.plugin.settings.defaultSort = sortType as any;
+				this.currentSort = sortType as SortType;
+				this.plugin.settings.defaultSort = sortType as SortType;
 				this.plugin.saveSettings();
 			},
 			(event: MouseEvent) => {
@@ -366,8 +403,8 @@ export class SEOSidePanel extends ItemView {
 					return hasIssues || hasWarnings || hasNotices;
 				});
 				this.actions.showSortMenu(event, issuesFiles, container, this.currentSort, (sortType: string) => {
-					this.currentSort = sortType as any;
-					this.plugin.settings.defaultSort = sortType as any;
+					this.currentSort = sortType as SortType;
+					this.plugin.settings.defaultSort = sortType as SortType;
 					this.plugin.saveSettings();
 				}, this.plugin.settings);
 			},

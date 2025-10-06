@@ -1,4 +1,4 @@
-import { App, Notice, setIcon, Menu } from "obsidian";
+import { App, Notice, setIcon, Menu, TFile } from "obsidian";
 import { SEOResults } from "../types";
 import { sortFiles } from "./panel-utils";
 import { SEOCurrentPanelViewType } from "./panel-constants";
@@ -147,12 +147,12 @@ export class PanelActions {
 	async openFile(filePath: string): Promise<void> {
 		try {
 			const file = this.app.vault.getAbstractFileByPath(filePath);
-			if (file) {
+			if (file && file instanceof TFile) {
 				// Try different methods to work around plugin conflicts
 				try {
 					// Method 1: Use getLeaf and open
 					const leaf = this.app.workspace.getLeaf();
-					await leaf.openFile(file as any);
+					await leaf.openFile(file);
 				} catch (error) {
 					// Method 2: Fallback to openLinkText
 					await this.app.workspace.openLinkText(filePath, '', true);
@@ -166,10 +166,10 @@ export class PanelActions {
 	async openFileAndAudit(filePath: string): Promise<void> {
 		// Get the file object
 		const file = this.app.vault.getAbstractFileByPath(filePath);
-		if (!file) return;
+		if (!file || !(file instanceof TFile)) return;
 		
 		// Open the file directly using workspace
-		await this.app.workspace.getLeaf().openFile(file as any);
+		await this.app.workspace.getLeaf().openFile(file);
 		
 		// Open current note panel and run audit
 		this.plugin.openCurrentPanel();

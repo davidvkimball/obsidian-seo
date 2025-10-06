@@ -58,23 +58,33 @@ export class PanelManager {
 
 	async getFilesToCheck(): Promise<TFile[]> {
 		const { vault } = this.app;
-		const { scanDirectories } = this.plugin.settings;
+		const { scanDirectories, ignoreUnderscoreFiles } = this.plugin.settings;
+		
+		let files: TFile[];
 		
 		if (!scanDirectories.trim()) {
 			// Scan all markdown files
-			return vault.getMarkdownFiles();
+			files = vault.getMarkdownFiles();
+		} else {
+			const directories = scanDirectories.split(',').map(dir => dir.trim());
+			files = [];
+			
+			for (const dir of directories) {
+				const folder = vault.getAbstractFileByPath(dir);
+				if (folder && folder instanceof TFolder) {
+					files.push(...vault.getMarkdownFiles().filter(file => 
+						file.path.startsWith(dir + '/') || file.path === dir
+					));
+				}
+			}
 		}
 		
-		const directories = scanDirectories.split(',').map(dir => dir.trim());
-		const files: TFile[] = [];
-		
-		for (const dir of directories) {
-			const folder = vault.getAbstractFileByPath(dir);
-			if (folder && folder instanceof TFolder) {
-				files.push(...vault.getMarkdownFiles().filter(file => 
-					file.path.startsWith(dir + '/') || file.path === dir
-				));
-			}
+		// Filter out files with underscore prefix if setting is enabled
+		if (ignoreUnderscoreFiles) {
+			files = files.filter(file => {
+				const fileName = file.basename;
+				return !fileName.startsWith('_');
+			});
 		}
 		
 		return files;

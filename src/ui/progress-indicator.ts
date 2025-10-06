@@ -27,47 +27,21 @@ export class ProgressIndicator extends Component {
 	private createProgressIndicator(): void {
 		// Create progress container
 		const progressContainer = this.container.createDiv('seo-progress-container');
-		progressContainer.style.display = 'none';
-		progressContainer.style.margin = '10px 0';
-		progressContainer.style.padding = '10px';
-		progressContainer.style.border = '1px solid var(--background-modifier-border)';
-		progressContainer.style.borderRadius = '4px';
-		progressContainer.style.backgroundColor = 'var(--background-secondary)';
 
 		// Create progress text
 		this.progressText = progressContainer.createDiv('seo-progress-text');
-		this.progressText.style.marginBottom = '8px';
-		this.progressText.style.fontSize = '14px';
-		this.progressText.style.color = 'var(--text-normal)';
 
 		// Create progress bar container
 		const progressBarContainer = progressContainer.createDiv('seo-progress-bar-container');
-		progressBarContainer.style.width = '100%';
-		progressBarContainer.style.height = '8px';
-		progressBarContainer.style.backgroundColor = 'var(--background-modifier-border)';
-		progressBarContainer.style.borderRadius = '4px';
-		progressBarContainer.style.overflow = 'hidden';
 
 		// Create progress bar
 		this.progressBar = progressBarContainer.createDiv('seo-progress-bar');
-		this.progressBar.style.height = '100%';
-		this.progressBar.style.backgroundColor = 'var(--interactive-accent)';
-		this.progressBar.style.width = '0%';
-		this.progressBar.style.transition = 'width 0.3s ease';
 
 		// Create cancel button
 		const cancelButton = progressContainer.createEl('button', {
 			text: 'Cancel',
 			cls: 'seo-progress-cancel'
 		});
-		cancelButton.style.marginTop = '8px';
-		cancelButton.style.padding = '4px 8px';
-		cancelButton.style.fontSize = '12px';
-		cancelButton.style.backgroundColor = 'var(--background-modifier-error)';
-		cancelButton.style.color = 'var(--text-on-accent)';
-		cancelButton.style.border = 'none';
-		cancelButton.style.borderRadius = '3px';
-		cancelButton.style.cursor = 'pointer';
 
 		// Store reference to container
 		this.container = progressContainer;

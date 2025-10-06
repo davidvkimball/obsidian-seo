@@ -6,6 +6,8 @@ export interface SEOSettings {
 	// Directory settings
 	/** Comma-separated list of directories to scan for SEO analysis */
 	scanDirectories: string;
+	/** Ignore files that begin with an underscore */
+	ignoreUnderscoreFiles: boolean;
 	
 	// Property names
 	/** Frontmatter property name for keywords */
@@ -63,7 +65,7 @@ export interface SEOSettings {
 	
 	// UI settings
 	/** Default sort order for results display */
-	defaultSort: 'issues-desc' | 'issues-asc' | 'warnings-desc' | 'warnings-asc' | 'filename-asc' | 'filename-desc';
+	defaultSort: 'issues-desc' | 'issues-asc' | 'warnings-desc' | 'warnings-asc' | 'notices-desc' | 'notices-asc' | 'filename-asc' | 'filename-desc';
 	
 	// Thresholds
 	/** Minimum content length in characters */
@@ -84,6 +86,7 @@ export interface SEOSettings {
 
 export const DEFAULT_SETTINGS: SEOSettings = {
 	scanDirectories: "",
+	ignoreUnderscoreFiles: false,
 	keywordProperty: "",
 	descriptionProperty: "",
 	titleProperty: "",

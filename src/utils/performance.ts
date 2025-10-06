@@ -3,6 +3,16 @@
  * Provides debouncing, throttling, and progress tracking
  */
 
+interface PerformanceMemory {
+	usedJSHeapSize: number;
+	totalJSHeapSize: number;
+	jsHeapSizeLimit: number;
+}
+
+interface PerformanceWithMemory extends Performance {
+	memory?: PerformanceMemory;
+}
+
 /**
  * Debounce function - delays execution until after wait time has passed
  * @param func - Function to debounce
@@ -179,8 +189,9 @@ export class MemoryTracker {
 	 * Get current memory usage (approximate)
 	 */
 	getCurrentMemory(): number {
-		if ((performance as any).memory) {
-			return (performance as any).memory.usedJSHeapSize;
+		const perf = performance as PerformanceWithMemory;
+		if (perf.memory) {
+			return perf.memory.usedJSHeapSize;
 		}
 		return 0;
 	}

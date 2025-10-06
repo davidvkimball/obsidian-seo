@@ -1,16 +1,41 @@
 import { Plugin, Notice, TFile, TFolder } from "obsidian";
 import SEOPlugin from "../main";
 import { runSEOCheck } from "../seo-checker";
+import { SEOResults } from "../types";
+
+interface SEOPanelView {
+	globalResults: SEOResults[];
+	actions: any;
+	render(): void;
+}
 
 /**
  * Registers all plugin commands with Obsidian
  * @param plugin - The SEO plugin instance
  */
 export function registerCommands(plugin: SEOPlugin) {
-	// Open SEO Current Note panel and run audit
+	// Open SEO Current Note panel only (without running audit)
 	plugin.addCommand({
 		id: "seo-open-current",
 		name: "Open current note audit",
+		callback: async () => {
+			plugin.openCurrentPanel();
+		}
+	});
+
+	// Open SEO Global panel only (without running audit)
+	plugin.addCommand({
+		id: "seo-open-global",
+		name: "Open vault audit",
+		callback: async () => {
+			plugin.openGlobalPanel();
+		}
+	});
+
+	// Run SEO Current Note audit (opens panel and runs audit)
+	plugin.addCommand({
+		id: "seo-run-current",
+		name: "Run current note audit",
 		callback: async () => {
 			plugin.openCurrentPanel();
 			// Wait for panel to open, then trigger the audit
@@ -26,19 +51,14 @@ export function registerCommands(plugin: SEOPlugin) {
 		}
 	});
 
-	// Open SEO Global panel and run audit
+	// Run SEO Global audit (opens panel and runs audit)
 	plugin.addCommand({
-		id: "seo-open-global",
-		name: "Open vault audit",
+		id: "seo-run-global",
+		name: "Run vault audit",
 		callback: async () => {
-			// Check if panel already exists
-			const existingPanels = plugin.app.workspace.getLeavesOfType('seo-global-panel');
-			const isFirstRun = existingPanels.length === 0;
-			
-			
 			plugin.openGlobalPanel();
 			
-			// Always check if panel opened successfully
+			// Always check if panel opened successfully and run the audit
 			setTimeout(async () => {
 				const globalPanels = plugin.app.workspace.getLeavesOfType('seo-global-panel');
 				
@@ -50,19 +70,12 @@ export function registerCommands(plugin: SEOPlugin) {
 				
 				const panel = globalPanels[0];
 				if (panel?.view) {
-					const seoPanel = panel.view as any;
+					const seoPanel = panel.view as unknown as SEOPanelView;
 					
-					// If first run, let onOpen() handle it automatically
-					if (isFirstRun) {
-						// Force the panel to be visible
-						plugin.app.workspace.revealLeaf(panel);
-						plugin.app.workspace.setActiveLeaf(panel);
-					} else {
-						// Trigger the refresh logic (same as clicking the refresh button)
-						await seoPanel.actions.refreshGlobalResults();
-						// Update the panel display with new results
-						seoPanel.render();
-					}
+					// Always trigger the refresh logic (same as clicking the refresh button)
+					await seoPanel.actions.refreshGlobalResults();
+					// Update the panel display with new results
+					seoPanel.render();
 				}
 			}, 300);
 		}
@@ -77,23 +90,33 @@ export function registerCommands(plugin: SEOPlugin) {
  */
 async function getFilesToCheck(plugin: SEOPlugin): Promise<TFile[]> {
 	const { vault } = plugin.app;
-	const { scanDirectories } = plugin.settings;
+	const { scanDirectories, ignoreUnderscoreFiles } = plugin.settings;
+	
+	let files: TFile[];
 	
 	if (!scanDirectories.trim()) {
 		// Scan all markdown files
-		return vault.getMarkdownFiles();
+		files = vault.getMarkdownFiles();
+	} else {
+		const directories = scanDirectories.split(',').map(dir => dir.trim());
+		files = [];
+		
+		for (const dir of directories) {
+			const folder = vault.getAbstractFileByPath(dir);
+			if (folder && folder instanceof TFolder) {
+				files.push(...vault.getMarkdownFiles().filter((file: TFile) => 
+					file.path.startsWith(dir + '/') || file.path === dir
+				));
+			}
+		}
 	}
 	
-	const directories = scanDirectories.split(',').map(dir => dir.trim());
-	const files: TFile[] = [];
-	
-	for (const dir of directories) {
-		const folder = vault.getAbstractFileByPath(dir);
-		if (folder && folder instanceof TFolder) {
-			files.push(...vault.getMarkdownFiles().filter((file: TFile) => 
-				file.path.startsWith(dir + '/') || file.path === dir
-			));
-		}
+	// Filter out files with underscore prefix if setting is enabled
+	if (ignoreUnderscoreFiles) {
+		files = files.filter(file => {
+			const fileName = file.basename;
+			return !fileName.startsWith('_');
+		});
 	}
 	
 	return files;

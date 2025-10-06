@@ -1,6 +1,39 @@
-import { setIcon } from "obsidian";
+import { setIcon, App } from "obsidian";
 import { SEOResults } from "../types";
 import { getDisplayPath } from "./panel-utils";
+
+interface ObsidianWindow extends Window {
+	app: App;
+}
+
+/**
+ * Helper function to create SVG icons
+ */
+function createSVGIcon(svgContent: string): SVGElement {
+	const parser = new DOMParser();
+	const doc = parser.parseFromString(svgContent, 'image/svg+xml');
+	return doc.documentElement as unknown as SVGElement;
+}
+
+/**
+ * Helper function to create collapse icon
+ */
+function createCollapseIcon(): SVGElement {
+	return createSVGIcon('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6,9 12,15 18,9"/></svg>');
+}
+
+/**
+ * Helper function to create status icons
+ */
+function createStatusIcon(type: 'error' | 'warning' | 'notice' | 'success'): SVGElement {
+	const icons = {
+		error: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+		warning: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+		notice: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>',
+		success: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>'
+	};
+	return createSVGIcon(icons[type]);
+}
 
 export class ResultsDisplay {
 	private isCollapsed: boolean = true; // Track collapse state
@@ -15,7 +48,7 @@ export class ResultsDisplay {
 	private async navigateToPosition(position: { line: number; searchText?: string; context?: string }): Promise<void> {
 		try {
 			// Get the app instance
-			const app = (window as any).app;
+			const app = (window as unknown as ObsidianWindow).app;
 			if (!app) {
 				console.warn('Obsidian app not found');
 				return;
@@ -44,19 +77,18 @@ export class ResultsDisplay {
 			if (!markdownView && app.workspace.getLeavesOfType) {
 				const leaves = app.workspace.getLeavesOfType('markdown');
 				if (leaves.length > 0) {
-					markdownView = leaves[0].view;
+					markdownView = leaves[0]?.view;
 				}
 			}
 			
-			// Try getting all leaves
-			if (!markdownView && app.workspace.getLeaves) {
-				const allLeaves = app.workspace.getLeaves();
-				for (const leaf of allLeaves) {
-					if (leaf.view && leaf.view.editor) {
+			// Try getting all leaves using workspace iteration
+			if (!markdownView) {
+				// Use workspace iteration to find markdown views
+				app.workspace.iterateAllLeaves((leaf) => {
+					if (leaf.view && 'editor' in leaf.view && !markdownView) {
 						markdownView = leaf.view;
-						break;
 					}
-				}
+				});
 			}
 			
 			if (!markdownView) {
@@ -222,7 +254,7 @@ export class ResultsDisplay {
 			
 			// Add collapse icon
 			const collapseIcon = header.createEl('span', { cls: 'seo-collapse-icon' });
-			collapseIcon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6,9 12,15 18,9"/></svg>';
+			collapseIcon.appendChild(createCollapseIcon());
 			
 			header.createEl('span', { text: displayName });
 			
@@ -233,19 +265,17 @@ export class ResultsDisplay {
 			
 			// Use Lucide icons instead of emojis
 			if (hasErrors) {
-				statusIcon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+				statusIcon.appendChild(createStatusIcon('error'));
 			} else if (hasWarnings) {
-				statusIcon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+				statusIcon.appendChild(createStatusIcon('warning'));
 			} else if (hasNotices) {
-				statusIcon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>';
+				statusIcon.appendChild(createStatusIcon('notice'));
 			} else {
-				statusIcon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>';
+				statusIcon.appendChild(createStatusIcon('success'));
 			}
 
 			// Results
-			const resultsList = checkEl.createEl('ul', { cls: 'seo-results' });
-			// Start expanded
-			resultsList.style.display = 'block';
+			const resultsList = checkEl.createEl('ul', { cls: 'seo-results seo-results-list-expanded' });
 			checkResults.forEach(result => {
 				const li = resultsList.createEl('li', { 
 					cls: `seo-result seo-${result.severity}`
@@ -266,8 +296,7 @@ export class ResultsDisplay {
 					});
 					
 					// Add visual indicator that it's clickable
-					messageEl.style.cursor = 'pointer';
-					messageEl.style.textDecoration = 'underline';
+					messageEl.addClass('seo-clickable-message');
 					messageEl.title = 'Click to jump to this issue in the note';
 				} else {
 					// Non-clickable message for results without position info
@@ -279,21 +308,33 @@ export class ResultsDisplay {
 				
 				if (result.suggestion) {
 					const suggestionEl = li.createEl('div', { 
-						cls: 'seo-suggestion'
+						cls: 'seo-suggestion',
+						text: result.suggestion
 					});
-					suggestionEl.innerHTML = result.suggestion;
 				}
 			});
 			
 			// Add click handler for collapse functionality
 			header.addEventListener('click', () => {
-				const isCollapsed = resultsList.style.display === 'none';
-				resultsList.style.display = isCollapsed ? 'block' : 'none';
+				const isCollapsed = resultsList.hasClass('seo-results-list-collapsed');
+				if (isCollapsed) {
+					resultsList.removeClass('seo-results-list-collapsed');
+					resultsList.addClass('seo-results-list-expanded');
+				} else {
+					resultsList.removeClass('seo-results-list-expanded');
+					resultsList.addClass('seo-results-list-collapsed');
+				}
 				
 				// Rotate the collapse icon
 				const icon = collapseIcon.querySelector('svg');
 				if (icon) {
-					icon.style.transform = isCollapsed ? 'rotate(0deg)' : 'rotate(-90deg)';
+					if (isCollapsed) {
+						icon.removeClass('seo-collapse-icon-rotated');
+						icon.addClass('seo-collapse-icon-normal');
+					} else {
+						icon.removeClass('seo-collapse-icon-normal');
+						icon.addClass('seo-collapse-icon-rotated');
+					}
 				}
 				
 				// If any individual item is expanded, reset main toggle to "collapse all" state
@@ -390,7 +431,7 @@ export class ResultsDisplay {
 		
 		// Collapse icon (only this should be clickable)
 		const collapseIcon = issuesHeader.createEl('span', { cls: 'seo-collapse-icon seo-collapsible-header' });
-		collapseIcon.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6,9 12,15 18,9"/></svg>';
+		collapseIcon.appendChild(createCollapseIcon());
 		
 		issuesHeader.createEl('h4', { text: 'Files with results', cls: 'seo-issues-header' });
 		
@@ -452,13 +493,25 @@ export class ResultsDisplay {
 
 		// Add collapse functionality to only the arrow icon
 		collapseIcon.addEventListener('click', (e) => {
-			const isCollapsed = filesListContainer.style.display === 'none';
-			filesListContainer.style.display = isCollapsed ? 'block' : 'none';
+			const isCollapsed = filesListContainer.hasClass('seo-results-list-collapsed');
+			if (isCollapsed) {
+				filesListContainer.removeClass('seo-results-list-collapsed');
+				filesListContainer.addClass('seo-results-list-expanded');
+			} else {
+				filesListContainer.removeClass('seo-results-list-expanded');
+				filesListContainer.addClass('seo-results-list-collapsed');
+			}
 			
 			// Rotate the collapse icon
 			const icon = collapseIcon.querySelector('svg');
 			if (icon) {
-				icon.style.transform = isCollapsed ? 'rotate(0deg)' : 'rotate(-90deg)';
+				if (isCollapsed) {
+					icon.removeClass('seo-collapse-icon-rotated');
+					icon.addClass('seo-collapse-icon-normal');
+				} else {
+					icon.removeClass('seo-collapse-icon-normal');
+					icon.addClass('seo-collapse-icon-rotated');
+				}
 			}
 		});
 	}
@@ -553,12 +606,16 @@ export class ResultsDisplay {
 				// Force to the state based on main toggle
 				if (this.isCollapsed) {
 					// Force all to collapsed
-					resultsList.style.display = 'none';
-					collapseIcon.style.transform = 'rotate(-90deg)';
+					resultsList.removeClass('seo-results-list-expanded');
+					resultsList.addClass('seo-results-list-collapsed');
+					collapseIcon.removeClass('seo-collapse-icon-normal');
+					collapseIcon.addClass('seo-collapse-icon-rotated');
 				} else {
 					// Force all to expanded
-					resultsList.style.display = 'block';
-					collapseIcon.style.transform = 'rotate(0deg)';
+					resultsList.removeClass('seo-results-list-collapsed');
+					resultsList.addClass('seo-results-list-expanded');
+					collapseIcon.removeClass('seo-collapse-icon-rotated');
+					collapseIcon.addClass('seo-collapse-icon-normal');
 				}
 			}
 		});

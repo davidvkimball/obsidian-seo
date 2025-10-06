@@ -46,9 +46,26 @@ export async function checkExternalLinks(content: string, file: TFile, settings:
 	}
 	
 	// Find naked URLs (but exclude archival URLs as they are meant to be displayed as-is)
-	const nakedUrls = cleanContent.match(/(?<!\]\()(?<!https?:\/\/[^\s\)]*\/)https?:\/\/[^\s\)]+/g);
+	// Using iOS-compatible regex without lookbehind assertions
+	const nakedUrls = cleanContent.match(/https?:\/\/[^\s\)]+/g);
 	if (nakedUrls) {
+		// Get all markdown link URLs to exclude them from naked URLs
+		const markdownLinkUrls = new Set<string>();
+		if (markdownLinks) {
+			markdownLinks.forEach(link => {
+				const match = link.match(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/);
+				if (match && match[2]) {
+					markdownLinkUrls.add(match[2]);
+				}
+			});
+		}
+		
 		nakedUrls.forEach(url => {
+			// Skip if URL is already in a markdown link
+			if (markdownLinkUrls.has(url)) {
+				return;
+			}
+			
 			// Skip archival URLs as they are meant to be displayed as-is
 			if (!url.includes('web.archive.org/web/') && 
 				!url.includes('archive.today/') &&
@@ -127,9 +144,26 @@ export async function checkExternalBrokenLinks(content: string, file: TFile, set
 	}
 	
 	// Find naked URLs (but exclude archival URLs as they are meant to be displayed as-is)
-	const nakedUrls = cleanContent.match(/(?<!\]\()(?<!https?:\/\/[^\s\)]*\/)https?:\/\/[^\s\)]+/g);
+	// Using iOS-compatible regex without lookbehind assertions
+	const nakedUrls = cleanContent.match(/https?:\/\/[^\s\)]+/g);
 	if (nakedUrls) {
+		// Get all markdown link URLs to exclude them from naked URLs
+		const markdownLinkUrls = new Set<string>();
+		if (markdownLinks) {
+			markdownLinks.forEach(link => {
+				const match = link.match(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/);
+				if (match && match[2]) {
+					markdownLinkUrls.add(match[2]);
+				}
+			});
+		}
+		
 		nakedUrls.forEach(url => {
+			// Skip if URL is already in a markdown link
+			if (markdownLinkUrls.has(url)) {
+				return;
+			}
+			
 			// Skip archival URLs as they are meant to be displayed as-is
 			if (!url.includes('web.archive.org/web/') && 
 				!url.includes('archive.today/') &&
