@@ -6,6 +6,7 @@
 import { TFile, App } from "obsidian";
 import { SEOSettings } from "../settings";
 import { SEOCheckResult } from "../types";
+import { removeCodeBlocks } from "./utils/content-parser";
 
 /**
  * Vault data structure for storing file metadata
@@ -395,27 +396,90 @@ export class VaultDuplicateDetector {
 	}
 
 	/**
-	 * Split content into paragraphs
+	 * Split content into paragraphs, filtering out non-content elements
 	 */
 	private splitIntoParagraphs(content: string): string[] {
-		// Remove frontmatter and code blocks
-		let cleanContent = content.replace(/^---\n[\s\S]*?\n---\n/, '');
-		cleanContent = cleanContent.replace(/```[\s\S]*?```/g, '');
-		cleanContent = cleanContent.replace(/~~~[\s\S]*?~~~/g, '');
+		// Use the content parser to remove code blocks, HTML, and other non-content
+		let cleanContent = removeCodeBlocks(content);
 		
-		// Split into paragraphs
+		// Additional filtering for structural elements
+		cleanContent = cleanContent
+			.replace(/^#{1,6}\s+/gm, '') // Remove heading markers
+			.replace(/^\s*[-*+]\s+/gm, '') // Remove list markers
+			.replace(/^\s*\d+\.\s+/gm, '') // Remove numbered list markers
+			.replace(/^\s*>\s*/gm, '') // Remove blockquote markers
+			.replace(/^\s*\|.*\|.*$/gm, '') // Remove table rows
+			.replace(/^\s*\|.*$/gm, '') // Remove table separators
+			.replace(/\[\[.*?\]\]/g, '') // Remove Obsidian internal links
+			.replace(/!\[\[.*?\]\]/g, '') // Remove Obsidian image links
+			.replace(/\[.*?\]\(.*?\)/g, '') // Remove markdown links
+			.replace(/!\[.*?\]\(.*?\)/g, '') // Remove markdown images
+			.replace(/^\s*---\s*$/gm, '') // Remove horizontal rules
+			.replace(/^\s*\+\+\+\s*$/gm, '') // Remove Obsidian spoilers
+			.replace(/^\s*==\s*$/gm, '') // Remove Obsidian highlights
+			.replace(/^\s*!!\s*$/gm, '') // Remove Obsidian callouts
+			.replace(/^\s*>\s*\[!.*?\]\s*$/gm, '') // Remove Obsidian callout headers
+			.replace(/^\s*>\s*$/gm, '') // Remove empty blockquotes
+			.replace(/^\s*$/gm, '') // Remove empty lines
+			.trim();
+		
+		// Split into paragraphs and filter out non-content
 		return cleanContent
 			.split(/\n\s*\n/)
 			.map(p => p.trim())
-			.filter(p => p.length > 0);
+			.filter(p => {
+				// Filter out paragraphs that are too short or contain only structural elements
+				if (p.length < 30) return false;
+				
+				// Filter out paragraphs that are mostly HTML-like content
+				const htmlLikeRatio = (p.match(/<[^>]*>/g) || []).join('').length / p.length;
+				if (htmlLikeRatio > 0.3) return false;
+				
+				// Filter out paragraphs that are mostly special characters or formatting
+				const specialCharRatio = (p.match(/[^\w\s.,!?;:'"()-]/g) || []).length / p.length;
+				if (specialCharRatio > 0.5) return false;
+				
+				// Filter out paragraphs that are mostly numbers or symbols
+				const wordRatio = (p.match(/\b\w+\b/g) || []).length / p.split(/\s+/).length;
+				if (wordRatio < 0.3) return false;
+				
+				return true;
+			});
 	}
 
 	/**
 	 * Calculate Jaccard similarity between two texts
 	 */
 	private calculateJaccardSimilarity(text1: string, text2: string): number {
-		const words1 = new Set(text1.toLowerCase().split(/\s+/).filter(w => w.length > 2));
-		const words2 = new Set(text2.toLowerCase().split(/\s+/).filter(w => w.length > 2));
+		// Normalize text by removing extra whitespace and converting to lowercase
+		const normalize = (text: string) => text.toLowerCase().replace(/\s+/g, ' ').trim();
+		
+		const normalized1 = normalize(text1);
+		const normalized2 = normalize(text2);
+		
+		// Extract words, filtering out very short words and common stop words
+		const stopWords = new Set(['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'can', 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us', 'them']);
+		
+		const words1 = new Set(
+			normalized1
+				.split(/\s+/)
+				.filter(w => w.length > 2 && !stopWords.has(w))
+				.map(w => w.replace(/[^\w]/g, '')) // Remove punctuation
+				.filter(w => w.length > 0)
+		);
+		
+		const words2 = new Set(
+			normalized2
+				.split(/\s+/)
+				.filter(w => w.length > 2 && !stopWords.has(w))
+				.map(w => w.replace(/[^\w]/g, '')) // Remove punctuation
+				.filter(w => w.length > 0)
+		);
+		
+		// If either set is empty, return 0 similarity
+		if (words1.size === 0 || words2.size === 0) {
+			return 0;
+		}
 		
 		const intersection = new Set([...words1].filter(x => words2.has(x)));
 		const union = new Set([...words1, ...words2]);

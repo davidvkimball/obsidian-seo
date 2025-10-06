@@ -7,31 +7,68 @@ import { TFile } from "obsidian";
 import { SEOSettings } from "../settings";
 import { SEOCheckResult } from "../types";
 import { findLineNumberForImage, getContextAroundLine } from "./utils/position-utils";
+import { removeCodeBlocks } from "./utils/content-parser";
 
 /**
- * Checks for external links and returns them as notices
- * This is the notice-based external links list
- * @param content - The markdown content to check
- * @param file - The file being checked
- * @param settings - Plugin settings
- * @returns Array of SEO check results (notices)
+ * Validates if a URL is properly formatted and not embedded in HTML entities
+ * @param url - The URL to validate
+ * @returns true if the URL is valid and should be checked
  */
-export async function checkExternalLinks(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
-	const results: SEOCheckResult[] = [];
-	
-	if (!settings.checkExternalLinks) {
-		return [];
+function isValidUrl(url: string): boolean {
+	// Check if URL contains HTML entities or malformed characters
+	if (url.includes('&gt;') || url.includes('&lt;') || url.includes('&amp;') || 
+		url.includes('&quot;') || url.includes('&apos;') || url.includes('&nbsp;')) {
+		return false;
 	}
 	
-	// Remove code blocks to avoid false positives
-	const cleanContent = content
-		.replace(/```[\s\S]*?```/g, '') // Remove code blocks
-		.replace(/~~~[\s\S]*?~~~/g, '') // Remove code blocks with ~~~
-		.replace(/`[^`\n]+`/g, '') // Remove inline code
-		.replace(/^---\n[\s\S]*?\n---\n/, '') // Remove frontmatter
-		.replace(/::\w+\{[^}]*\}/g, ''); // Remove Obsidian callout-style blocks
+	// Check if URL contains HTML tags or malformed HTML
+	if (url.includes('<') || url.includes('>') || url.includes('"') || url.includes("'")) {
+		return false;
+	}
 	
-	// Find external links - both markdown links and naked URLs
+	// Check if URL ends with HTML-like fragments
+	if (url.endsWith('&gt;') || url.endsWith('&lt;') || url.endsWith('&amp;') ||
+		url.endsWith('&quot;') || url.endsWith('&apos;') || url.endsWith('&nbsp;')) {
+		return false;
+	}
+	
+	// Check if URL contains suspicious patterns that indicate HTML fragments
+	if (url.includes('/a&gt;') || url.includes('/p&gt;') || url.includes('/div&gt;') ||
+		url.includes('/span&gt;') || url.includes('/img&gt;') || url.includes('/script&gt;')) {
+		return false;
+	}
+	
+	// Basic URL format validation
+	try {
+		const urlObj = new URL(url);
+		// Ensure it's http or https
+		if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
+			return false;
+		}
+		// Ensure hostname is not empty
+		if (!urlObj.hostname || urlObj.hostname.length === 0) {
+			return false;
+		}
+		// Ensure hostname doesn't contain suspicious characters
+		if (urlObj.hostname.includes('<') || urlObj.hostname.includes('>') || 
+			urlObj.hostname.includes('"') || urlObj.hostname.includes("'")) {
+			return false;
+		}
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Extracts and validates external links from content
+ * @param content - The content to extract links from
+ * @returns Array of valid external URLs
+ */
+function extractValidExternalLinks(content: string): string[] {
+	// Use the content parser to remove code blocks, HTML, and other non-content
+	const cleanContent = removeCodeBlocks(content);
+	
 	const externalLinks: string[] = [];
 	
 	// Find markdown links with http/https URLs
@@ -40,14 +77,16 @@ export async function checkExternalLinks(content: string, file: TFile, settings:
 		markdownLinks.forEach(link => {
 			const match = link.match(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/);
 			if (match && match[2]) {
-				externalLinks.push(match[2]);
+				const url = match[2];
+				if (isValidUrl(url)) {
+					externalLinks.push(url);
+				}
 			}
 		});
 	}
 	
-	// Find naked URLs (but exclude archival URLs as they are meant to be displayed as-is)
-	// Using iOS-compatible regex without lookbehind assertions
-	const nakedUrls = cleanContent.match(/https?:\/\/[^\s\)]+/g);
+	// Find naked URLs with improved regex and validation
+	const nakedUrls = cleanContent.match(/https?:\/\/[^\s\)\]]+/g);
 	if (nakedUrls) {
 		// Get all markdown link URLs to exclude them from naked URLs
 		const markdownLinkUrls = new Set<string>();
@@ -67,17 +106,41 @@ export async function checkExternalLinks(content: string, file: TFile, settings:
 			}
 			
 			// Skip archival URLs as they are meant to be displayed as-is
-			if (!url.includes('web.archive.org/web/') && 
-				!url.includes('archive.today/') &&
-				!url.includes('archive.is/') &&
-				!url.includes('web.archive.org/save/')) {
+			if (url.includes('web.archive.org/web/') || 
+				url.includes('archive.today/') ||
+				url.includes('archive.is/') ||
+				url.includes('web.archive.org/save/')) {
+				return;
+			}
+			
+			// Validate the URL before adding it
+			if (isValidUrl(url)) {
 				externalLinks.push(url);
 			}
 		});
 	}
 	
 	// Remove duplicates
-	const uniqueLinks = [...new Set(externalLinks)];
+	return [...new Set(externalLinks)];
+}
+
+/**
+ * Checks for external links and returns them as notices
+ * This is the notice-based external links list
+ * @param content - The markdown content to check
+ * @param file - The file being checked
+ * @param settings - Plugin settings
+ * @returns Array of SEO check results (notices)
+ */
+export async function checkExternalLinks(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+	const results: SEOCheckResult[] = [];
+	
+	if (!settings.checkExternalLinks) {
+		return [];
+	}
+	
+	// Use the improved link extraction
+	const uniqueLinks = extractValidExternalLinks(content);
 	
 	if (uniqueLinks.length > 0) {
 		// List each external link as a notice
@@ -121,61 +184,8 @@ export async function checkExternalBrokenLinks(content: string, file: TFile, set
 		return [];
 	}
 	
-	// Remove code blocks to avoid false positives
-	const cleanContent = content
-		.replace(/```[\s\S]*?```/g, '') // Remove code blocks
-		.replace(/~~~[\s\S]*?~~~/g, '') // Remove code blocks with ~~~
-		.replace(/`[^`\n]+`/g, '') // Remove inline code
-		.replace(/^---\n[\s\S]*?\n---\n/, '') // Remove frontmatter
-		.replace(/::\w+\{[^}]*\}/g, ''); // Remove Obsidian callout-style blocks
-	
-	// Find external links - both markdown links and naked URLs
-	const externalLinks: string[] = [];
-	
-	// Find markdown links with http/https URLs
-	const markdownLinks = cleanContent.match(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g);
-	if (markdownLinks) {
-		markdownLinks.forEach(link => {
-			const match = link.match(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/);
-			if (match && match[2]) {
-				externalLinks.push(match[2]);
-			}
-		});
-	}
-	
-	// Find naked URLs (but exclude archival URLs as they are meant to be displayed as-is)
-	// Using iOS-compatible regex without lookbehind assertions
-	const nakedUrls = cleanContent.match(/https?:\/\/[^\s\)]+/g);
-	if (nakedUrls) {
-		// Get all markdown link URLs to exclude them from naked URLs
-		const markdownLinkUrls = new Set<string>();
-		if (markdownLinks) {
-			markdownLinks.forEach(link => {
-				const match = link.match(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/);
-				if (match && match[2]) {
-					markdownLinkUrls.add(match[2]);
-				}
-			});
-		}
-		
-		nakedUrls.forEach(url => {
-			// Skip if URL is already in a markdown link
-			if (markdownLinkUrls.has(url)) {
-				return;
-			}
-			
-			// Skip archival URLs as they are meant to be displayed as-is
-			if (!url.includes('web.archive.org/web/') && 
-				!url.includes('archive.today/') &&
-				!url.includes('archive.is/') &&
-				!url.includes('web.archive.org/save/')) {
-				externalLinks.push(url);
-			}
-		});
-	}
-	
-	// Remove duplicates
-	const uniqueLinks = [...new Set(externalLinks)];
+	// Use the improved link extraction
+	const uniqueLinks = extractValidExternalLinks(content);
 	
 	if (uniqueLinks.length === 0) {
 		results.push({
