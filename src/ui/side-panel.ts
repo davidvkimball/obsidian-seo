@@ -20,6 +20,7 @@ export class SEOSidePanel extends ItemView {
 	panelType: 'current' | 'global' = 'current';
 	currentSort: SortType;
 	hasRunInitialScan: boolean = false;
+	private isRefreshing: boolean = false;
 	
 	private actions: PanelActions;
 	private resultsDisplay: ResultsDisplay;
@@ -36,11 +37,98 @@ export class SEOSidePanel extends ItemView {
 			async (filePath: string) => await this.actions.openFile(filePath),
 			async (filePath: string) => await this.actions.openFileAndAudit(filePath)
 		);
+		
+		
+		// No global event delegation - we'll handle this in render()
+		
+		// Listen for file changes to update current note panel
+		if (this.panelType === 'current') {
+			let activeLeafChangeTimeout: any = null;
+			this.registerEvent(this.app.workspace.on('active-leaf-change', () => {
+				// Don't re-render if we're currently refreshing
+				if (this.isRefreshing) {
+					return;
+				}
+				
+				// Don't re-render if we already have current note results for the active file
+				const activeFile = this.app.workspace.getActiveFile();
+				if (activeFile && this.currentNoteResults && this.currentNoteResults?.file === activeFile?.path) {
+					return;
+				}
+				
+				// Only update the display name, don't re-render the entire panel
+				this.updateDisplayName();
+			}));
+			
+			// Listen for file modifications to update current note panel
+			this.registerEvent(this.app.vault.on('modify', (file) => {
+				if (file instanceof TFile && file.path.endsWith('.md')) {
+					const activeFile = this.app.workspace.getActiveFile();
+					if (activeFile && activeFile.path === file.path) {
+						// Don't re-render if we're currently refreshing
+						if (this.isRefreshing) {
+							return;
+						}
+						
+						// Clear current note results when the active file is modified
+						this.currentNoteResults = null;
+						// Only update the display name, don't re-render the entire panel
+						this.updateDisplayName();
+					}
+				}
+			}));
+		}
 	}
 
 	getViewType(): string {
 		return this.panelType === 'current' ? SEOCurrentPanelViewType : SEOGlobalPanelViewType;
 	}
+
+	private async handleRefreshClick(button: HTMLButtonElement): Promise<void> {
+		// Prevent multiple clicks
+		if (button.disabled) {
+			return;
+		}
+		
+		this.isRefreshing = true;
+		button.textContent = 'Refreshing...';
+		button.disabled = true;
+		
+		try {
+			const result = await this.actions.checkCurrentNote();
+			if (result) {
+				this.currentNoteResults = result;
+				
+				// Clear ALL existing results more aggressively
+				const existingResults = this.containerEl.querySelectorAll('.seo-results-container, .seo-file-issue, .seo-issue, .seo-warning, .seo-notice, .seo-info-note, .seo-check, .seo-result, .seo-score-header, .seo-score-text, .seo-score-number, .seo-collapse-toggle, .seo-collapse-icon');
+				existingResults.forEach(el => el.remove());
+				
+				// Create a new results container and render results
+				const newResultsContainer = this.containerEl.createEl('div', { cls: 'seo-results-container' });
+				
+				// Create a new ResultsDisplay instance with the new container
+				const tempResultsDisplay = new ResultsDisplay(
+					newResultsContainer,
+					async (filePath: string) => await this.actions.openFile(filePath),
+					async (filePath: string) => await this.actions.openFileAndAudit(filePath)
+				);
+				tempResultsDisplay.renderResults(result);
+				
+				// Update global results if they exist (but don't trigger re-render)
+				this.updateGlobalResultsIfExists(result);
+			}
+		} catch (error) {
+			console.error('Error in refresh button:', error);
+		} finally {
+			this.isRefreshing = false;
+			button.textContent = 'Refresh';
+			button.disabled = false;
+			
+			// Show completion notification
+			new Notice('SEO audit completed!');
+		}
+	}
+
 
 	getDisplayText(): string {
 		return this.panelType === 'current' ? "SEO audit: current note" : "SEO audit: vault";
@@ -202,8 +290,24 @@ export class SEOSidePanel extends ItemView {
 				const activeFile = this.app.workspace.getActiveFile();
 				if (activeFile && activeFile.path.endsWith('.md')) {
 					const filenameEl = header.createEl('div', { cls: 'seo-filename' });
-					// Use display name from current note results if available, otherwise use file path
-					const displayName = this.currentNoteResults?.displayName || activeFile.path;
+					
+					// Get the correct display name based on the current active file
+					let displayName = activeFile.path;
+					
+					// If we have current note results for this specific file, use its display name
+					if (this.currentNoteResults && this.currentNoteResults.file === activeFile.path) {
+						displayName = this.currentNoteResults.displayName || activeFile.path;
+					}
+					// If we have global results for this file, use its display name
+					else if (this.plugin.settings.cachedGlobalResults) {
+						const globalResult = this.plugin.settings.cachedGlobalResults.find(
+							result => result.file === activeFile.path
+						);
+						if (globalResult) {
+							displayName = globalResult.displayName || activeFile.path;
+						}
+					}
+					
 					filenameEl.textContent = `Target note: ${displayName}`;
 				}
 			} else {
@@ -217,28 +321,15 @@ export class SEOSidePanel extends ItemView {
 			// Action button at the top
 			if (this.panelType === 'current') {
 				const auditCurrentBtn = containerEl.createEl('button', { 
-					text: 'Audit current note',
+					text: 'Refresh',
 					cls: 'mod-cta seo-btn seo-top-btn'
 				});
-				auditCurrentBtn.addEventListener('click', async () => {
-					// Use a more subtle loading state to avoid flickering
-					const originalText = auditCurrentBtn.textContent;
-					auditCurrentBtn.disabled = true;
-					auditCurrentBtn.addClass('seo-btn-disabled');
-					
-					try {
-						const result = await this.actions.checkCurrentNote();
-						if (result) {
-							this.currentNoteResults = result;
-							// Update global results if they exist
-							this.updateGlobalResultsIfExists(result);
-							this.render();
-						}
-					} finally {
-						auditCurrentBtn.disabled = false;
-						auditCurrentBtn.removeClass('seo-btn-disabled');
-						auditCurrentBtn.addClass('seo-btn-enabled');
-					}
+				
+				// Use only click event to avoid double execution
+				auditCurrentBtn.addEventListener('click', async (event) => {
+					event.preventDefault();
+					event.stopPropagation();
+					await this.handleRefreshClick(auditCurrentBtn);
 				});
 
 				// External links button (only show if enabled in settings and vault-wide is disabled)
@@ -272,11 +363,38 @@ export class SEOSidePanel extends ItemView {
 
 			// Content based on panel type
 			if (this.panelType === 'current') {
-				if (this.currentNoteResults) {
-					this.resultsDisplay.renderResults(this.currentNoteResults);
+				// Check if we have results for the current file from global audit
+				const activeFile = this.app.workspace.getActiveFile();
+				let currentFileResults: SEOResults | null = null;
+				
+				if (activeFile && this.plugin.settings.cachedGlobalResults) {
+					// Find results for the current file in the global results
+					currentFileResults = this.plugin.settings.cachedGlobalResults.find(
+						result => result.file === activeFile.path
+					) || null;
+				}
+				
+				// Show results if we have them (either from current note audit or global audit)
+				const resultsToShow = this.currentNoteResults || currentFileResults;
+				if (resultsToShow) {
+					this.resultsDisplay.renderResults(resultsToShow);
+					
+					// Show a note if these are from global audit
+					if (!this.currentNoteResults && currentFileResults) {
+						const note = containerEl.createEl('div', { 
+							cls: 'seo-info-note',
+							text: 'Showing results from vault-wide audit. Click "Refresh" to re-audit this file specifically.'
+						});
+						note.style.marginTop = '10px';
+						note.style.padding = '8px';
+						note.style.backgroundColor = 'var(--background-secondary)';
+						note.style.borderRadius = '4px';
+						note.style.fontSize = '12px';
+						note.style.color = 'var(--text-muted)';
+					}
 				} else {
 					const noResults = containerEl.createEl('div', { cls: 'seo-no-results' });
-					noResults.createEl('p', { text: 'Open a markdown file and click "Audit current note" to audit it.' });
+					noResults.createEl('p', { text: 'Open a markdown file and click "Refresh" to audit it.' });
 				}
 			} else {
 				if (this.globalResults.length > 0) {
@@ -341,6 +459,82 @@ export class SEOSidePanel extends ItemView {
 			
 			// Update global panel if it's open
 			this.updateGlobalPanelIfOpen();
+		}
+	}
+
+	private updateDisplayName(): void {
+		// Update display name and results for the new file
+		const activeFile = this.app.workspace.getActiveFile();
+		if (activeFile && activeFile.path.endsWith('.md')) {
+			// Update the display name
+			const filenameEl = this.containerEl.querySelector('.seo-filename');
+			if (filenameEl) {
+				// Get the correct display name based on the current active file
+				let displayName = activeFile.path;
+				
+				// If we have current note results for this specific file, use its display name
+				if (this.currentNoteResults && this.currentNoteResults.file === activeFile.path) {
+					displayName = this.currentNoteResults.displayName || activeFile.path;
+				}
+				// If we have global results for this file, use its display name
+				else if (this.plugin.settings.cachedGlobalResults) {
+					const globalResult = this.plugin.settings.cachedGlobalResults.find(
+						result => result.file === activeFile.path
+					);
+					if (globalResult) {
+						displayName = globalResult.displayName || activeFile.path;
+					}
+				}
+				
+				filenameEl.textContent = `Target note: ${displayName}`;
+			}
+			
+			// Update the results display
+			this.updateResultsForCurrentFile();
+		}
+	}
+
+	private updateResultsForCurrentFile(): void {
+		// Check if we have results for the current file from global audit
+		const activeFile = this.app.workspace.getActiveFile();
+		let currentFileResults: SEOResults | null = null;
+		
+		if (activeFile && this.plugin.settings.cachedGlobalResults) {
+			// Find results for the current file in the global results
+			currentFileResults = this.plugin.settings.cachedGlobalResults.find(
+				result => result.file === activeFile.path
+			) || null;
+		}
+		
+		// Show results if we have them (either from current note audit or global audit)
+		const resultsToShow = this.currentNoteResults || currentFileResults;
+		
+		// Clear existing results
+		const existingResults = this.containerEl.querySelectorAll('.seo-results-container, .seo-file-issue, .seo-issue, .seo-warning, .seo-notice, .seo-info-note, .seo-check, .seo-result, .seo-score-header, .seo-score-text, .seo-score-number, .seo-collapse-toggle, .seo-collapse-icon');
+		existingResults.forEach(el => el.remove());
+		
+		if (resultsToShow) {
+			// Create a new results container and render results
+			const newResultsContainer = this.containerEl.createEl('div', { cls: 'seo-results-container' });
+			this.resultsDisplay.renderResults(resultsToShow);
+			
+			// Show a note if these are from global audit
+			if (!this.currentNoteResults && currentFileResults) {
+				const note = this.containerEl.createEl('div', { 
+					cls: 'seo-info-note',
+					text: 'Showing results from vault-wide audit. Click "Refresh" to re-audit this file specifically.'
+				});
+				note.style.marginTop = '10px';
+				note.style.padding = '8px';
+				note.style.backgroundColor = 'var(--background-secondary)';
+				note.style.borderRadius = '4px';
+				note.style.fontSize = '12px';
+				note.style.color = 'var(--text-muted)';
+			}
+		} else {
+			// No results available, show prompt
+			const noResults = this.containerEl.createEl('div', { cls: 'seo-no-results' });
+			noResults.createEl('p', { text: 'Open a markdown file and click "Refresh" to audit it.' });
 		}
 	}
 

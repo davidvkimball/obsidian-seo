@@ -109,6 +109,8 @@ export class PanelActions {
 	}
 
 	async refreshGlobalResults(): Promise<SEOResults[]> {
+		let auditNotice: Notice | null = null;
+		
 		try {
 			// Clear cache first to ensure fresh results
 			const { clearAllCache } = await import("../seo-checker");
@@ -121,9 +123,9 @@ export class PanelActions {
 				return [];
 			}
 			
-			// Show notification for large scans
+			// Show persistent notification for large scans
 			if (files.length > 20) {
-				new Notice(`Refreshing SEO audit on ${files.length} files... This may take a moment.`);
+				auditNotice = new Notice(`Refreshing SEO audit on ${files.length} files... This may take a moment.`, 0);
 			}
 			
 			// Import and run SEO check directly
@@ -135,10 +137,18 @@ export class PanelActions {
 			this.plugin.settings.lastScanTimestamp = Date.now();
 			await this.plugin.saveSettings();
 			
+			// Dismiss the audit notice and show completion notice
+			if (auditNotice) {
+				auditNotice.hide();
+			}
 			new Notice(`SEO audit complete with ${results.length} files.`);
 			return results;
 		} catch (error) {
 			console.error('Error checking all notes:', error);
+			// Dismiss the audit notice if it exists
+			if (auditNotice) {
+				auditNotice.hide();
+			}
 			new Notice('Error analyzing files. Check console for details.');
 			return [];
 		}
@@ -171,20 +181,34 @@ export class PanelActions {
 		// Open the file directly using workspace
 		await this.app.workspace.getLeaf().openFile(file);
 		
-		// Open current note panel and run audit
+		// Open current note panel and wait for it to be fully ready
 		this.plugin.openCurrentPanel();
 		
-		// Wait for panel to open, then trigger the check
-		setTimeout(() => {
-			// Find and click the "Check current note" button
-			const currentPanel = this.app.workspace.getLeavesOfType(SEOCurrentPanelViewType)[0];
-			if (currentPanel) {
-				const checkBtn = currentPanel.view.containerEl.querySelector('.seo-top-btn') as HTMLButtonElement;
-				if (checkBtn) {
-					checkBtn.click();
+		// Wait for the panel to be fully initialized and focused
+		await new Promise<void>((resolve) => {
+			const checkPanel = () => {
+				const currentPanels = this.app.workspace.getLeavesOfType('seo-current-panel');
+				if (currentPanels.length > 0) {
+					const currentPanel = currentPanels[0];
+					if (currentPanel && currentPanel.view) {
+						// Focus the panel to ensure it's properly active
+						this.app.workspace.setActiveLeaf(currentPanel);
+						// Re-render to ensure it's in the correct state
+						if ('render' in currentPanel.view) {
+							(currentPanel.view as any).render();
+						}
+						resolve();
+					} else {
+						// Panel not ready yet, check again
+						setTimeout(checkPanel, 50);
+					}
+				} else {
+					// Panel not found, check again
+					setTimeout(checkPanel, 50);
 				}
-			}
-		}, 200);
+			};
+			checkPanel();
+		});
 	}
 
 	showSortMenu(event: MouseEvent, issuesFiles: SEOResults[], issuesList: HTMLElement, currentSort: string, onSortChange: (sortType: string) => void, settings?: any): void {

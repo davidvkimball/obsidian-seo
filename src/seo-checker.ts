@@ -213,8 +213,28 @@ function generateSettingsHash(settings: any): string {
 		useFilenameAsTitle: settings.useFilenameAsTitle,
 		checkContentLength: settings.checkContentLength,
 		minContentLength: settings.minContentLength,
-		checkDuplicateContent: settings.checkDuplicateContent,
 		scanDirectories: settings.scanDirectories || '',
+		// External link checking settings
+		checkExternalLinks: settings.checkExternalLinks,
+		enableExternalLinkVaultCheck: settings.enableExternalLinkVaultCheck,
+		checkPotentiallyBrokenLinks: settings.checkPotentiallyBrokenLinks,
+		checkPotentiallyBrokenEmbeds: settings.checkPotentiallyBrokenEmbeds,
+		// Other SEO check settings
+		checkAltText: settings.checkAltText,
+		checkBrokenLinks: settings.checkBrokenLinks,
+		checkNakedLinks: settings.checkNakedLinks,
+		checkHeadingOrder: settings.checkHeadingOrder,
+		checkKeywordDensity: settings.checkKeywordDensity,
+		checkMetaDescription: settings.checkMetaDescription,
+		checkTitleLength: settings.checkTitleLength,
+		checkImageNaming: settings.checkImageNaming,
+		checkDuplicateContent: settings.checkDuplicateContent,
+		checkReadingLevel: settings.checkReadingLevel,
+		checkKeywordInTitle: settings.checkKeywordInTitle,
+		checkKeywordInSlug: settings.checkKeywordInSlug,
+		checkSlugFormat: settings.checkSlugFormat,
+		// Thresholds that affect results
+		duplicateThreshold: settings.duplicateThreshold,
 		// Add other settings that affect SEO results
 	};
 	

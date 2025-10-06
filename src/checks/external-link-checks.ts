@@ -189,41 +189,73 @@ export async function checkExternalBrokenLinks(content: string, file: TFile, set
 	// Check each external link
 	for (const url of uniqueLinks) {
 		let timeoutId: NodeJS.Timeout | null = null;
+		let linkIsBroken = false;
+		let errorMessage = '';
+		let suggestion = '';
 		
 		try {
 			const controller = new AbortController();
 			timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 			
-			const response = await fetch(url, {
-				method: 'GET',
-				headers: {
-					'Range': 'bytes=0-0'
-				},
-				mode: 'no-cors',
-				signal: controller.signal
-			});
-			
-			if (timeoutId) clearTimeout(timeoutId);
-			
-			// With no-cors mode, we can't read the status, but if we get here without error, it's likely working
-			// We'll consider it working if no network error occurred
-			
-		} catch (error) {
-			if (timeoutId) clearTimeout(timeoutId);
-			
-			// Find the line number for this URL
-			const lines = content.split('\n');
-			let lineNumber = 1;
-			for (let i = 0; i < lines.length; i++) {
-				const line = lines[i];
-				if (line && url && line.includes(url)) {
-					lineNumber = i + 1;
-					break;
+			// Use a more reliable approach: try HEAD request first, then GET if HEAD fails
+			try {
+				// First try HEAD request with CORS to get status codes
+				const response = await fetch(url, {
+					method: 'HEAD',
+					headers: {
+						'User-Agent': 'Mozilla/5.0 (compatible; Obsidian-SEO-Plugin/1.0)'
+					},
+					mode: 'cors',
+					signal: controller.signal
+				});
+				
+				if (timeoutId) clearTimeout(timeoutId);
+				
+				// Check the response status
+				if (!response.ok) {
+					linkIsBroken = true;
+					if (response.status >= 400 && response.status < 500) {
+						errorMessage = `External link error (${response.status}): ${url}`;
+						suggestion = `This link returned a ${response.status} error. The page may not exist or may require authentication.`;
+					} else if (response.status >= 500) {
+						errorMessage = `External link server error (${response.status}): ${url}`;
+						suggestion = `This link returned a ${response.status} server error. The server may be experiencing issues.`;
+					} else {
+						errorMessage = `External link error (${response.status}): ${url}`;
+						suggestion = `This link returned an unexpected status code: ${response.status}`;
+					}
+				}
+			} catch (corsError) {
+				// CORS failed, try GET request with no-cors to detect network issues
+				try {
+					const response = await fetch(url, {
+						method: 'GET',
+						headers: {
+							'User-Agent': 'Mozilla/5.0 (compatible; Obsidian-SEO-Plugin/1.0)',
+							'Range': 'bytes=0-0'
+						},
+						mode: 'no-cors',
+						signal: controller.signal
+					});
+					
+					if (timeoutId) clearTimeout(timeoutId);
+					
+					// With no-cors, we can't determine if it's broken from status codes
+					// But if we get here without error, assume it's working
+					// This is a fallback for sites that block CORS but are still accessible
+				} catch (networkError) {
+					// This is a genuine network error - the link is broken
+					linkIsBroken = true;
+					errorMessage = `External link unreachable: ${url}`;
+					suggestion = 'This link could not be reached. Check if the URL is correct or if the server is down.';
 				}
 			}
 			
-			let errorMessage = '';
-			let suggestion = '';
+			if (timeoutId) clearTimeout(timeoutId);
+			
+		} catch (error) {
+			if (timeoutId) clearTimeout(timeoutId);
+			linkIsBroken = true;
 			
 			if (error instanceof Error && error.name === 'AbortError') {
 				errorMessage = `External link timeout: ${url}`;
@@ -234,6 +266,19 @@ export async function checkExternalBrokenLinks(content: string, file: TFile, set
 			} else {
 				errorMessage = `External link error: ${url}`;
 				suggestion = 'This link could not be verified. Please check the URL manually.';
+			}
+		}
+		
+		// If we detected a broken link, add it to results
+		if (linkIsBroken) {
+			const lines = content.split('\n');
+			let lineNumber = 1;
+			for (let i = 0; i < lines.length; i++) {
+				const line = lines[i];
+				if (line && url && line.includes(url)) {
+					lineNumber = i + 1;
+					break;
+				}
 			}
 			
 			results.push({
