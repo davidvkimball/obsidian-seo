@@ -17,10 +17,15 @@ A comprehensive SEO analysis plugin for Obsidian that helps you optimize your no
 - **Reading Level** - Analyzes readability and complexity
 - **Keyword Density** - Optimal keyword usage
 - **Duplicate Content** - Detects similar content across notes
+- **Duplicate Titles** - Identifies duplicate titles across vault
+- **Duplicate Descriptions** - Finds duplicate meta descriptions
 
 #### **Technical SEO**
 - **Title Optimization** - Proper title length and structure
 - **Meta Description** - Frontmatter description validation
+- **Keyword in Title** - Ensures keywords appear in titles
+- **Keyword in Description** - Validates keyword presence in descriptions
+- **Keyword in Slug** - Checks keyword inclusion in filenames
 - **Heading Structure** - Proper H1-H6 hierarchy
 - **Image Alt Text** - Missing alt text detection
 - **Image Naming** - SEO-friendly image filename patterns
@@ -42,8 +47,10 @@ A comprehensive SEO analysis plugin for Obsidian that helps you optimize your no
 
 | Command | Description |
 |---------|-------------|
-| **Open current note audit** | Audit the currently open note |
-| **Open vault audit** | Audit all notes in configured directories |
+| **Open current note audit** | Open the current note audit panel |
+| **Open vault audit** | Open the vault-wide audit panel |
+| **Run current note audit** | Open panel and run audit on current note |
+| **Run vault audit** | Open panel and run audit on all notes |
 
 ## SEO Score System
 
@@ -52,7 +59,7 @@ The plugin uses a weighted scoring system that prioritizes critical SEO factors:
 - **Critical Issues** (10x weight): Broken links, missing titles
 - **Important Issues** (5x weight): Missing alt text, meta descriptions  
 - **Moderate Issues** (3x weight): Content length, readability
-- **Minor Issues** (1x weight): Warnings and suggestions
+- **Minor Issues** (1x weight): Warnings and notices
 
 **Score Range**: 40-100 (40 = needs work, 100 = excellent)
 
@@ -60,13 +67,12 @@ The plugin uses a weighted scoring system that prioritizes critical SEO factors:
 
 ### **Quick Current Note Check**
 1. Open any markdown file
-2. Use command "Open current note audit"
-3. Click "Check current note" to run analysis
-4. Review issues and warnings
+2. Use command "Run current note audit"
+4. Review issues, warnings, and notices
 
 ### **Vault-wide Analysis**
 1. Configure scan directories in settings
-2. Use command "Open vault audit"
+2. Use command "Run vault audit"
 3. Review comprehensive analysis with sorting options
 4. Click any file to open and fix issues
 

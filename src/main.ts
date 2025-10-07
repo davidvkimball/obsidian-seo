@@ -5,7 +5,6 @@ import { SEOSettingTab } from "./settings-tab";
 import { SEOSidePanel } from "./ui/side-panel";
 import { SEOCurrentPanelViewType, SEOGlobalPanelViewType } from "./ui/panel-constants";
 import { PanelManager } from "./ui/panel-manager";
-import { RealTimeChecker } from "./real-time-checker";
 import { handleError, withErrorHandling, validateRequiredParams } from "./utils/error-handler";
 import { seoCache, clearAllCache } from "./utils/cache-manager";
 
@@ -21,12 +20,11 @@ interface SEOPanelView {
 export default class SEOPlugin extends Plugin {
 	settings!: SEOSettings;
 	private panelManager!: PanelManager;
-	private realTimeChecker!: RealTimeChecker;
 	public sidePanel: SEOSidePanel | null = null;
 
 	/**
 	 * Plugin initialization - called when the plugin is loaded
-	 * Sets up managers, registers views, commands, and real-time checking
+	 * Sets up managers, registers views, and commands
 	 */
 	async onload() {
 		try {
@@ -45,11 +43,6 @@ export default class SEOPlugin extends Plugin {
 				null as any
 			);
 
-			this.realTimeChecker = await withErrorHandling(
-				() => Promise.resolve(new RealTimeChecker(this.app, this)),
-				'real-time checker initialization',
-				null as any
-			);
 
 			// Ensure icons load properly using Obsidian's API
 			this.forceIconRefresh();
@@ -90,16 +83,6 @@ export default class SEOPlugin extends Plugin {
 				undefined
 			);
 
-			// Register real-time checking for current note with error handling
-			await withErrorHandling(
-				async () => {
-					if (this.realTimeChecker) {
-						this.realTimeChecker.registerRealTimeChecking();
-					}
-				},
-				'real-time checking registration',
-				undefined
-			);
 
 			// Add ribbon icon for easy access (default to global) with error handling
 			await withErrorHandling(
@@ -237,13 +220,17 @@ export default class SEOPlugin extends Plugin {
 	 */
 	async runBulkCheck() {
 		try {
-			if (this.realTimeChecker) {
-				await this.realTimeChecker.runBulkCheck();
-			} else {
-				throw new Error('Real-time checker not initialized');
+			const { runSEOCheck } = await import("./seo-checker");
+			const files = await this.getFilesToCheck();
+			if (files.length === 0) {
+				return [];
 			}
+			
+			const results = await runSEOCheck(this, files);
+			return results;
 		} catch (error) {
 			handleError(error, 'running bulk check', true);
+			return [];
 		}
 	}
 

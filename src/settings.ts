@@ -24,6 +24,8 @@ export interface SEOSettings {
 	useFilenameAsSlug: boolean;
 	/** Filename pattern for parent folder slug generation */
 	parentFolderSlugFilename: string;
+	/** Optional prefix or suffix to append to meta title for character count calculations */
+	titlePrefixSuffix: string;
 	
 	// Check toggles
 	/** Enable title length validation */
@@ -94,6 +96,7 @@ export const DEFAULT_SETTINGS: SEOSettings = {
 	slugProperty: "",
 	useFilenameAsSlug: false,
 	parentFolderSlugFilename: "",
+	titlePrefixSuffix: "",
 	checkTitleLength: true,
 	checkHeadingOrder: true,
 	checkAltText: true,

@@ -39,6 +39,17 @@ export class SEOSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
+			.setName('Title prefix / suffix')
+			.setDesc('Specify an optional prefix or suffix that gets appended to your meta title - used to factor in character count for the title length check')
+			.addText(text => text
+				.setPlaceholder('- Author Name')
+				.setValue(this.plugin.settings.titlePrefixSuffix)
+				.onChange(async (value) => {
+					this.plugin.settings.titlePrefixSuffix = value;
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
 			.setName('Ignores files with an underscore prefix')
 			.setDesc('Don\'t process files that begin with an underscore, like _example.md')
 			.addToggle(toggle => toggle

@@ -130,26 +130,37 @@ export async function checkTitleLength(content: string, file: TFile, settings: S
 		return results; // Return empty results - don't show the check
 	}
 	
-	const length = title.length;
+	// Apply prefix/suffix if configured (adds space for character count)
+	const fullTitle = settings.titlePrefixSuffix ? `${title} ${settings.titlePrefixSuffix}` : title;
+	const length = fullTitle.length;
 	
 	if (length < 30) {
+		const message = settings.titlePrefixSuffix 
+			? `Title too short: ${length} characters (${title} + " ${settings.titlePrefixSuffix}")`
+			: `Title too short: ${length} characters`;
 		results.push({
 			passed: false,
-			message: `Title too short: ${length} characters`,
+			message,
 			suggestion: "Aim for 30-60 characters",
 			severity: 'warning'
 		});
 	} else if (length > 60) {
+		const message = settings.titlePrefixSuffix 
+			? `Title too long: ${length} characters (${title} + " ${settings.titlePrefixSuffix}")`
+			: `Title too long: ${length} characters`;
 		results.push({
 			passed: false,
-			message: `Title too long: ${length} characters`,
+			message,
 			suggestion: "Aim for 30-60 characters",
 			severity: 'warning'
 		});
 	} else {
+		const message = settings.titlePrefixSuffix 
+			? `Good title length: ${length} characters (${title} + " ${settings.titlePrefixSuffix}")`
+			: `Good title length: ${length} characters`;
 		results.push({
 			passed: true,
-			message: `Good title length: ${length} characters`,
+			message,
 			severity: 'info'
 		});
 	}
