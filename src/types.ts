@@ -48,6 +48,14 @@ export interface SEOResults {
 		headingOrder: SEOCheckResult[];
 		/** Keyword density analysis results */
 		keywordDensity: SEOCheckResult[];
+		/** Keyword presence in title */
+		keywordInTitle: SEOCheckResult[];
+		/** Keyword presence in description */
+		keywordInDescription: SEOCheckResult[];
+		/** Keyword presence in slug */
+		keywordInSlug: SEOCheckResult[];
+		/** Slug format validation */
+		slugFormat: SEOCheckResult[];
 		/** Broken link detection results */
 		brokenLinks: SEOCheckResult[];
 		/** External broken link detection results */
@@ -70,6 +78,8 @@ export interface SEOResults {
 	readingLevel: SEOCheckResult[];
 	/** Potentially broken embed detection results */
 	potentiallyBrokenEmbeds: SEOCheckResult[];
+	/** Potentially broken links (publish-mode relative notices) */
+	potentiallyBrokenLinks: SEOCheckResult[];
 	};
 	/** Overall SEO score (0-100) */
 	overallScore: number;

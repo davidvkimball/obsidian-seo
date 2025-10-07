@@ -200,54 +200,19 @@ export async function checkBrokenLinks(content: string, file: TFile, settings: S
 				}
 				
 				if (app) {
-					// Try to resolve the relative path
-					let resolvedPath = linkUrl;
+					// Use the EXACT same logic as wikilinks - this should work identically
+					const resolvedLink = app.metadataCache.getFirstLinkpathDest(linkUrl, file.path);
 					
-					// Handle different relative path formats
-					if (linkUrl.startsWith('/')) {
-						// Absolute path from vault root
-						resolvedPath = linkUrl.substring(1); // Remove leading slash
-						// Remove trailing slash if present
-						if (resolvedPath.endsWith('/')) {
-							resolvedPath = resolvedPath.substring(0, resolvedPath.length - 1);
-						}
-					} else if (linkUrl.startsWith('./')) {
-						// Relative to current file
-						const currentDir = file.parent?.path || '';
-						resolvedPath = currentDir + '/' + linkUrl.substring(2);
-					} else {
-						// Relative to current file's directory
-						const currentDir = file.parent?.path || '';
-						// Only add current directory if the link doesn't already start with a path
-						if (linkUrl.includes('/')) {
-							// Link already has a path, use it as-is
-							resolvedPath = linkUrl;
-						} else {
-							// Simple filename, add current directory
-							resolvedPath = currentDir + '/' + linkUrl;
-						}
-					}
-					
-					// Try different file extensions
-					const possiblePaths = [
-						resolvedPath + '.md',
-						resolvedPath,
-						resolvedPath + '.markdown'
-					];
-					
-					let linkedFile = null;
-					for (const possiblePath of possiblePaths) {
-						linkedFile = app.vault.getAbstractFileByPath(possiblePath);
-						if (linkedFile) break;
-					}
-					
-					if (!linkedFile) {
+					if (!resolvedLink) {
 						const lineNumber = findLineNumberForImage(content, markdownLink);
+						
+						// Use the same suggestion format as wikilinks
+						const suggestedPath = linkUrl.endsWith('.md') ? linkUrl : linkUrl + '.md';
 						
 						results.push({
 							passed: false,
 							message: `Broken internal link: ${linkText}`,
-							suggestion: `Check if the file "${resolvedPath}.md" exists or update the link`,
+							suggestion: `Check if the file "${suggestedPath}" exists or update the link`,
 							severity: 'error',
 							position: {
 								line: lineNumber,
@@ -283,7 +248,8 @@ export async function checkBrokenLinks(content: string, file: TFile, settings: S
 export async function checkPotentiallyBrokenLinks(content: string, file: TFile, settings: SEOSettings, app?: any): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
-	if (!settings.checkPotentiallyBrokenLinks) {
+	// Only run this check in publish mode (flexible relative links), and when enabled
+	if (!settings.checkPotentiallyBrokenLinks || !settings.publishMode) {
 		return [];
 	}
 	
@@ -322,7 +288,7 @@ export async function checkPotentiallyBrokenLinks(content: string, file: TFile, 
 				results.push({
 					passed: true,
 					message: `Relative path link: ${linkText}`,
-					suggestion: "This link is valid for static site generators but may not work in Obsidian",
+					suggestion: "This link may be valid for static site generators but may not work in Obsidian",
 					severity: 'notice',
 					position: {
 						line: lineNumber,

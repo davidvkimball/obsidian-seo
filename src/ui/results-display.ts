@@ -57,16 +57,16 @@ export class ResultsDisplay {
 			}
 
 			// Get the current active file
-			const activeFile = app.workspace.getActiveFile();
-			if (!activeFile) {
-				console.warn('No active file found for navigation');
-				return;
-			}
+		const activeFile = app.workspace.getActiveFile();
+		if (!activeFile) {
+			console.warn('No active file found for navigation');
+			return;
+		}
 
-			// Open the file if it's not already open
-			await this.onFileClick(activeFile.path);
-
-			// Get the markdown view - try different approaches
+		// Open the file if it's not already open
+		await this.onFileClick(activeFile.path);
+		
+		// Get the markdown view - try different approaches
 			let markdownView: any = null;
 			let editor: any = null;
 			
@@ -149,6 +149,9 @@ export class ResultsDisplay {
 	}
 
 	renderResults(results: SEOResults): void {
+		// Use raw notices count so notices from Potentially Broken Links are visible and counted
+		let filteredNoticesCount = results.noticesCount;
+		
 		// Overall score with collapsible toggle
 		const scoreEl = this.container.createEl('div', { cls: 'seo-score-header' });
 		
@@ -168,7 +171,7 @@ export class ResultsDisplay {
 			scoreNumber.addClass('seo-score-poor');
 		}
 		
-		if (results.issuesCount > 0 || results.warningsCount > 0 || results.noticesCount > 0) {
+		if (results.issuesCount > 0 || results.warningsCount > 0 || filteredNoticesCount > 0) {
 			scoreText.createEl('span', { text: ` (` });
 			const issuesCount = scoreText.createEl('span', { 
 				text: `${results.issuesCount} issues`,
@@ -179,10 +182,10 @@ export class ResultsDisplay {
 				text: `${results.warningsCount} warnings`,
 				cls: 'seo-warnings-count-text'
 			});
-			if (results.noticesCount > 0) {
+			if (filteredNoticesCount > 0) {
 				scoreText.createEl('span', { text: ', ' });
 				const noticesCount = scoreText.createEl('span', { 
-					text: `${results.noticesCount} notices`,
+					text: `${filteredNoticesCount} notices`,
 					cls: 'seo-notices-count-text'
 				});
 			}
@@ -215,17 +218,7 @@ export class ResultsDisplay {
 		Object.entries(results.checks).forEach(([checkName, checkResults]) => {
 			if (checkResults.length === 0) return;
 			
-			// Hide "Potentially Broken Links" if it only contains notices (no actual issues)
-			if (checkName === 'potentiallyBrokenLinks') {
-				const hasErrors = checkResults.some(r => r.severity === 'error');
-				const hasWarnings = checkResults.some(r => r.severity === 'warning');
-				const hasOnlyNotices = checkResults.every(r => r.severity === 'notice');
-				
-				// If it only has notices and no errors/warnings, hide it
-				if (hasOnlyNotices && !hasErrors && !hasWarnings) {
-					return;
-				}
-			}
+			// Always show Potentially Broken Links so notice-only cases are visible
 			
 			// Determine the check status for color coding
 			const checkHasErrors = checkResults.some(r => r.severity === 'error');
@@ -395,7 +388,10 @@ export class ResultsDisplay {
 		const totalFiles = results.length;
 		const totalIssues = results.reduce((sum, r) => sum + r.issuesCount, 0);
 		const totalWarnings = results.reduce((sum, r) => sum + r.warningsCount, 0);
+		
+		// Use raw sum of notices so PBL notices are included
 		const totalNotices = results.reduce((sum, r) => sum + r.noticesCount, 0);
+		
 		const avgScore = Math.round(
 			results.reduce((sum, r) => sum + r.overallScore, 0) / totalFiles
 		);
@@ -458,6 +454,8 @@ export class ResultsDisplay {
 		const issuesFiles = results.filter(r => {
 			const hasIssues = r.issuesCount > 0;
 			const hasWarnings = r.warningsCount > 0;
+			
+			// Use raw notices count so it matches visible entries
 			const hasNotices = showNotices && r.noticesCount > 0;
 			return hasIssues || hasWarnings || hasNotices;
 		});
@@ -559,6 +557,34 @@ export class ResultsDisplay {
 		const sortedFiles = [...files];
 		
 		switch (sortType) {
+			case 'notices-desc':
+				// Sort by notices (high first), then issues (high first), then warnings (high first), then file name A-Z
+				sortedFiles.sort((a, b) => {
+					const noticesCompare = b.noticesCount - a.noticesCount;
+					if (noticesCompare !== 0) return noticesCompare;
+					const issuesCompare = b.issuesCount - a.issuesCount;
+					if (issuesCompare !== 0) return issuesCompare;
+					const warningsCompare = b.warningsCount - a.warningsCount;
+					if (warningsCompare !== 0) return warningsCompare;
+					const aFileName = a.file.split('/').pop() || '';
+					const bFileName = b.file.split('/').pop() || '';
+					return aFileName.localeCompare(bFileName);
+				});
+				break;
+			case 'notices-asc':
+				// Sort by notices (low first), then issues (low first), then warnings (low first), then file name A-Z
+				sortedFiles.sort((a, b) => {
+					const noticesCompare = a.noticesCount - b.noticesCount;
+					if (noticesCompare !== 0) return noticesCompare;
+					const issuesCompare = a.issuesCount - b.issuesCount;
+					if (issuesCompare !== 0) return issuesCompare;
+					const warningsCompare = a.warningsCount - b.warningsCount;
+					if (warningsCompare !== 0) return warningsCompare;
+					const aFileName = a.file.split('/').pop() || '';
+					const bFileName = b.file.split('/').pop() || '';
+					return aFileName.localeCompare(bFileName);
+				});
+				break;
 			case 'warnings-desc':
 				// Sort by warnings (high first), then by issues (high first), then by file name A-Z
 				sortedFiles.sort((a, b) => {

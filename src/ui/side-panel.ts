@@ -5,6 +5,7 @@ import { SEOCurrentPanelViewType, SEOGlobalPanelViewType } from "./panel-constan
 import { getVaultFoldersInfo } from "./panel-utils";
 import { PanelActions } from "./panel-actions";
 import { ResultsDisplay } from "./results-display";
+import { PanelRenderer } from "./panel-renderer";
 
 interface SEOPanelView {
 	globalResults: SEOResults[];
@@ -24,6 +25,7 @@ export class SEOSidePanel extends ItemView {
 	
 	private actions: PanelActions;
 	private resultsDisplay: ResultsDisplay;
+	private renderer: PanelRenderer;
 
 	constructor(plugin: SEOPlugin, panelType: 'current' | 'global' = 'current', leaf?: WorkspaceLeaf) {
 		super(leaf || plugin.app.workspace.getLeaf());
@@ -37,6 +39,7 @@ export class SEOSidePanel extends ItemView {
 			async (filePath: string) => await this.actions.openFile(filePath),
 			async (filePath: string) => await this.actions.openFileAndAudit(filePath)
 		);
+		this.renderer = new PanelRenderer(this.app, this.plugin, this.actions);
 		
 		
 		// No global event delegation - we'll handle this in render()
@@ -320,6 +323,45 @@ export class SEOSidePanel extends ItemView {
 	}
 
 	render() {
+		// Use the new renderer for cleaner code organization
+		this.renderer.render(
+			this.containerEl,
+			this.panelType,
+			this.currentNoteResults,
+			this.globalResults,
+			async (btn: HTMLButtonElement) => await this.handleRefreshClick(btn),
+			async () => {
+				const result = await this.actions.checkExternalLinks();
+				if (result) {
+					this.currentNoteResults = result;
+					// Update global results if they exist
+					this.updateGlobalResultsIfExists(result);
+					this.render();
+				}
+			}
+		);
+
+		// Handle custom events from the renderer
+		this.containerEl.addEventListener('seo-refresh-complete', (event: Event) => {
+			const customEvent = event as CustomEvent;
+			this.globalResults = customEvent.detail.results;
+			this.render();
+		});
+
+		this.containerEl.addEventListener('seo-sort-change', (event: Event) => {
+			const customEvent = event as CustomEvent;
+			this.currentSort = customEvent.detail.sortType;
+			this.plugin.settings.defaultSort = customEvent.detail.sortType;
+			this.plugin.saveSettings();
+			this.render();
+		});
+	}
+
+	/**
+	 * Legacy render method - kept as fallback during migration
+	 * TODO: Remove once PanelRenderer is fully tested
+	 */
+	private renderLegacy() {
 		try {
 			const { containerEl } = this;
 			containerEl.empty();
