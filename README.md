@@ -1,8 +1,8 @@
 # SEO Plugin for Obsidian 
 
-**Ensure your public-facing notes are optimized for search engines and AI.**
+A comprehensive SEO analysis plugin for Obsidian that helps you optimize your notes for better discoverability and search engine ranking.
 
-A comprehensive SEO analysis tool for Obsidian that helps you optimize your notes for better discoverability and search engine ranking.
+![obsidian-seo-preview](https://github.com/user-attachments/assets/f015bae8-1c71-49f0-b9b8-0d7443249460)
 
 ## Features
 
