@@ -95,6 +95,10 @@ The plugin uses a weighted scoring system that prioritizes critical SEO factors:
 2. Ensure `manifest.json`, `main.js`, and `styles.css` are in the `seo` folder.
 3. In Obsidian, go to **Settings > Community Plugins**, enable "Community Plugins" if not already enabled, and then enable "SEO."
 
+## Privacy & Security
+
+**Note**: This plugin includes an optional external link checking feature that requires an internet connection. This feature is **disabled by default** and can be enabled in the plugin settings if desired. All other SEO checks work entirely offline.
+
 ## Contributing
 
 Submit issues or pull requests on the [GitHub repository](https://github.com/davidvkimball/obsidian-seo). Contributions to enhance features, improve documentation, or fix bugs are welcome!
