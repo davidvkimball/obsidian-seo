@@ -31,9 +31,11 @@ export {
 export { 
 	checkMetaDescription, 
 	checkTitleLength, 
+	checkTitleH1Uniqueness,
 	checkKeywordDensity, 
 	checkKeywordInTitle,
-	checkKeywordInDescription
+	checkKeywordInDescription,
+	checkKeywordInHeadings
 } from './meta-checks';
 
 // Heading checks
@@ -195,8 +197,8 @@ export function getDisplayName(file: TFile, content: string, settings: SEOSettin
 			}
 		}
 	}
-	// Fallback to file name
-	return file.basename;
+	// Fallback to file path with parent folder
+	return getDisplayPath(file.path);
 }
 
 export function getSlugFromFile(file: TFile, content: string, settings: SEOSettings): string {
@@ -208,3 +210,4 @@ export function getSlugFromFile(file: TFile, content: string, settings: SEOSetti
 import { TFile } from "obsidian";
 import { SEOSettings } from "../settings";
 import { SEOCheckResult } from "../types";
+import { getDisplayPath } from "../ui/panel-utils";

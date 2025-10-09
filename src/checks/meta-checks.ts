@@ -7,6 +7,7 @@ import { TFile } from "obsidian";
 import { SEOSettings } from "../settings";
 import { SEOCheckResult } from "../types";
 import { removeCodeBlocks } from "./utils/content-parser";
+import { getContextAroundLine } from "./utils/position-utils";
 
 /**
  * Checks meta description length and presence
@@ -55,7 +56,13 @@ export async function checkMetaDescription(content: string, file: TFile, setting
 		return results;
 	}
 	
-	const description = descriptionMatch[1].trim();
+	let description = descriptionMatch[1].trim();
+	
+	// Remove surrounding quotes if present
+	if ((description.startsWith('"') && description.endsWith('"')) || 
+		(description.startsWith("'") && description.endsWith("'"))) {
+		description = description.slice(1, -1);
+	}
 	const length = description.length;
 	
 	if (length < 120) {
@@ -237,12 +244,51 @@ export async function checkKeywordDensity(content: string, file: TFile, settings
 	}
 	
 	// Remove code blocks and frontmatter for keyword analysis
-	const cleanContent = removeCodeBlocks(content);
+	let cleanContent = removeCodeBlocks(content);
 	
-	// Count keyword occurrences (case-insensitive)
-	const keywordRegex = new RegExp(`\\b${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
-	const matches = cleanContent.match(keywordRegex);
-	const keywordCount = matches ? matches.length : 0;
+	// Add title to content for keyword density calculation if it exists
+	const titleFrontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+	if (titleFrontmatterMatch && titleFrontmatterMatch[1] && settings.titleProperty) {
+		const frontmatter = titleFrontmatterMatch[1];
+		const lines = frontmatter.split('\n');
+		
+		for (const line of lines) {
+			if (line.startsWith(settings.titleProperty + ':')) {
+				let title = line.substring(settings.titleProperty.length + 1).trim();
+				// Remove surrounding quotes if present
+				if ((title.startsWith('"') && title.endsWith('"')) || 
+					(title.startsWith("'") && title.endsWith("'"))) {
+					title = title.slice(1, -1);
+				}
+				// Remove title prefix/suffix if specified (for keyword density, we want the raw title)
+				// Note: We don't remove prefix/suffix here because keyword density should count the actual title
+				// Add title to content for keyword analysis
+				cleanContent = title + ' ' + cleanContent;
+				break;
+			}
+		}
+	}
+	
+	// Count keyword occurrences (case-insensitive, flexible matching)
+	const keywordLower = keyword.toLowerCase();
+	const cleanContentLower = cleanContent.toLowerCase();
+	
+	// Split keyword into words for more flexible matching
+	const keywordWords = keywordLower.split(/\s+/).filter(word => word.length > 0);
+	
+	// Count occurrences by checking if all keyword words appear together
+	// This handles variations like "single-source-of-truth" vs "single source of truth"
+	let keywordCount = 0;
+	const contentWords = cleanContentLower.split(/\s+/);
+	
+	for (let i = 0; i <= contentWords.length - keywordWords.length; i++) {
+		const phrase = contentWords.slice(i, i + keywordWords.length).join(' ');
+		// Check if all keyword words appear in this phrase (in any order)
+		const allWordsFound = keywordWords.every(word => phrase.includes(word));
+		if (allWordsFound) {
+			keywordCount++;
+		}
+	}
 	
 	// Count total words
 	const words = cleanContent.split(/\s+/).filter(word => word.length > 0);
@@ -355,21 +401,300 @@ export async function checkKeywordInDescription(content: string, file: TFile, se
 		return results;
 	}
 	
-	// Check if keyword appears in description (case-insensitive)
+	// Check if keyword appears in description (case-insensitive, flexible matching)
 	const keywordLower = keyword.toLowerCase();
 	const descriptionLower = description.toLowerCase();
 	
-	if (descriptionLower.includes(keywordLower)) {
+	// Split keyword into words for more flexible matching
+	const keywordWords = keywordLower.split(/\s+/).filter(word => word.length > 0);
+	
+	// Check if all keyword words appear in the description
+	const allWordsFound = keywordWords.every(word => descriptionLower.includes(word));
+	
+	if (allWordsFound) {
 		results.push({
 			passed: true,
-			message: `Target keyword "${keyword}" found in description`,
+			message: `Keyword found in description`,
 			severity: 'info'
 		});
 	} else {
 		results.push({
 			passed: false,
-			message: `Target keyword "${keyword}" not found in description`,
+			message: `Keyword not found in description`,
 			suggestion: "Include your target keyword in the description",
+			severity: 'warning'
+		});
+	}
+	
+	return results;
+}
+
+/**
+ * Checks if meta title and H1 are unique (not identical)
+ * @param content - The markdown content to check
+ * @param file - The file being checked
+ * @param settings - Plugin settings
+ * @returns Array of SEO check results
+ */
+export async function checkTitleH1Uniqueness(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+	const results: SEOCheckResult[] = [];
+	
+	if (!settings.titleProperty) {
+		return results;
+	}
+	
+	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+	if (!frontmatterMatch) {
+		return results;
+	}
+	
+	const frontmatter = frontmatterMatch[1];
+	if (!frontmatter) {
+		return results;
+	}
+	
+	// Get title from frontmatter
+	let metaTitle = '';
+	const lines = frontmatter.split('\n');
+	
+	for (const line of lines) {
+		if (line.startsWith(settings.titleProperty + ':')) {
+			metaTitle = line.substring(settings.titleProperty.length + 1).trim();
+			// Remove surrounding quotes if present
+			if ((metaTitle.startsWith('"') && metaTitle.endsWith('"')) || 
+				(metaTitle.startsWith("'") && metaTitle.endsWith("'"))) {
+				metaTitle = metaTitle.slice(1, -1);
+			}
+			break;
+		}
+	}
+	
+	if (!metaTitle) {
+		// No title found in frontmatter - this check requires a title to be meaningful
+		// Skip silently as this is expected behavior when no title is set
+		return results;
+	}
+	
+	// Get H1 heading
+	let h1Heading = '';
+	
+	// If "Title property is H1" is enabled, use the title as H1
+	if (settings.skipH1Check) {
+		// If there's a prefix/suffix configured, they will always be different
+		if (settings.titlePrefixSuffix && settings.titlePrefixSuffix.trim()) {
+			results.push({
+				passed: true,
+				message: "Meta title and H1 are unique (prefix/suffix configured)",
+				severity: 'info'
+			});
+			return results;
+		}
+		
+		// The H1 is the title without prefix/suffix
+		h1Heading = metaTitle;
+		// Remove prefix/suffix if specified to get the actual H1 content
+		if (settings.titlePrefixSuffix) {
+			const prefixSuffix = settings.titlePrefixSuffix;
+			// Remove prefix
+			if (h1Heading.startsWith(prefixSuffix)) {
+				h1Heading = h1Heading.substring(prefixSuffix.length).trim();
+			}
+			// Remove suffix
+			if (h1Heading.endsWith(prefixSuffix)) {
+				h1Heading = h1Heading.substring(0, h1Heading.length - prefixSuffix.length).trim();
+			}
+		}
+		// Now metaTitle has prefix/suffix, h1Heading doesn't - they should be different
+	} else {
+		// Look for actual H1 in content
+		const contentLines = content.split('\n');
+		for (const line of contentLines) {
+			if (!line) continue;
+			const h1Match = line.match(/^#\s+(.+)$/);
+			if (h1Match && h1Match[1]) {
+				h1Heading = h1Match[1].trim();
+				break;
+			}
+		}
+	}
+	
+	if (!h1Heading) {
+		// No H1 found - this should be flagged as a warning
+		// The heading order check should already catch missing H1, but this provides context
+		results.push({
+			passed: false,
+			message: "No H1 heading found to compare with meta title",
+			suggestion: "Add an H1 heading to your content, or enable 'Title property is H1' if your static site generator creates H1s from the title",
+			severity: 'warning'
+		});
+		return results;
+	}
+	
+	// Compare meta title and H1
+	const metaTitleLower = metaTitle.toLowerCase().trim();
+	const h1Lower = h1Heading.toLowerCase().trim();
+	
+	if (metaTitleLower === h1Lower) {
+		results.push({
+			passed: false,
+			message: "Meta title and H1 are identical",
+			suggestion: "Modify one to be unique, or specify a suffix/prefix in plugin settings",
+			severity: 'warning'
+		});
+	} else {
+		results.push({
+			passed: true,
+			message: "Meta title and H1 are unique",
+			severity: 'info'
+		});
+	}
+	
+	return results;
+}
+
+/**
+ * Checks if target keyword appears in any heading (H1-H6)
+ * @param content - The markdown content to check
+ * @param file - The file being checked
+ * @param settings - Plugin settings
+ * @returns Array of SEO check results
+ */
+export async function checkKeywordInHeadings(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+	const results: SEOCheckResult[] = [];
+	
+	if (!settings.keywordProperty) {
+		return results;
+	}
+	
+	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+	if (!frontmatterMatch) {
+		return results;
+	}
+	
+	const frontmatter = frontmatterMatch[1];
+	if (!frontmatter) {
+		return results;
+	}
+	
+	// Parse line by line instead of using regex
+	const lines = frontmatter.split('\n');
+	let keyword = '';
+	let foundKeywordLine = false;
+	
+	for (const line of lines) {
+		if (line.startsWith(settings.keywordProperty + ':')) {
+			foundKeywordLine = true;
+			keyword = line.substring(settings.keywordProperty.length + 1).trim();
+			break;
+		}
+	}
+	
+	if (!foundKeywordLine) {
+		results.push({
+			passed: true,
+			message: `No ${settings.keywordProperty} defined in properties`,
+			severity: 'notice'
+		});
+		return results;
+	}
+
+	if (!keyword || keyword === 'false' || keyword === 'true' || keyword === 'null' || keyword === 'undefined') {
+		results.push({
+			passed: true,
+			message: `No valid keyword defined in properties`,
+			severity: 'notice'
+		});
+		return results;
+	}
+	
+	// Extract H1 headings only (most important for SEO)
+	const h1Headings: { text: string }[] = [];
+	
+	// If "Title property is H1" is enabled, add the title as a virtual H1
+	if (settings.skipH1Check && settings.titleProperty) {
+		const titleFrontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+		if (titleFrontmatterMatch && titleFrontmatterMatch[1]) {
+			const frontmatter = titleFrontmatterMatch[1];
+			const lines = frontmatter.split('\n');
+			
+			for (const line of lines) {
+				if (line.startsWith(settings.titleProperty + ':')) {
+					let title = line.substring(settings.titleProperty.length + 1).trim();
+					// Remove surrounding quotes if present
+					if ((title.startsWith('"') && title.endsWith('"')) || 
+						(title.startsWith("'") && title.endsWith("'"))) {
+						title = title.slice(1, -1);
+					}
+					// Remove title prefix/suffix if specified
+					if (settings.titlePrefixSuffix) {
+						const prefixSuffix = settings.titlePrefixSuffix;
+						// Remove prefix
+						if (title.startsWith(prefixSuffix)) {
+							title = title.substring(prefixSuffix.length).trim();
+						}
+						// Remove suffix
+						if (title.endsWith(prefixSuffix)) {
+							title = title.substring(0, title.length - prefixSuffix.length).trim();
+						}
+					}
+					// Add as virtual H1
+					h1Headings.push({ text: title });
+					break;
+				}
+			}
+		}
+	}
+	
+	// Find actual H1 headings in content
+	const contentLines = content.split('\n');
+	
+	for (const line of contentLines) {
+		if (!line) continue;
+		const h1Match = line.match(/^#\s+(.+)$/);
+		if (h1Match && h1Match[1]) {
+			h1Headings.push({ text: h1Match[1].trim() });
+		}
+	}
+	
+	if (h1Headings.length === 0) {
+		results.push({
+			passed: false,
+			message: "No H1 heading found in content",
+			suggestion: "Add an H1 heading to structure your content and include your target keyword",
+			severity: 'warning'
+		});
+		return results;
+	}
+	
+	// Check if keyword appears in any H1 heading (flexible matching)
+	const keywordLower = keyword.toLowerCase();
+	const keywordWords = keywordLower.split(/\s+/).filter(word => word.length > 0);
+	
+	let keywordFoundInH1 = false;
+	let foundH1Text = '';
+	
+	for (const h1 of h1Headings) {
+		const h1Lower = h1.text.toLowerCase();
+		const allWordsFound = keywordWords.every(word => h1Lower.includes(word));
+		
+		if (allWordsFound) {
+			keywordFoundInH1 = true;
+			foundH1Text = h1.text;
+			break;
+		}
+	}
+	
+	if (keywordFoundInH1) {
+		results.push({
+			passed: true,
+			message: `Keyword found in H1`,
+			severity: 'info'
+		});
+	} else {
+		results.push({
+			passed: false,
+			message: `Keyword not found in H1`,
+			suggestion: "Include your target keyword in the H1 heading for better SEO",
 			severity: 'warning'
 		});
 	}
@@ -454,13 +779,13 @@ export async function checkKeywordInTitle(content: string, file: TFile, settings
 	if (allWordsFound) {
 		results.push({
 			passed: true,
-			message: `Target keyword "${keyword}" found in title`,
+			message: `Keyword found in title`,
 			severity: 'info'
 		});
 	} else {
 		results.push({
 			passed: false,
-			message: `Target keyword "${keyword}" not found in title`,
+			message: `Keyword not found in title`,
 			suggestion: "Include your target keyword in the title",
 			severity: 'warning'
 		});

@@ -23,6 +23,7 @@ import {
 	checkPotentiallyBrokenLinks,
 	checkMetaDescription,
 	checkTitleLength,
+	checkTitleH1Uniqueness,
 	checkContentLength,
 	checkImageNaming,
 	checkDuplicateContent,
@@ -30,6 +31,7 @@ import {
 	checkNotices,
 	checkKeywordInTitle,
 	checkKeywordInDescription,
+	checkKeywordInHeadings,
 	checkKeywordInSlug,
 	checkSlugFormat,
 	getDisplayName
@@ -41,7 +43,7 @@ import {
 } from "./checks/content-checks";
 import { VaultDuplicateDetector } from "./checks/duplicate-detection";
 
-export async function runSEOCheck(plugin: SEOPlugin, files: TFile[]): Promise<SEOResults[]> {
+export async function runSEOCheck(plugin: SEOPlugin, files: TFile[], abortController?: AbortController): Promise<SEOResults[]> {
 	const results: SEOResults[] = [];
 	
 	// Create vault detector for duplicate detection
@@ -53,6 +55,11 @@ export async function runSEOCheck(plugin: SEOPlugin, files: TFile[]): Promise<SE
 	}
 	
 	for (const file of files) {
+		// Check for cancellation before processing each file
+		if (abortController?.signal.aborted) {
+			throw new DOMException('Operation was aborted', 'AbortError');
+		}
+		
 		try {
 			// Check cache first
 			const cachedResult = getCachedResult(file, plugin);
@@ -63,12 +70,15 @@ export async function runSEOCheck(plugin: SEOPlugin, files: TFile[]): Promise<SE
 			
 			// Run fresh check
 			const content = await plugin.app.vault.read(file);
-			const result = await checkFile(plugin, file, content, vaultDetector);
+			const result = await checkFile(plugin, file, content, vaultDetector, abortController);
 			
 			// Cache the result
 			cacheResult(file, result, plugin);
 			results.push(result);
 		} catch (error) {
+			if (error instanceof Error && error.name === 'AbortError') {
+				throw error; // Re-throw AbortError to propagate cancellation
+			}
 			console.error(`Error checking file ${file.path}:`, error);
 		}
 	}
@@ -77,12 +87,14 @@ export async function runSEOCheck(plugin: SEOPlugin, files: TFile[]): Promise<SE
 	return results;
 }
 
-async function checkFile(plugin: SEOPlugin, file: TFile, content: string, vaultDetector: VaultDuplicateDetector): Promise<SEOResults> {
+async function checkFile(plugin: SEOPlugin, file: TFile, content: string, vaultDetector: VaultDuplicateDetector, abortController?: AbortController): Promise<SEOResults> {
 	const checks = {
 		titleLength: await checkTitleLength(content, file, plugin.settings),
 		metaDescription: await checkMetaDescription(content, file, plugin.settings),
+		titleH1Uniqueness: await checkTitleH1Uniqueness(content, file, plugin.settings),
 		keywordInTitle: await checkKeywordInTitle(content, file, plugin.settings),
 		keywordInDescription: await checkKeywordInDescription(content, file, plugin.settings),
+		keywordInHeadings: await checkKeywordInHeadings(content, file, plugin.settings),
 		keywordInSlug: await checkKeywordInSlug(content, file, plugin.settings),
 		slugFormat: await checkSlugFormat(content, file, plugin.settings),
 		keywordDensity: await checkKeywordDensity(content, file, plugin.settings),
@@ -100,7 +112,7 @@ async function checkFile(plugin: SEOPlugin, file: TFile, content: string, vaultD
 		potentiallyBrokenLinks: await checkPotentiallyBrokenLinks(content, file, plugin.settings, plugin.app),
 		potentiallyBrokenEmbeds: await checkNotices(content, file, plugin.settings),
 		externalBrokenLinks: plugin.settings.enableExternalLinkVaultCheck 
-			? await checkExternalBrokenLinks(content, file, plugin.settings)
+			? await checkExternalBrokenLinks(content, file, plugin.settings, abortController)
 			: (plugin.settings.checkExternalLinks ? await checkExternalLinks(content, file, plugin.settings) : []),
 		readingLevel: await checkReadingLevel(content, file, plugin.settings)
 	};

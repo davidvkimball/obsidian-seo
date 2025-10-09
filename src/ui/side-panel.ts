@@ -22,6 +22,10 @@ export class SEOSidePanel extends ItemView {
 	currentSort: SortType;
 	hasRunInitialScan: boolean = false;
 	private isRefreshing: boolean = false;
+	private currentAuditController: AbortController | null = null;
+	
+	// Static property to track the current audit controller globally
+	public static globalAuditController: AbortController | null = null;
 	
 	private actions: PanelActions;
 	private resultsDisplay: ResultsDisplay;
@@ -48,6 +52,13 @@ export class SEOSidePanel extends ItemView {
 		if (this.panelType === 'current') {
 			let activeLeafChangeTimeout: any = null;
 			this.registerEvent(this.app.workspace.on('active-leaf-change', () => {
+				// Cancel any ongoing audit when switching files
+				if (SEOSidePanel.globalAuditController) {
+					SEOSidePanel.globalAuditController.abort();
+					SEOSidePanel.globalAuditController = null;
+					console.log('Audit cancelled due to file switch');
+				}
+				
 				// Don't re-render if we're currently refreshing
 				if (this.isRefreshing) {
 					return;
@@ -95,12 +106,20 @@ export class SEOSidePanel extends ItemView {
 			return;
 		}
 		
+		// Cancel any existing audit
+		if (SEOSidePanel.globalAuditController) {
+			SEOSidePanel.globalAuditController.abort();
+		}
+		
+		// Create new abort controller for this audit
+		SEOSidePanel.globalAuditController = new AbortController();
+		
 		this.isRefreshing = true;
 		button.textContent = 'Refreshing...';
 		button.disabled = true;
 		
 		try {
-			const result = await this.actions.checkCurrentNote();
+			const result = await this.actions.checkCurrentNote(SEOSidePanel.globalAuditController.signal);
 			if (result) {
 				this.currentNoteResults = result;
 				
@@ -123,11 +142,16 @@ export class SEOSidePanel extends ItemView {
 				this.updateGlobalResultsIfExists(result);
 			}
 		} catch (error) {
+			if (error instanceof Error && error.name === 'AbortError') {
+				console.log('Audit was cancelled');
+				return;
+			}
 			console.error('Error in refresh button:', error);
 		} finally {
 			this.isRefreshing = false;
 			button.textContent = 'Refresh';
 			button.disabled = false;
+			SEOSidePanel.globalAuditController = null;
 		}
 	}
 
@@ -223,13 +247,11 @@ export class SEOSidePanel extends ItemView {
 	}
 
 	async updateCurrentNoteResults(file: TFile) {
-		if (!file || !file.path.endsWith('.md')) return;
+		if (!file || !file.path.endsWith('.md')) {
+			return;
+		}
 
 		try {
-			// Clear current note results when switching files
-			// This ensures we show cached results for the new file
-			this.currentNoteResults = null;
-			
 			// Check if we have cached results for this file
 			let currentFileResults: SEOResults | null = null;
 			
@@ -240,30 +262,43 @@ export class SEOSidePanel extends ItemView {
 				) || null;
 			}
 			
+			// Update currentNoteResults with cached results if available
+			if (currentFileResults) {
+				this.currentNoteResults = currentFileResults;
+			} else {
+				// Clear current note results when switching files if no cached results
+				this.currentNoteResults = null;
+			}
+			
 			// Show results if we have them (either from current note audit or global audit)
-			// If we're switching files, prioritize cached results for the new file
-			const resultsToShow = currentFileResults || this.currentNoteResults;
+			const resultsToShow = this.currentNoteResults;
 			
 			
 			// Clear existing results
 			const existingResults = this.containerEl.querySelectorAll('.seo-results-container, .seo-file-issue, .seo-issue, .seo-warning, .seo-notice, .seo-info-note, .seo-check, .seo-result, .seo-score-header, .seo-score-text, .seo-score-number, .seo-toggle-icon, .seo-collapse-icon');
 			existingResults.forEach(el => el.remove());
 			
-			if (resultsToShow) {
-				// Create a new results container and render results
-				const newResultsContainer = this.containerEl.createEl('div', { cls: 'seo-results-container' });
-				
-				// Create a new results display instance for this container
-				const tempResultsDisplay = new ResultsDisplay(
+		if (resultsToShow) {
+			// Create a new results container and render results
+			const newResultsContainer = this.containerEl.createEl('div', { cls: 'seo-results-container' });
+			
+			// Reuse the existing results display instance or create a new one
+			if (!this.resultsDisplay) {
+				this.resultsDisplay = new ResultsDisplay(
 					newResultsContainer,
 					async (filePath: string) => await this.actions.openFile(filePath),
 					async (filePath: string) => await this.actions.openFileAndAudit(filePath)
 				);
-				tempResultsDisplay.renderResults(resultsToShow);
-				
-				// Panel is ready for interactions without stealing focus
-				
 			} else {
+				// Update the container for the existing instance
+				this.resultsDisplay.updateContainer(newResultsContainer);
+			}
+			
+			this.resultsDisplay.renderResults(resultsToShow);
+			
+			// Panel is ready for interactions without stealing focus
+			
+		} else {
 				// No results available, show message
 				const noResultsEl = this.containerEl.createEl('div', { 
 					cls: 'seo-info-note',
@@ -276,8 +311,46 @@ export class SEOSidePanel extends ItemView {
 				noResultsEl.style.fontSize = '12px';
 				noResultsEl.style.color = 'var(--text-muted)';
 			}
+			
+			// Update the header with the new file name (preserves button event listeners)
+			this.updateHeaderAndResults();
 		} catch (error) {
 			console.error('Error updating current note results:', error);
+		}
+	}
+
+	/**
+	 * Updates only the header and results content without re-rendering the entire panel
+	 * This preserves button event listeners and other UI state
+	 */
+	private updateHeaderAndResults() {
+		// Update the header with the current file name
+		const header = this.containerEl.querySelector('.seo-panel-header');
+		if (header) {
+			const filenameEl = header.querySelector('.seo-filename');
+			if (filenameEl) {
+				const activeFile = this.app.workspace.getActiveFile();
+				if (activeFile && activeFile.path.endsWith('.md')) {
+					// Get the correct display name based on the current active file
+					let displayName = activeFile.path;
+					
+					// If we have current note results for this specific file, use its display name
+					if (this.currentNoteResults && this.currentNoteResults.file === activeFile.path) {
+						displayName = this.currentNoteResults.displayName || activeFile.path;
+					}
+					// If we have global results for this file, use its display name
+					else if (this.plugin.settings.cachedGlobalResults) {
+						const globalResult = this.plugin.settings.cachedGlobalResults.find(
+							result => result.file === activeFile.path
+						);
+						if (globalResult) {
+							displayName = globalResult.displayName || activeFile.path;
+						}
+					}
+					
+					filenameEl.textContent = `Target note: ${displayName}`;
+				}
+			}
 		}
 	}
 
@@ -621,8 +694,8 @@ export class SEOSidePanel extends ItemView {
 		if (globalPanels.length > 0) {
 			const globalPanel = globalPanels[0];
 			
-			if (globalPanel?.view) {
-				const seoPanel = globalPanel.view as unknown as SEOPanelView;
+			if (globalPanel?.view && globalPanel.view instanceof SEOSidePanel) {
+				const seoPanel = globalPanel.view as SEOSidePanel;
 				// Update the global results in the panel
 				seoPanel.globalResults = [...this.plugin.settings.cachedGlobalResults];
 				// Re-render the panel
@@ -638,7 +711,8 @@ export class SEOSidePanel extends ItemView {
 		// Add refresh button below stats
 		const refreshBtn = container.createEl('button', { 
 			text: 'Refresh',
-			cls: 'mod-cta seo-btn seo-refresh-btn'
+			cls: 'mod-cta seo-btn seo-refresh-btn',
+			attr: { 'data-refresh-btn': 'true' }
 		});
 		refreshBtn.addEventListener('click', async () => {
 			refreshBtn.textContent = 'Refreshing...';

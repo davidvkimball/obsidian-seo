@@ -2,6 +2,7 @@ import { App, Notice, setIcon, Menu, TFile } from "obsidian";
 import { SEOResults } from "../types";
 import { sortFiles } from "./panel-utils";
 import { SEOCurrentPanelViewType } from "./panel-constants";
+import { SEOSidePanel } from "./side-panel";
 
 export class PanelActions {
 	constructor(
@@ -41,7 +42,7 @@ export class PanelActions {
 		}
 	}
 
-	async checkCurrentNote(): Promise<SEOResults | null> {
+	async checkCurrentNote(abortSignal?: AbortSignal): Promise<SEOResults | null> {
 		const activeFile = this.app.workspace.getActiveFile();
 		if (!activeFile || !activeFile.path.endsWith('.md')) {
 			new Notice('Please open a markdown file first.');
@@ -55,7 +56,7 @@ export class PanelActions {
 			
 			// Import and run SEO check directly
 			const { runSEOCheck } = await import("../seo-checker");
-			const results = await runSEOCheck(this.plugin, [activeFile]);
+			const results = await runSEOCheck(this.plugin, [activeFile], abortSignal ? { signal: abortSignal } as AbortController : undefined);
 			
 			if (results.length > 0) {
 				new Notice('SEO audit complete.');
@@ -63,6 +64,10 @@ export class PanelActions {
 			}
 			return null;
 		} catch (error) {
+			if (error instanceof Error && error.name === 'AbortError') {
+				new Notice('SEO audit cancelled.');
+				throw error; // Re-throw abort errors
+			}
 			console.error('Error checking current note:', error);
 			new Notice('Error analyzing current note. Check console for details.');
 			return null;
@@ -108,8 +113,9 @@ export class PanelActions {
 		}
 	}
 
-	async refreshGlobalResults(): Promise<SEOResults[]> {
+	async refreshGlobalResults(abortSignal?: AbortSignal): Promise<SEOResults[]> {
 		let auditNotice: Notice | null = null;
+		let wasCancelled = false;
 		
 		try {
 			// Clear cache first to ensure fresh results
@@ -130,7 +136,7 @@ export class PanelActions {
 			
 			// Import and run SEO check directly
 			const { runSEOCheck } = await import("../seo-checker");
-			const results = await runSEOCheck(this.plugin, files);
+			const results = await runSEOCheck(this.plugin, files, abortSignal ? { signal: abortSignal } as AbortController : undefined);
 			
 			// Save results to settings for backward compatibility
 			this.plugin.settings.cachedGlobalResults = results;
@@ -144,11 +150,19 @@ export class PanelActions {
 			new Notice(`SEO audit complete with ${results.length} files.`);
 			return results;
 		} catch (error) {
-			console.error('Error checking all notes:', error);
 			// Dismiss the audit notice if it exists
 			if (auditNotice) {
 				auditNotice.hide();
 			}
+			
+			if (error instanceof Error && error.name === 'AbortError') {
+				wasCancelled = true;
+				console.log('Vault audit cancelled by user');
+				new Notice('Vault audit cancelled.');
+				return [];
+			}
+			
+			console.error('Error checking all notes:', error);
 			new Notice('Error analyzing files. Check console for details.');
 			return [];
 		}
@@ -167,16 +181,24 @@ export class PanelActions {
 					// Method 2: Fallback to openLinkText
 					await this.app.workspace.openLinkText(filePath, '', true);
 				}
+			} else {
+				// File not found - show notification
+				new Notice(`File not found: ${filePath}\nThis file may have been renamed or deleted.`);
 			}
 		} catch (error) {
 			console.error(`Error opening file ${filePath}:`, error);
+			new Notice(`Error opening file: ${filePath}`);
 		}
 	}
 
 	async openFileAndAudit(filePath: string): Promise<void> {
 		// Get the file object
 		const file = this.app.vault.getAbstractFileByPath(filePath);
-		if (!file || !(file instanceof TFile)) return;
+		if (!file || !(file instanceof TFile)) {
+			// File not found - show notification
+			new Notice(`File not found: ${filePath}\nThis file may have been renamed or deleted.`);
+			return;
+		}
 		
 		// Open the file directly using workspace
 		await this.app.workspace.getLeaf().openFile(file);
@@ -209,6 +231,54 @@ export class PanelActions {
 			};
 			checkPanel();
 		});
+
+		// Now run the audit on the current note
+		try {
+			// Create abort controller for this audit if one doesn't exist
+			if (!SEOSidePanel.globalAuditController) {
+				SEOSidePanel.globalAuditController = new AbortController();
+			}
+			
+			// Disable refresh button in current note panel if it exists
+			// Wait a bit for the panel to be fully rendered
+			await new Promise(resolve => setTimeout(resolve, 100));
+			
+			const currentPanels = this.app.workspace.getLeavesOfType('seo-current-panel');
+			if (currentPanels.length > 0) {
+				const currentPanel = currentPanels[0];
+				if (currentPanel && currentPanel.view) {
+					const refreshBtn = currentPanel.view.containerEl.querySelector('button[data-refresh-btn]') as HTMLButtonElement;
+					if (refreshBtn) {
+						refreshBtn.disabled = true;
+						refreshBtn.textContent = 'Auditing...';
+					}
+				}
+			}
+
+			const results = await this.checkCurrentNote(SEOSidePanel.globalAuditController?.signal);
+			if (results) {
+				// Update the current note results in the panel
+				if (this.plugin.sidePanel && this.plugin.sidePanel.panelType === 'current') {
+					this.plugin.sidePanel.currentNoteResults = results;
+					this.plugin.sidePanel.render();
+				}
+			}
+		} catch (error) {
+			console.error('Error running audit after opening file:', error);
+		} finally {
+			// Re-enable refresh button in current note panel
+			const currentPanels = this.app.workspace.getLeavesOfType('seo-current-panel');
+			if (currentPanels.length > 0) {
+				const currentPanel = currentPanels[0];
+				if (currentPanel && currentPanel.view) {
+					const refreshBtn = currentPanel.view.containerEl.querySelector('button[data-refresh-btn]') as HTMLButtonElement;
+					if (refreshBtn) {
+						refreshBtn.disabled = false;
+						refreshBtn.textContent = 'Refresh';
+					}
+				}
+			}
+		}
 	}
 
 	showSortMenu(event: MouseEvent, issuesFiles: SEOResults[], issuesList: HTMLElement, currentSort: string, onSortChange: (sortType: string) => void, settings?: any): void {
@@ -364,6 +434,7 @@ export class PanelActions {
 			});
 			fileLink.addEventListener('click', (e) => {
 				e.preventDefault();
+				e.stopPropagation();
 				this.openFile(result.file);
 			});
 			
@@ -401,9 +472,11 @@ export class PanelActions {
 	}
 
 	private getDisplayPath(fullPath: string): string {
-		const parts = fullPath.split('/');
-		if (parts.length <= 2) {
-			return fullPath; // Return as-is if no parent folder
+		// Remove leading slash if present and split
+		const cleanPath = fullPath.startsWith('/') ? fullPath.slice(1) : fullPath;
+		const parts = cleanPath.split('/');
+		if (parts.length <= 1) {
+			return cleanPath; // Return as-is if no parent folder (just filename)
 		}
 		return parts.slice(-2).join('/'); // Return last two parts (parent folder + file name)
 	}

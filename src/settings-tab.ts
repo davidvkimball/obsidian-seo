@@ -146,8 +146,8 @@ export class SEOSettingTab extends PluginSettingTab {
 		containerEl.createEl('h2', { text: 'Audit Options' });
 
 		new Setting(containerEl)
-			.setName('Check title length')
-			.setDesc('Enable title length checking')
+			.setName('Check meta title length')
+			.setDesc('Enable meta title length checking')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.checkTitleLength)
 				.onChange(async (value) => {
@@ -301,8 +301,8 @@ export class SEOSettingTab extends PluginSettingTab {
 				}));
 
 		new Setting(containerEl)
-			.setName('Skip H1 check')
-			.setDesc('For when your notes don\'t start with an H1, or H1 is hardcoded from the title for your published note. If enabled, won\'t require an H1, but will still flag H1s that appear after other heading levels.')
+			.setName('Title property is H1')
+			.setDesc('Enable when your static site generator uses the title frontmatter property to automatically generate the H1 heading. This prevents H1 validation errors while still flagging H1s that appear after other heading levels.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.skipH1Check)
 				.onChange(async (value) => {

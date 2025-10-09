@@ -9,6 +9,7 @@ import { SEOResults } from "../types";
 import { getVaultFoldersInfo } from "./panel-utils";
 import { PanelActions } from "./panel-actions";
 import { ResultsDisplay } from "./results-display";
+import { SEOSidePanel } from "./side-panel";
 
 type SortType = 'issues-desc' | 'issues-asc' | 'warnings-desc' | 'warnings-asc' | 'notices-desc' | 'notices-asc' | 'filename-asc' | 'filename-desc';
 
@@ -111,7 +112,8 @@ export class PanelRenderer {
 	) {
 		const auditCurrentBtn = containerEl.createEl('button', { 
 			text: 'Refresh',
-			cls: 'mod-cta seo-btn seo-top-btn'
+			cls: 'mod-cta seo-btn seo-top-btn',
+			attr: { 'data-refresh-btn': 'true' }
 		});
 		
 		// Use only click event to avoid double execution
@@ -196,20 +198,47 @@ export class PanelRenderer {
 		// Add refresh button below stats
 		const refreshBtn = containerEl.createEl('button', { 
 			text: 'Refresh',
-			cls: 'mod-cta seo-btn seo-refresh-btn'
+			cls: 'mod-cta seo-btn seo-refresh-btn',
+			attr: { 'data-refresh-btn': 'true' }
 		});
 		refreshBtn.addEventListener('click', async () => {
-			refreshBtn.textContent = 'Refreshing...';
-			refreshBtn.disabled = true;
+			// Check if this is a cancel operation
+			if (refreshBtn.textContent === 'Cancel') {
+				// Cancel the ongoing audit
+				if (SEOSidePanel.globalAuditController) {
+					SEOSidePanel.globalAuditController.abort();
+					SEOSidePanel.globalAuditController = null;
+					console.log('Vault audit cancelled by user');
+				}
+				refreshBtn.textContent = 'Refresh';
+				refreshBtn.disabled = false;
+				return;
+			}
+			
+			// Start new audit
+			refreshBtn.textContent = 'Cancel';
+			refreshBtn.disabled = false; // Keep enabled so user can cancel
+			
+			// Create abort controller for vault audit
+			SEOSidePanel.globalAuditController = new AbortController();
 			
 			try {
-				const results = await this.actions.refreshGlobalResults();
+				const results = await this.actions.refreshGlobalResults(SEOSidePanel.globalAuditController?.signal);
 				if (results.length > 0) {
-					// This will be handled by the calling code
-					// We just need to trigger a re-render
-					containerEl.dispatchEvent(new CustomEvent('seo-refresh-complete', { 
-						detail: { results } 
-					}));
+					// Only dispatch completion event if audit wasn't cancelled
+					if (SEOSidePanel.globalAuditController && !SEOSidePanel.globalAuditController.signal.aborted) {
+						containerEl.dispatchEvent(new CustomEvent('seo-refresh-complete', { 
+							detail: { results } 
+						}));
+					}
+				}
+			} catch (error) {
+				// Handle cancellation or other errors
+				if (error instanceof Error && error.name === 'AbortError') {
+					console.log('Vault audit cancelled in panel renderer');
+					// Don't dispatch completion event for cancelled audits
+				} else {
+					console.error('Error in vault audit:', error);
 				}
 			} finally {
 				refreshBtn.textContent = 'Refresh';

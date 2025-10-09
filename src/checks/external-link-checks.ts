@@ -177,7 +177,7 @@ export async function checkExternalLinks(content: string, file: TFile, settings:
  * @param settings - Plugin settings
  * @returns Array of SEO check results (errors for broken links)
  */
-export async function checkExternalBrokenLinks(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export async function checkExternalBrokenLinks(content: string, file: TFile, settings: SEOSettings, abortController?: AbortController): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.enableExternalLinkVaultCheck) {
@@ -198,6 +198,12 @@ export async function checkExternalBrokenLinks(content: string, file: TFile, set
 	
 	// Check each external link
 	for (const url of uniqueLinks) {
+		// Check for global cancellation before processing each link
+		if (abortController?.signal.aborted) {
+			console.log('External link check cancelled');
+			throw new DOMException('Operation was aborted', 'AbortError');
+		}
+		
 		let timeoutId: NodeJS.Timeout | null = null;
 		let linkIsBroken = false;
 		let errorMessage = '';
@@ -236,6 +242,7 @@ export async function checkExternalBrokenLinks(content: string, file: TFile, set
 					}
 				}
 			} catch (corsError) {
+				console.log(`CORS failed for ${url}, trying no-cors mode:`, corsError instanceof Error ? corsError.message : String(corsError));
 				// CORS failed, try GET request with no-cors to detect network issues
 				try {
 					const response = await fetch(url, {
@@ -254,10 +261,22 @@ export async function checkExternalBrokenLinks(content: string, file: TFile, set
 					// But if we get here without error, assume it's working
 					// This is a fallback for sites that block CORS but are still accessible
 				} catch (networkError) {
-					// This is a genuine network error - the link is broken
-					linkIsBroken = true;
-					errorMessage = `External link unreachable: ${url}`;
-					suggestion = 'This link could not be reached. Check if the URL is correct or if the server is down.';
+					const networkErrorMessage = networkError instanceof Error ? networkError.message : String(networkError);
+					console.log(`Network error for ${url}:`, networkErrorMessage);
+					
+					// Check if this is a CORS/security error rather than a genuine network failure
+					if (networkErrorMessage.includes('ERR_BLOCKED_BY_RESPONSE') || 
+						networkErrorMessage.includes('ERR_FAILED') || 
+						networkErrorMessage.includes('Failed to fetch')) {
+						// These are often CORS/security blocks, not actual broken links
+						// Don't mark as broken - just log for debugging
+						console.log(`Skipping ${url} due to CORS/security restrictions`);
+					} else {
+						// This is a genuine network error - the link is broken
+						linkIsBroken = true;
+						errorMessage = `External link unreachable: ${url}`;
+						suggestion = 'This link could not be reached. Check if the URL is correct or if the server is down.';
+					}
 				}
 			}
 			
@@ -312,6 +331,16 @@ export async function checkExternalBrokenLinks(content: string, file: TFile, set
 			message: `Found ${uniqueLinks.length} external link(s), all appear to resolve and are working`,
 			severity: 'info'
 		});
+	} else if (uniqueLinks.length > 0) {
+		// Add summary message when there are both working and broken links
+		const workingLinks = uniqueLinks.length - results.filter(r => !r.passed).length;
+		if (workingLinks > 0) {
+			results.push({
+				passed: true,
+				message: `${workingLinks} of ${uniqueLinks.length} external link(s) are working`,
+				severity: 'info'
+			});
+		}
 	}
 	
 	return results;

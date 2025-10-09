@@ -39,12 +39,18 @@ function createStatusIcon(type: 'error' | 'warning' | 'notice' | 'success'): SVG
 
 export class ResultsDisplay {
 	private isCollapsed: boolean = true; // Track collapse state
+	private individualCollapseStates: Map<string, boolean> = new Map(); // Track individual item collapse states
 	
 	constructor(
 		private container: HTMLElement,
 		private onFileClick: (filePath: string) => Promise<void>,
 		private onFileAudit: (filePath: string) => Promise<void>
 	) {}
+
+	// Method to update the container (needed for reusing instances)
+	updateContainer(newContainer: HTMLElement) {
+		this.container = newContainer;
+	}
 
 	// Navigation method to jump to specific positions in the note
 	private async navigateToPosition(position: { line: number; searchText?: string; context?: string }): Promise<void> {
@@ -199,9 +205,12 @@ export class ResultsDisplay {
 		
 		// Right side: Toggle button (styled like global sort icon)
 		const toggleBtn = scoreEl.createEl('div', { cls: 'seo-toggle-icon' });
-		setIcon(toggleBtn, 'chevrons-down-up'); // Default: collapsed state
+		// Apply the current collapse state to the icon
+		setIcon(toggleBtn, this.isCollapsed ? 'chevrons-up-down' : 'chevrons-down-up');
 		
-		toggleBtn.addEventListener('click', () => {
+		toggleBtn.addEventListener('mousedown', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
 			// Toggle the state
 			this.isCollapsed = !this.isCollapsed;
 			// chevrons-down-up = "collapse all", chevrons-up-down = "expand all"
@@ -211,9 +220,6 @@ export class ResultsDisplay {
 
 		// Individual checks container
 		const checksContainer = this.container.createEl('div', { cls: 'seo-checks' });
-		
-		// Initial state: all items expanded, icon shows "collapse all"
-		this.isCollapsed = false;
 		
 		Object.entries(results.checks).forEach(([checkName, checkResults]) => {
 			if (checkResults.length === 0) return;
@@ -239,6 +245,7 @@ export class ResultsDisplay {
 			
 			const checkEl = checksContainer.createEl('div', { cls: `seo-check ${statusClass}` });
 			const header = checkEl.createEl('div', { cls: 'seo-check-header seo-collapsible-header' });
+			header.setAttribute('data-check-name', checkName); // Store check name for state tracking
 			
 			// Convert camelCase to sentence case with special handling
 			let displayName = checkName.replace(/([A-Z])/g, ' $1').trim()
@@ -289,6 +296,29 @@ export class ResultsDisplay {
 
 			// Results
 			const resultsList = checkEl.createEl('ul', { cls: 'seo-results seo-results-list-expanded' });
+			
+			// Apply saved collapse state
+			const savedCollapseState = this.individualCollapseStates.get(checkName);
+			if (savedCollapseState !== undefined) {
+				if (savedCollapseState) {
+					resultsList.classList.add('seo-results-list-collapsed');
+					resultsList.classList.remove('seo-results-list-expanded');
+					const icon = collapseIcon.querySelector('svg');
+					if (icon) {
+						icon.classList.add('seo-collapse-icon-rotated');
+						icon.classList.remove('seo-collapse-icon-normal');
+					}
+				} else {
+					resultsList.classList.add('seo-results-list-expanded');
+					resultsList.classList.remove('seo-results-list-collapsed');
+					const icon = collapseIcon.querySelector('svg');
+					if (icon) {
+						icon.classList.add('seo-collapse-icon-normal');
+						icon.classList.remove('seo-collapse-icon-rotated');
+					}
+				}
+			}
+			
 			checkResults.forEach(result => {
 				const li = resultsList.createEl('li', { 
 					cls: `seo-result seo-${result.severity}`
@@ -346,31 +376,39 @@ export class ResultsDisplay {
 				}
 			});
 			
-			// Add click handler for collapse functionality
-			header.addEventListener('click', () => {
-				const isCollapsed = resultsList.hasClass('seo-results-list-collapsed');
-				if (isCollapsed) {
-					resultsList.removeClass('seo-results-list-collapsed');
-					resultsList.addClass('seo-results-list-expanded');
+			// Add mousedown handler for collapse functionality (works better without focus)
+			header.addEventListener('mousedown', (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				
+				// Get or initialize the collapse state for this check
+				const currentState = this.individualCollapseStates.get(checkName) ?? false;
+				const newState = !currentState;
+				this.individualCollapseStates.set(checkName, newState);
+				
+				// Apply the new state
+				if (newState) {
+					resultsList.classList.remove('seo-results-list-expanded');
+					resultsList.classList.add('seo-results-list-collapsed');
 				} else {
-					resultsList.removeClass('seo-results-list-expanded');
-					resultsList.addClass('seo-results-list-collapsed');
+					resultsList.classList.remove('seo-results-list-collapsed');
+					resultsList.classList.add('seo-results-list-expanded');
 				}
 				
 				// Rotate the collapse icon
 				const icon = collapseIcon.querySelector('svg');
 				if (icon) {
-					if (isCollapsed) {
-						icon.removeClass('seo-collapse-icon-rotated');
-						icon.addClass('seo-collapse-icon-normal');
+					if (newState) {
+						icon.classList.remove('seo-collapse-icon-normal');
+						icon.classList.add('seo-collapse-icon-rotated');
 					} else {
-						icon.removeClass('seo-collapse-icon-normal');
-						icon.addClass('seo-collapse-icon-rotated');
+						icon.classList.remove('seo-collapse-icon-rotated');
+						icon.classList.add('seo-collapse-icon-normal');
 					}
 				}
 				
 				// If any individual item is expanded, reset main toggle to "collapse all" state
-				if (isCollapsed) {
+				if (!newState) {
 					// Item was just expanded, reset main toggle to "collapse all" state
 					this.isCollapsed = false;
 					const toggleBtn = this.container.querySelector('.seo-toggle-icon') as HTMLElement;
@@ -529,25 +567,138 @@ export class ResultsDisplay {
 		});
 
 		// Add collapse functionality to only the arrow icon
-		collapseIcon.addEventListener('click', (e) => {
-			const isCollapsed = filesListContainer.hasClass('seo-results-list-collapsed');
+		collapseIcon.addEventListener('mousedown', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			const isCollapsed = filesListContainer.classList.contains('seo-results-list-collapsed');
 			if (isCollapsed) {
-				filesListContainer.removeClass('seo-results-list-collapsed');
-				filesListContainer.addClass('seo-results-list-expanded');
+				filesListContainer.classList.remove('seo-results-list-collapsed');
+				filesListContainer.classList.add('seo-results-list-expanded');
 			} else {
-				filesListContainer.removeClass('seo-results-list-expanded');
-				filesListContainer.addClass('seo-results-list-collapsed');
+				filesListContainer.classList.remove('seo-results-list-expanded');
+				filesListContainer.classList.add('seo-results-list-collapsed');
 			}
 			
 			// Rotate the collapse icon
 			const icon = collapseIcon.querySelector('svg');
 			if (icon) {
 				if (isCollapsed) {
-					icon.removeClass('seo-collapse-icon-rotated');
-					icon.addClass('seo-collapse-icon-normal');
+					icon.classList.remove('seo-collapse-icon-rotated');
+					icon.classList.add('seo-collapse-icon-normal');
 				} else {
-					icon.removeClass('seo-collapse-icon-normal');
-					icon.addClass('seo-collapse-icon-rotated');
+					icon.classList.remove('seo-collapse-icon-normal');
+					icon.classList.add('seo-collapse-icon-rotated');
+				}
+			}
+		});
+
+		// Add "Files that pass" section
+		this.renderPassingFilesList(results, currentSort, showNotices);
+	}
+
+	private renderPassingFilesList(results: SEOResults[], currentSort: string, showNotices: boolean): void {
+		// Filter for files that have no issues or warnings (only notices or nothing)
+		const passingFiles = results.filter(r => {
+			const hasIssues = r.issuesCount > 0;
+			const hasWarnings = r.warningsCount > 0;
+			return !hasIssues && !hasWarnings;
+		});
+
+		if (passingFiles.length === 0) return;
+
+		const passingList = this.container.createEl('div', { cls: 'seo-issues-list' });
+		
+		// Header with collapse functionality
+		const passingHeader = passingList.createEl('div', { cls: 'seo-issues-header-container' });
+		
+		// Collapse icon (only this should be clickable) - start with right arrow (collapsed state)
+		const collapseIcon = passingHeader.createEl('span', { cls: 'seo-collapse-icon seo-collapsible-header' });
+		collapseIcon.appendChild(createCollapseIcon());
+		
+		// Start with right arrow (collapsed state) and add rotation class
+		const icon = collapseIcon.querySelector('svg');
+		if (icon) {
+			// Rotate the down arrow to point right (collapsed state)
+			icon.classList.add('seo-collapse-icon-rotated');
+		}
+		
+		// Center the heading
+		const headingContainer = passingHeader.createEl('div', { cls: 'seo-heading-center' });
+		headingContainer.createEl('h4', { text: 'Files that pass', cls: 'seo-issues-header' });
+		
+		// Files list container (collapsed by default)
+		const filesListContainer = passingList.createEl('div', { 
+			cls: 'seo-files-list-container seo-results-list-collapsed' 
+		});
+		
+		// Apply same sorting as the main list
+		const sortedFiles = this.sortFiles(passingFiles, currentSort);
+		
+		sortedFiles.forEach(result => {
+			const fileEl = filesListContainer.createEl('div', { cls: 'seo-file-issue' });
+			fileEl.setAttribute('data-file-path', result.file);
+			
+			// Make file path clickable
+			const fileLink = fileEl.createEl('a', { 
+				text: result.displayName || getDisplayPath(result.file),
+				cls: 'seo-file-link',
+				href: '#'
+			});
+			fileLink.addEventListener('click', async (e) => {
+				e.preventDefault();
+				await this.onFileClick(result.file);
+			});
+			
+			// Stats and audit button container
+			const statsContainer = fileEl.createEl('div', { cls: 'seo-stats-container' });
+			
+			// Only show notices if they exist
+			if (showNotices && result.noticesCount > 0) {
+				statsContainer.createEl('span', { 
+					text: `${result.noticesCount} notices`,
+					cls: 'seo-file-stats'
+				});
+			}
+			
+			// Audit button
+			const auditBtn = statsContainer.createEl('button', {
+				cls: 'clickable-icon seo-audit-btn',
+				attr: { 'aria-label': 'Audit this note' }
+			});
+			setIcon(auditBtn, 'search-check');
+			auditBtn.addEventListener('click', async (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				await this.onFileAudit(result.file);
+			});
+		});
+
+		// Add collapse functionality to the header
+		collapseIcon.addEventListener('mousedown', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			
+			const isCollapsed = filesListContainer.classList.contains('seo-results-list-collapsed');
+			
+			if (isCollapsed) {
+				filesListContainer.classList.remove('seo-results-list-collapsed');
+				filesListContainer.classList.add('seo-results-list-expanded');
+			} else {
+				filesListContainer.classList.remove('seo-results-list-expanded');
+				filesListContainer.classList.add('seo-results-list-collapsed');
+			}
+			
+			// Rotate the collapse icon with smooth transition
+			const icon = collapseIcon.querySelector('svg');
+			if (icon) {
+				if (isCollapsed) {
+					// Going from collapsed to expanded: remove rotation (down arrow)
+					icon.classList.remove('seo-collapse-icon-rotated');
+					icon.classList.add('seo-collapse-icon-normal');
+				} else {
+					// Going from expanded to collapsed: add rotation (right arrow)
+					icon.classList.remove('seo-collapse-icon-normal');
+					icon.classList.add('seo-collapse-icon-rotated');
 				}
 			}
 		});
@@ -635,20 +786,58 @@ export class ResultsDisplay {
 				break;
 			case 'filename-asc':
 				sortedFiles.sort((a, b) => {
+					// Primary: file name A-Z
 					const aFileName = a.file.split('/').pop() || '';
 					const bFileName = b.file.split('/').pop() || '';
 					const fileNameCompare = aFileName.localeCompare(bFileName);
 					if (fileNameCompare !== 0) return fileNameCompare;
-					return a.file.localeCompare(b.file);
+					
+					// Secondary: parent folder A-Z (root files first)
+					const aParts = a.file.split('/');
+					const bParts = b.file.split('/');
+					const aParent = aParts.length > 1 ? (aParts[aParts.length - 2] || '') : '';
+					const bParent = bParts.length > 1 ? (bParts[bParts.length - 2] || '') : '';
+					const parentCompare = aParent.localeCompare(bParent);
+					if (parentCompare !== 0) return parentCompare;
+					
+					// Tertiary: issues (high first)
+					if (b.issuesCount !== a.issuesCount) {
+						return b.issuesCount - a.issuesCount;
+					}
+					// Quaternary: warnings (high first)
+					if (b.warningsCount !== a.warningsCount) {
+						return b.warningsCount - a.warningsCount;
+					}
+					// Quinary: notices (high first)
+					return b.noticesCount - a.noticesCount;
 				});
 				break;
 			case 'filename-desc':
 				sortedFiles.sort((a, b) => {
+					// Primary: file name Z-A
 					const aFileName = a.file.split('/').pop() || '';
 					const bFileName = b.file.split('/').pop() || '';
 					const fileNameCompare = bFileName.localeCompare(aFileName);
 					if (fileNameCompare !== 0) return fileNameCompare;
-					return b.file.localeCompare(a.file);
+					
+					// Secondary: parent folder Z-A (root files last)
+					const aParts = a.file.split('/');
+					const bParts = b.file.split('/');
+					const aParent = aParts.length > 1 ? (aParts[aParts.length - 2] || '') : '';
+					const bParent = bParts.length > 1 ? (bParts[bParts.length - 2] || '') : '';
+					const parentCompare = bParent.localeCompare(aParent);
+					if (parentCompare !== 0) return parentCompare;
+					
+					// Tertiary: issues (high first)
+					if (b.issuesCount !== a.issuesCount) {
+						return b.issuesCount - a.issuesCount;
+					}
+					// Quaternary: warnings (high first)
+					if (b.warningsCount !== a.warningsCount) {
+						return b.warningsCount - a.warningsCount;
+					}
+					// Quinary: notices (high first)
+					return b.noticesCount - a.noticesCount;
 				});
 				break;
 		}
@@ -667,22 +856,36 @@ export class ResultsDisplay {
 			const resultsList = htmlHeader.parentElement?.querySelector('.seo-results') as HTMLElement;
 			const collapseIcon = htmlHeader.querySelector('.seo-collapse-icon svg') as HTMLElement;
 			
+			// Find the check name for this header to update the state map
+			const checkName = this.findCheckNameForHeader(htmlHeader);
+			
 			if (resultsList && collapseIcon) {
+				// Update the individual state map
+				if (checkName) {
+					this.individualCollapseStates.set(checkName, this.isCollapsed);
+				}
+				
 				// Force to the state based on main toggle
 				if (this.isCollapsed) {
 					// Force all to collapsed
-					resultsList.removeClass('seo-results-list-expanded');
-					resultsList.addClass('seo-results-list-collapsed');
-					collapseIcon.removeClass('seo-collapse-icon-normal');
-					collapseIcon.addClass('seo-collapse-icon-rotated');
+					resultsList.classList.remove('seo-results-list-expanded');
+					resultsList.classList.add('seo-results-list-collapsed');
+					collapseIcon.classList.remove('seo-collapse-icon-normal');
+					collapseIcon.classList.add('seo-collapse-icon-rotated');
 				} else {
 					// Force all to expanded
-					resultsList.removeClass('seo-results-list-collapsed');
-					resultsList.addClass('seo-results-list-expanded');
-					collapseIcon.removeClass('seo-collapse-icon-rotated');
-					collapseIcon.addClass('seo-collapse-icon-normal');
+					resultsList.classList.remove('seo-results-list-collapsed');
+					resultsList.classList.add('seo-results-list-expanded');
+					collapseIcon.classList.remove('seo-collapse-icon-rotated');
+					collapseIcon.classList.add('seo-collapse-icon-normal');
 				}
 			}
 		});
+	}
+	
+	// Helper method to find the check name for a given header
+	private findCheckNameForHeader(header: HTMLElement): string | null {
+		// Get the check name from the data attribute
+		return header.getAttribute('data-check-name');
 	}
 }

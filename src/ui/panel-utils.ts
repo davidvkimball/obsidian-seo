@@ -1,9 +1,11 @@
 import { SEOResults } from "../types";
 
 export function getDisplayPath(fullPath: string): string {
-	const parts = fullPath.split('/');
-	if (parts.length <= 2) {
-		return fullPath; // Return as-is if no parent folder
+	// Remove leading slash if present and split
+	const cleanPath = fullPath.startsWith('/') ? fullPath.slice(1) : fullPath;
+	const parts = cleanPath.split('/');
+	if (parts.length <= 1) {
+		return cleanPath; // Return as-is if no parent folder (just filename)
 	}
 	return parts.slice(-2).join('/'); // Return last two parts (parent folder + file name)
 }
@@ -43,7 +45,9 @@ export function sortFiles(files: SEOResults[], sortType: string): SEOResults[] {
 					return b.noticesCount - a.noticesCount;
 				}
 				// Quaternary: file name A-Z
-				return a.file.localeCompare(b.file);
+				const aFileName = a.file.split('/').pop() || '';
+				const bFileName = b.file.split('/').pop() || '';
+				return aFileName.localeCompare(bFileName);
 			});
 			break;
 		case 'warnings-asc':
@@ -61,7 +65,9 @@ export function sortFiles(files: SEOResults[], sortType: string): SEOResults[] {
 					return a.noticesCount - b.noticesCount;
 				}
 				// Quaternary: file name A-Z
-				return a.file.localeCompare(b.file);
+				const aFileName = a.file.split('/').pop() || '';
+				const bFileName = b.file.split('/').pop() || '';
+				return aFileName.localeCompare(bFileName);
 			});
 			break;
 		case 'issues-desc':
@@ -79,7 +85,9 @@ export function sortFiles(files: SEOResults[], sortType: string): SEOResults[] {
 					return b.noticesCount - a.noticesCount;
 				}
 				// Quaternary: file name A-Z
-				return a.file.localeCompare(b.file);
+				const aFileName = a.file.split('/').pop() || '';
+				const bFileName = b.file.split('/').pop() || '';
+				return aFileName.localeCompare(bFileName);
 			});
 			break;
 		case 'issues-asc':
@@ -97,7 +105,9 @@ export function sortFiles(files: SEOResults[], sortType: string): SEOResults[] {
 					return a.noticesCount - b.noticesCount;
 				}
 				// Quaternary: file name A-Z
-				return a.file.localeCompare(b.file);
+				const aFileName = a.file.split('/').pop() || '';
+				const bFileName = b.file.split('/').pop() || '';
+				return aFileName.localeCompare(bFileName);
 			});
 			break;
 		case 'notices-desc':
@@ -115,7 +125,9 @@ export function sortFiles(files: SEOResults[], sortType: string): SEOResults[] {
 					return b.warningsCount - a.warningsCount;
 				}
 				// Quaternary: file name A-Z
-				return a.file.localeCompare(b.file);
+				const aFileName = a.file.split('/').pop() || '';
+				const bFileName = b.file.split('/').pop() || '';
+				return aFileName.localeCompare(bFileName);
 			});
 			break;
 		case 'notices-asc':
@@ -133,40 +145,64 @@ export function sortFiles(files: SEOResults[], sortType: string): SEOResults[] {
 					return a.warningsCount - b.warningsCount;
 				}
 				// Quaternary: file name A-Z
-				return a.file.localeCompare(b.file);
+				const aFileName = a.file.split('/').pop() || '';
+				const bFileName = b.file.split('/').pop() || '';
+				return aFileName.localeCompare(bFileName);
 			});
 			break;
 		case 'filename-asc':
 			sortedFiles.sort((a, b) => {
 				// Primary: file name A-Z
-				const nameCompare = a.file.localeCompare(b.file);
+				const aFileName = a.file.split('/').pop() || '';
+				const bFileName = b.file.split('/').pop() || '';
+				const nameCompare = aFileName.localeCompare(bFileName);
 				if (nameCompare !== 0) return nameCompare;
-				// Secondary: issues (high first)
+				
+				// Secondary: parent folder A-Z (root files first)
+				const aParts = a.file.split('/');
+				const bParts = b.file.split('/');
+				const aParent = aParts.length > 1 ? (aParts[aParts.length - 2] || '') : '';
+				const bParent = bParts.length > 1 ? (bParts[bParts.length - 2] || '') : '';
+				const parentCompare = aParent.localeCompare(bParent);
+				if (parentCompare !== 0) return parentCompare;
+				
+				// Tertiary: issues (high first)
 				if (b.issuesCount !== a.issuesCount) {
 					return b.issuesCount - a.issuesCount;
 				}
-				// Tertiary: warnings (high first)
+				// Quaternary: warnings (high first)
 				if (b.warningsCount !== a.warningsCount) {
 					return b.warningsCount - a.warningsCount;
 				}
-				// Quaternary: notices (high first)
+				// Quinary: notices (high first)
 				return b.noticesCount - a.noticesCount;
 			});
 			break;
 		case 'filename-desc':
 			sortedFiles.sort((a, b) => {
 				// Primary: file name Z-A
-				const nameCompare = b.file.localeCompare(a.file);
+				const aFileName = a.file.split('/').pop() || '';
+				const bFileName = b.file.split('/').pop() || '';
+				const nameCompare = bFileName.localeCompare(aFileName);
 				if (nameCompare !== 0) return nameCompare;
-				// Secondary: issues (high first)
+				
+				// Secondary: parent folder Z-A (root files last)
+				const aParts = a.file.split('/');
+				const bParts = b.file.split('/');
+				const aParent = aParts.length > 1 ? (aParts[aParts.length - 2] || '') : '';
+				const bParent = bParts.length > 1 ? (bParts[bParts.length - 2] || '') : '';
+				const parentCompare = bParent.localeCompare(aParent);
+				if (parentCompare !== 0) return parentCompare;
+				
+				// Tertiary: issues (high first)
 				if (b.issuesCount !== a.issuesCount) {
 					return b.issuesCount - a.issuesCount;
 				}
-				// Tertiary: warnings (high first)
+				// Quaternary: warnings (high first)
 				if (b.warningsCount !== a.warningsCount) {
 					return b.warningsCount - a.warningsCount;
 				}
-				// Quaternary: notices (high first)
+				// Quinary: notices (high first)
 				return b.noticesCount - a.noticesCount;
 			});
 			break;
