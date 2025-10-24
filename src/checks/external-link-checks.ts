@@ -71,33 +71,70 @@ function extractValidExternalLinks(content: string): string[] {
 	
 	const externalLinks: string[] = [];
 	
-	// Find markdown links with http/https URLs
-	const markdownLinks = cleanContent.match(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g);
-	if (markdownLinks) {
-		markdownLinks.forEach(link => {
-			const match = link.match(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/);
-			if (match && match[2]) {
-				const url = match[2];
-				if (isValidUrl(url)) {
-					externalLinks.push(url);
-				}
+	// Find markdown links with http/https URLs using manual parsing to handle nested brackets
+	let pos = 0;
+	while (pos < cleanContent.length) {
+		// Find the next opening bracket
+		const openBracket = cleanContent.indexOf('[', pos);
+		if (openBracket === -1) break;
+		
+		// Find the matching closing bracket
+		let bracketCount = 1;
+		let closeBracket = openBracket + 1;
+		while (closeBracket < cleanContent.length && bracketCount > 0) {
+			if (cleanContent[closeBracket] === '[') {
+				bracketCount++;
+			} else if (cleanContent[closeBracket] === ']') {
+				bracketCount--;
 			}
-		});
+			closeBracket++;
+		}
+		
+		if (bracketCount > 0) {
+			// No matching closing bracket found
+			pos = openBracket + 1;
+			continue;
+		}
+		
+		// Check if there's a URL part after the closing bracket
+		if (closeBracket < cleanContent.length && cleanContent[closeBracket] === '(') {
+			// Find the matching closing parenthesis
+			let parenCount = 1;
+			let closeParen = closeBracket + 1;
+			while (closeParen < cleanContent.length && parenCount > 0) {
+				if (cleanContent[closeParen] === '(') {
+					parenCount++;
+				} else if (cleanContent[closeParen] === ')') {
+					parenCount--;
+				}
+				closeParen++;
+			}
+			
+			if (parenCount === 0) {
+				// We found a complete markdown link
+				const linkUrl = cleanContent.substring(closeBracket + 1, closeParen - 1);
+				
+				// Check if it's an external URL
+				if (linkUrl.startsWith('http://') || linkUrl.startsWith('https://')) {
+					if (isValidUrl(linkUrl)) {
+						externalLinks.push(linkUrl);
+					}
+				}
+				
+				pos = closeParen;
+			} else {
+				pos = closeBracket;
+			}
+		} else {
+			pos = closeBracket;
+		}
 	}
 	
 	// Find naked URLs with improved regex and validation
 	const nakedUrls = cleanContent.match(/https?:\/\/[^\s\)\]]+/g);
 	if (nakedUrls) {
 		// Get all markdown link URLs to exclude them from naked URLs
-		const markdownLinkUrls = new Set<string>();
-		if (markdownLinks) {
-			markdownLinks.forEach(link => {
-				const match = link.match(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/);
-				if (match && match[2]) {
-					markdownLinkUrls.add(match[2]);
-				}
-			});
-		}
+		const markdownLinkUrls = new Set<string>(externalLinks);
 		
 		nakedUrls.forEach(url => {
 			// Skip if URL is already in a markdown link

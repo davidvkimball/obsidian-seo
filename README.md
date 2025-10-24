@@ -27,7 +27,7 @@ A comprehensive SEO analysis plugin for Obsidian that helps you optimize your no
 - **Keyword in Description** - Validates keyword presence in descriptions
 - **Keyword in Slug** - Checks keyword inclusion in filenames
 - **Heading Structure** - Proper H1-H6 hierarchy
-- **Image Alt Text** - Missing alt text detection
+- **Media Alt Text** - Missing alt text detection for images, videos, embeds, etc.
 - **Image Naming** - SEO-friendly image filename patterns
 
 #### **Link Management**

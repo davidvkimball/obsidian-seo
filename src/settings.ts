@@ -32,7 +32,7 @@ export interface SEOSettings {
 	checkTitleLength: boolean;
 	/** Enable heading hierarchy validation */
 	checkHeadingOrder: boolean;
-	/** Enable alt text validation for images */
+	/** Enable alt text validation for media content (images, videos, embeds, etc.) */
 	checkAltText: boolean;
 	/** Enable image filename validation */
 	checkImageNaming: boolean;

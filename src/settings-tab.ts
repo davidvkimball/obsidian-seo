@@ -198,7 +198,7 @@ export class SEOSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Check alt text')
-			.setDesc('Enable alt text checking for images')
+			.setDesc('Enable alt text checking for media content (images, videos, embeds, etc.)')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.checkAltText)
 				.onChange(async (value) => {

@@ -64,35 +64,20 @@ export class SEOSidePanel extends ItemView {
 					return;
 				}
 				
-				// Always update when switching files
+				// Always update when switching files (shows cached results if available)
 				const activeFile = this.app.workspace.getActiveFile();
 				if (!activeFile) {
 					return;
 				}
 				
-				// Update the panel with results for the new file
+				// Update the panel with cached results for the new file (no new audit)
 				if (activeFile) {
 					this.updateCurrentNoteResults(activeFile);
 				}
 			}));
 			
-			// Listen for file modifications to update current note panel
-			this.registerEvent(this.app.vault.on('modify', (file) => {
-				if (file instanceof TFile && file.path.endsWith('.md')) {
-					const activeFile = this.app.workspace.getActiveFile();
-					if (activeFile && activeFile.path === file.path) {
-						// Don't re-render if we're currently refreshing
-						if (this.isRefreshing) {
-							return;
-						}
-						
-						// Clear current note results when the active file is modified
-						this.currentNoteResults = null;
-						// Update the panel with results for the modified file
-						this.updateCurrentNoteResults(activeFile);
-					}
-				}
-			}));
+			// Note: Removed real-time audit on file modification to improve performance
+			// Audits should only be triggered by explicit user actions (buttons, commands)
 		}
 	}
 

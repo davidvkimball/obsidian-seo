@@ -81,20 +81,29 @@ export async function checkBrokenLinks(content: string, file: TFile, settings: S
 		return [];
 	}
 	
-	// Remove code blocks to avoid false positives
-	const cleanContent = content
-		.replace(/```[\s\S]*?```/g, '') // Remove code blocks
-		.replace(/~~~[\s\S]*?~~~/g, '') // Remove code blocks with ~~~
-		.replace(/`[^`\n]+`/g, '') // Remove inline code
-		.replace(/^---\n[\s\S]*?\n---\n/, '') // Remove frontmatter
-		.replace(/::\w+\{[^}]*\}/g, ''); // Remove Obsidian callout-style blocks
-	
 	// Find wikilinks [[link]] and [[link|display text]]
-	const wikilinks = cleanContent.match(/\[\[([^\]]+)\]\]/g);
-	if (wikilinks) {
+	// First find all wikilinks in the original content
+	const allWikilinks = content.match(/\[\[([^\]]+)\]\]/g);
+	if (allWikilinks) {
 		const brokenLinks = [];
 		
-		for (const wikilink of wikilinks) {
+		for (const wikilink of allWikilinks) {
+			// Check if this link is inside a code block
+			const linkStart = content.indexOf(wikilink);
+			if (linkStart === -1) continue;
+			
+			// Check if the link is inside a code block by looking at content before it
+			const contentBeforeLink = content.substring(0, linkStart);
+			const codeBlockMatches = contentBeforeLink.match(/```[\s\S]*?```|~~~[\s\S]*?~~~/g);
+			
+			// Count unclosed code blocks
+			const openCodeBlocks = (contentBeforeLink.match(/```/g) || []).length - (codeBlockMatches || []).length;
+			const openTildeBlocks = (contentBeforeLink.match(/~~~/g) || []).length - (codeBlockMatches || []).length;
+			
+			// Skip if we're inside a code block
+			if (openCodeBlocks > 0 || openTildeBlocks > 0) {
+				continue;
+			}
 			const linkMatch = wikilink.match(/\[\[([^\]]+)\]\]/);
 			if (!linkMatch || !linkMatch[1]) continue;
 			
@@ -174,11 +183,24 @@ export async function checkBrokenLinks(content: string, file: TFile, settings: S
 	}
 	
 	// Find markdown links [text](url) - check for relative/internal links (exclude images)
-	const markdownLinks = cleanContent.match(/\[([^\]]+)\]\(([^)]+)\)/g);
-	if (markdownLinks) {
-		for (const markdownLink of markdownLinks) {
-			// Skip image links - they should not be checked as broken links
-			if (markdownLink.startsWith('![')) {
+	// First find all markdown links in the original content
+	const allMarkdownLinks = content.match(/\[([^\]]+)\]\(([^)]+)\)/g);
+	if (allMarkdownLinks) {
+		for (const markdownLink of allMarkdownLinks) {
+			// Check if this link is inside a code block
+			const linkStart = content.indexOf(markdownLink);
+			if (linkStart === -1) continue;
+			
+			// Check if the link is inside a code block by looking at content before it
+			const contentBeforeLink = content.substring(0, linkStart);
+			const codeBlockMatches = contentBeforeLink.match(/```[\s\S]*?```|~~~[\s\S]*?~~~/g);
+			
+			// Count unclosed code blocks
+			const openCodeBlocks = (contentBeforeLink.match(/```/g) || []).length - (codeBlockMatches || []).length;
+			const openTildeBlocks = (contentBeforeLink.match(/~~~/g) || []).length - (codeBlockMatches || []).length;
+			
+			// Skip if we're inside a code block
+			if (openCodeBlocks > 0 || openTildeBlocks > 0) {
 				continue;
 			}
 			
@@ -187,6 +209,11 @@ export async function checkBrokenLinks(content: string, file: TFile, settings: S
 			
 			const linkText = linkMatch[1];
 			const linkUrl = linkMatch[2];
+			
+			// Skip image links and linked images - they should not be checked as broken links
+			if (markdownLink.startsWith('![') || linkText.startsWith('![')) {
+				continue;
+			}
 			
 			// Check if it's a relative/internal link (not external)
 			if (!linkUrl.startsWith('http://') && !linkUrl.startsWith('https://') && !linkUrl.startsWith('mailto:') && !linkUrl.startsWith('#')) {
@@ -263,49 +290,121 @@ export async function checkPotentiallyBrokenLinks(content: string, file: TFile, 
 		}
 	});
 	
-	// Remove code blocks to avoid false positives
-	const cleanContent = content
-		.replace(/```[\s\S]*?```/g, '') // Remove code blocks
-		.replace(/~~~[\s\S]*?~~~/g, '') // Remove code blocks with ~~~
-		.replace(/`[^`\n]+`/g, '') // Remove inline code
-		.replace(/^---\n[\s\S]*?\n---\n/, '') // Remove frontmatter
-		.replace(/::\w+\{[^}]*\}/g, ''); // Remove Obsidian callout-style blocks
-	
-	// Find markdown links that might be flexible relative links (exclude images)
-	const markdownLinks = cleanContent.match(/(?<!\!)\[([^\]]+)\]\(([^)]+)\)/g);
-	if (markdownLinks) {
-		for (const markdownLink of markdownLinks) {
-			
-			const linkMatch = markdownLink.match(/\[([^\]]+)\]\(([^)]+)\)/);
-			if (!linkMatch || !linkMatch[1] || !linkMatch[2]) continue;
-			
-			const linkText = linkMatch[1];
-			const linkUrl = linkMatch[2];
-			
-			// Check if it's a flexible relative link (publish mode)
-			if (settings.publishMode && linkUrl.startsWith('/') && !linkUrl.startsWith('http://') && !linkUrl.startsWith('https://')) {
-				const lineNumber = findLineNumberForImage(content, markdownLink);
-				results.push({
-					passed: true,
-					message: `Relative path link: ${linkText}`,
-					suggestion: "This link may be valid for static site generators but may not work in Obsidian",
-					severity: 'notice',
-					position: {
-						line: lineNumber,
-						searchText: markdownLink,
-						context: getContextAroundLine(content, lineNumber)
-					}
-				});
+	// Find markdown links that might be flexible relative links (exclude images and linked images)
+	// Use a manual approach to properly handle nested brackets
+	let pos = 0;
+	while (pos < content.length) {
+		// Find the next opening bracket
+		const openBracket = content.indexOf('[', pos);
+		if (openBracket === -1) break;
+		
+		// Check if this is inside a code block
+		const contentBeforeBracket = content.substring(0, openBracket);
+		const codeBlockMatches = contentBeforeBracket.match(/```[\s\S]*?```|~~~[\s\S]*?~~~/g);
+		const openCodeBlocks = (contentBeforeBracket.match(/```/g) || []).length - (codeBlockMatches || []).length;
+		const openTildeBlocks = (contentBeforeBracket.match(/~~~/g) || []).length - (codeBlockMatches || []).length;
+		
+		// Skip if we're inside a code block
+		if (openCodeBlocks > 0 || openTildeBlocks > 0) {
+			pos = openBracket + 1;
+			continue;
+		}
+		
+		// Find the matching closing bracket
+		let bracketCount = 1;
+		let closeBracket = openBracket + 1;
+		while (closeBracket < content.length && bracketCount > 0) {
+			if (content[closeBracket] === '[') {
+				bracketCount++;
+			} else if (content[closeBracket] === ']') {
+				bracketCount--;
 			}
+			closeBracket++;
+		}
+		
+		if (bracketCount > 0) {
+			// No matching closing bracket found
+			pos = openBracket + 1;
+			continue;
+		}
+		
+		// Check if there's a URL part after the closing bracket
+		if (closeBracket < content.length && content[closeBracket] === '(') {
+			// Find the matching closing parenthesis
+			let parenCount = 1;
+			let closeParen = closeBracket + 1;
+			while (closeParen < content.length && parenCount > 0) {
+				if (content[closeParen] === '(') {
+					parenCount++;
+				} else if (content[closeParen] === ')') {
+					parenCount--;
+				}
+				closeParen++;
+			}
+			
+			if (parenCount === 0) {
+				// We found a complete markdown link
+				const linkText = content.substring(openBracket + 1, closeBracket - 1);
+				const linkUrl = content.substring(closeBracket + 1, closeParen - 1);
+				const fullLink = content.substring(openBracket, closeParen);
+				
+				// Skip if this is a linked image (link text starts with ![)
+				// Linked images should be handled by external link checks, not potentially broken link checks
+				if (linkText.startsWith('![')) {
+					pos = closeParen;
+					continue;
+				}
+				
+				// Check if it's a flexible relative link (publish mode)
+				// Only check for relative paths, not external URLs
+				if (settings.publishMode && linkUrl.startsWith('/') && !linkUrl.startsWith('http://') && !linkUrl.startsWith('https://')) {
+					const lineNumber = findLineNumberForImage(content, fullLink);
+					results.push({
+						passed: true,
+						message: `Relative path link: ${linkText}`,
+						suggestion: "This link may be valid for static site generators but may not work in Obsidian",
+						severity: 'notice',
+						position: {
+							line: lineNumber,
+							searchText: fullLink,
+							context: getContextAroundLine(content, lineNumber)
+						}
+					});
+				}
+				
+				pos = closeParen;
+			} else {
+				pos = closeBracket;
+			}
+		} else {
+			pos = closeBracket;
 		}
 	}
 	
 	// Find wikilinks that might be broken
-	const wikilinks = cleanContent.match(/\[\[([^\]]+)\]\]/g);
-	if (wikilinks) {
+	// First find all wikilinks in the original content
+	const allWikilinks = content.match(/\[\[([^\]]+)\]\]/g);
+	if (allWikilinks) {
 		const potentiallyBroken = [];
 		
-		for (const wikilink of wikilinks) {
+		for (const wikilink of allWikilinks) {
+			// Check if this link is inside a code block
+			const linkStart = content.indexOf(wikilink);
+			if (linkStart === -1) continue;
+			
+			// Check if the link is inside a code block by looking at content before it
+			const contentBeforeLink = content.substring(0, linkStart);
+			const codeBlockMatches = contentBeforeLink.match(/```[\s\S]*?```|~~~[\s\S]*?~~~/g);
+			
+			// Count unclosed code blocks
+			const openCodeBlocks = (contentBeforeLink.match(/```/g) || []).length - (codeBlockMatches || []).length;
+			const openTildeBlocks = (contentBeforeLink.match(/~~~/g) || []).length - (codeBlockMatches || []).length;
+			
+			// Skip if we're inside a code block
+			if (openCodeBlocks > 0 || openTildeBlocks > 0) {
+				continue;
+			}
+			
 			const linkMatch = wikilink.match(/\[\[([^\]]+)\]\]/);
 			if (!linkMatch || !linkMatch[1]) continue;
 			
