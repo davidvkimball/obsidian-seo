@@ -18,6 +18,7 @@ export function registerCommands(plugin: SEOPlugin) {
 	plugin.addCommand({
 		id: "seo-open-current",
 		name: "Open current note audit",
+		icon: "search-check",
 		callback: async () => {
 			plugin.openCurrentPanel();
 		}
@@ -27,6 +28,7 @@ export function registerCommands(plugin: SEOPlugin) {
 	plugin.addCommand({
 		id: "seo-open-global",
 		name: "Open vault audit",
+		icon: "search-check",
 		callback: async () => {
 			plugin.openGlobalPanel();
 		}
@@ -36,6 +38,7 @@ export function registerCommands(plugin: SEOPlugin) {
 	plugin.addCommand({
 		id: "seo-run-current",
 		name: "Run current note audit",
+		icon: "search-check",
 		callback: async () => {
 			plugin.openCurrentPanel();
 			// Wait for panel to open, then trigger the audit
@@ -55,6 +58,7 @@ export function registerCommands(plugin: SEOPlugin) {
 	plugin.addCommand({
 		id: "seo-run-global",
 		name: "Run vault audit",
+		icon: "search-check",
 		callback: async () => {
 			plugin.openGlobalPanel();
 			
