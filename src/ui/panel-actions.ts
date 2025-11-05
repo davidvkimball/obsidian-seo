@@ -219,8 +219,8 @@ export class PanelActions {
 						// Focus the panel to ensure it's properly active
 						this.app.workspace.setActiveLeaf(currentPanel);
 						// Re-render to ensure it's in the correct state
-						if ('render' in currentPanel.view) {
-							(currentPanel.view as any).render();
+						if (currentPanel.view instanceof SEOSidePanel) {
+							currentPanel.view.render();
 						}
 						resolve();
 					} else {

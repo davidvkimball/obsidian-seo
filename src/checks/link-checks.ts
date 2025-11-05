@@ -227,19 +227,33 @@ export async function checkBrokenLinks(content: string, file: TFile, settings: S
 				}
 				
 				if (app) {
-					// Use the EXACT same logic as wikilinks - this should work identically
-					const resolvedLink = app.metadataCache.getFirstLinkpathDest(linkUrl, file.path);
+					// Strip anchor from link URL before resolution (same as wikilinks)
+					let linkPath = linkUrl;
+					let anchor: string | null = null;
+					
+					if (linkPath.includes('#')) {
+						const anchorParts = linkPath.split('#');
+						linkPath = anchorParts[0] || '';
+						anchor = anchorParts[1] || null;
+					}
+					
+					// Use Obsidian's link resolution to check if the link works
+					const resolvedLink = app.metadataCache.getFirstLinkpathDest(linkPath, file.path);
 					
 					if (!resolvedLink) {
 						const lineNumber = findLineNumberForImage(content, markdownLink);
 						
-						// Use the same suggestion format as wikilinks
-						const suggestedPath = linkUrl.endsWith('.md') ? linkUrl : linkUrl + '.md';
+						// Create a more helpful suggestion message (same format as wikilinks)
+						let suggestedPath = linkPath.endsWith('.md') ? linkPath : linkPath + '.md';
+						let suggestion = `Check if the file "${suggestedPath}" exists or update the link`;
+						if (anchor) {
+							suggestion += ` (anchor: #${anchor})`;
+						}
 						
 						results.push({
 							passed: false,
 							message: `Broken internal link: ${linkText}`,
-							suggestion: `Check if the file "${suggestedPath}" exists or update the link`,
+							suggestion: suggestion,
 							severity: 'error',
 							position: {
 								line: lineNumber,

@@ -19,7 +19,7 @@ interface SEOPanelView {
  */
 export default class SEOPlugin extends Plugin {
 	settings!: SEOSettings;
-	private panelManager!: PanelManager;
+	private panelManager: PanelManager | null = null;
 	public sidePanel: SEOSidePanel | null = null;
 
 	/**
@@ -40,7 +40,7 @@ export default class SEOPlugin extends Plugin {
 			this.panelManager = await withErrorHandling(
 				() => Promise.resolve(new PanelManager(this.app, this)),
 				'panel manager initialization',
-				null as any
+				null
 			);
 
 
