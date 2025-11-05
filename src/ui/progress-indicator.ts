@@ -53,7 +53,8 @@ export class ProgressIndicator extends Component {
 	 */
 	show(message: string = 'Processing...'): void {
 		this.progressText.textContent = message;
-		this.container.style.display = 'block';
+		this.container.removeClass('seo-progress-container-hidden');
+		this.container.addClass('seo-progress-container-visible');
 		this.isVisible = true;
 	}
 
@@ -61,7 +62,8 @@ export class ProgressIndicator extends Component {
 	 * Hide progress indicator
 	 */
 	hide(): void {
-		this.container.style.display = 'none';
+		this.container.removeClass('seo-progress-container-visible');
+		this.container.addClass('seo-progress-container-hidden');
 		this.isVisible = false;
 	}
 
@@ -74,8 +76,8 @@ export class ProgressIndicator extends Component {
 			this.show();
 		}
 
-		// Update progress bar
-		this.progressBar.style.width = `${progress.percentage}%`;
+		// Update progress bar using CSS custom property
+		this.progressBar.style.setProperty('--seo-progress-width', `${progress.percentage}%`);
 
 		// Update progress text
 		const elapsed = this.formatDuration(progress.elapsed);

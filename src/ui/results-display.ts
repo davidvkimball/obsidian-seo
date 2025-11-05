@@ -1,5 +1,6 @@
 import { setIcon, App } from "obsidian";
 import { SEOResults } from "../types";
+import { SEOSettings } from "../settings";
 import { getDisplayPath } from "./panel-utils";
 
 interface ObsidianWindow extends Window {
@@ -73,8 +74,11 @@ export class ResultsDisplay {
 		await this.onFileClick(activeFile.path);
 		
 		// Get the markdown view - try different approaches
-			let markdownView: any = null;
-			let editor: any = null;
+		// Note: Using any for Obsidian's internal view types that don't have public type definitions
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		let markdownView: any = null;
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		let editor: any = null;
 			
 			// Try direct access to active leaf
 			if (app.workspace.activeLeaf) {
@@ -356,7 +360,15 @@ export class ResultsDisplay {
 					
 					// Check if suggestion contains HTML (file links)
 					if (result.suggestion.includes('<a href="#" data-file-path=')) {
-						suggestionEl.innerHTML = result.suggestion;
+						// Parse HTML safely using DOMParser
+						const parser = new DOMParser();
+						const doc = parser.parseFromString(result.suggestion, 'text/html');
+						const body = doc.body;
+						
+						// Move all nodes from parsed body to suggestion element
+						while (body.firstChild) {
+							suggestionEl.appendChild(body.firstChild);
+						}
 						
 						// Use event delegation on the suggestion element
 						suggestionEl.addEventListener('click', async (e) => {
@@ -420,7 +432,7 @@ export class ResultsDisplay {
 		});
 	}
 
-	renderGlobalResults(results: SEOResults[], settings?: any): void {
+	renderGlobalResults(results: SEOResults[], settings?: SEOSettings): void {
 		const summary = this.container.createEl('div', { cls: 'seo-vault-summary' });
 		
 		const totalFiles = results.length;
@@ -483,7 +495,7 @@ export class ResultsDisplay {
 		}
 	}
 
-	renderIssuesList(results: SEOResults[], currentSort: string, onSortChange: (sortType: string) => void, onShowSortMenu: (event: MouseEvent) => void, settings?: any): void {
+	renderIssuesList(results: SEOResults[], currentSort: string, onSortChange: (sortType: string) => void, onShowSortMenu: (event: MouseEvent) => void, settings?: SEOSettings): void {
 		// Check if notices should be shown (both potentially broken checks must be enabled)
 		const showNotices = settings ? 
 			(settings.checkPotentiallyBrokenLinks && settings.checkPotentiallyBrokenEmbeds) : 

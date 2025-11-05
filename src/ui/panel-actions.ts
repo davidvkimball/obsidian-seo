@@ -1,13 +1,16 @@
 import { App, Notice, setIcon, Menu, TFile } from "obsidian";
 import { SEOResults } from "../types";
+import { SEOSettings } from "../settings";
 import { sortFiles } from "./panel-utils";
 import { SEOCurrentPanelViewType } from "./panel-constants";
 import { SEOSidePanel } from "./side-panel";
 
+import SEOPlugin from "../main";
+
 export class PanelActions {
 	constructor(
 		private app: App,
-		private plugin: any,
+		private plugin: SEOPlugin,
 		private panelType: 'current' | 'global'
 	) {}
 
@@ -281,7 +284,7 @@ export class PanelActions {
 		}
 	}
 
-	showSortMenu(event: MouseEvent, issuesFiles: SEOResults[], issuesList: HTMLElement, currentSort: string, onSortChange: (sortType: string) => void, settings?: any): void {
+	showSortMenu(event: MouseEvent, issuesFiles: SEOResults[], issuesList: HTMLElement, currentSort: string, onSortChange: (sortType: string) => void, settings?: SEOSettings): void {
 		const menu = new Menu();
 		
 		// Check if notices should be shown (both potentially broken checks must be enabled)
@@ -406,7 +409,7 @@ export class PanelActions {
 		menu.showAtPosition({ x: event.clientX, y: event.clientY });
 	}
 
-	private sortAndRenderFiles(issuesFiles: SEOResults[], issuesList: HTMLElement, sortType: string, settings?: any): void {
+	private sortAndRenderFiles(issuesFiles: SEOResults[], issuesList: HTMLElement, sortType: string, settings?: SEOSettings): void {
 		// Sort the array using the proper sorting function
 		const sortedFiles = sortFiles([...issuesFiles], sortType);
 		
@@ -421,7 +424,7 @@ export class PanelActions {
 		this.renderFilesList(sortedFiles, filesListContainer as HTMLElement, settings);
 	}
 
-	private renderFilesList(files: SEOResults[], container: HTMLElement, settings?: any): void {
+	private renderFilesList(files: SEOResults[], container: HTMLElement, settings?: SEOSettings): void {
 		files.forEach(result => {
 			const fileEl = container.createEl('div', { cls: 'seo-file-issue' });
 			fileEl.setAttribute('data-file-path', result.file);

@@ -189,12 +189,8 @@ export class SEOSettingTab extends PluginSettingTab {
 		// Add performance warning
 		const warningEl = duplicateContentSetting.descEl.createEl('div', {
 			text: '⚠️ WARNING: This feature can be very resource-intensive with large vaults and many notes. Disable for faster audits.',
-			cls: 'setting-item-description'
+			cls: 'setting-item-description seo-warning-message'
 		});
-		warningEl.style.color = '#ff6b6b';
-		warningEl.style.fontWeight = 'bold';
-
-		warningEl.style.marginTop = '4px';
 
 		new Setting(containerEl)
 			.setName('Check alt text')
@@ -327,11 +323,8 @@ export class SEOSettingTab extends PluginSettingTab {
 		// Add warning for vault-wide external link checking
 		const vaultWarningEl = vaultCheckSetting.descEl.createEl('div', {
 			text: '⚠️ WARNING: This will make vault audits extremely slow. Use the "Check external links" button instead for individual notes.',
-			cls: 'setting-item-description'
+			cls: 'setting-item-description seo-warning-message'
 		});
-		vaultWarningEl.style.color = '#ff6b6b';
-		vaultWarningEl.style.fontWeight = 'bold';
-		vaultWarningEl.style.marginTop = '4px';
 
 		// Thresholds
 		containerEl.createEl('h2', { text: 'Thresholds' });

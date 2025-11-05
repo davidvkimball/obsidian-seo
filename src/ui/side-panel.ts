@@ -50,7 +50,7 @@ export class SEOSidePanel extends ItemView {
 		
 		// Listen for file changes to update current note panel
 		if (this.panelType === 'current') {
-			let activeLeafChangeTimeout: any = null;
+			let activeLeafChangeTimeout: ReturnType<typeof setTimeout> | null = null;
 			this.registerEvent(this.app.workspace.on('active-leaf-change', () => {
 				// Cancel any ongoing audit when switching files
 				if (SEOSidePanel.globalAuditController) {
@@ -209,8 +209,10 @@ export class SEOSidePanel extends ItemView {
 			// Approach 1: Direct DOM manipulation of icon element
 			const iconEl = this.containerEl.querySelector('.view-header-icon') as HTMLElement;
 			if (iconEl) {
-				// Clear and reset the icon
-				iconEl.innerHTML = '';
+				// Clear and reset the icon using DOM API
+				while (iconEl.firstChild) {
+					iconEl.removeChild(iconEl.firstChild);
+				}
 				iconEl.setAttribute('data-icon', 'search-check');
 				// Force a re-render by temporarily changing the attribute
 				iconEl.setAttribute('data-icon', '');
@@ -221,9 +223,10 @@ export class SEOSidePanel extends ItemView {
 			// Approach 2: Force re-render of the entire header
 			const headerEl = this.containerEl.querySelector('.view-header') as HTMLElement;
 			if (headerEl) {
-				headerEl.style.display = 'none';
+				headerEl.addClass('seo-header-hidden');
 				headerEl.offsetHeight; // Force reflow
-				headerEl.style.display = '';
+				headerEl.removeClass('seo-header-hidden');
+				headerEl.addClass('seo-header-visible');
 			}
 			
 			// Approach 3: Trigger a workspace refresh
@@ -286,15 +289,9 @@ export class SEOSidePanel extends ItemView {
 		} else {
 				// No results available, show message
 				const noResultsEl = this.containerEl.createEl('div', { 
-					cls: 'seo-info-note',
+					cls: 'seo-info-note seo-no-results-message',
 					text: 'No SEO results available for this file. Click "Refresh" to run an audit.'
 				});
-				noResultsEl.style.marginTop = '10px';
-				noResultsEl.style.padding = '8px';
-				noResultsEl.style.backgroundColor = 'var(--background-secondary)';
-				noResultsEl.style.borderRadius = '4px';
-				noResultsEl.style.fontSize = '12px';
-				noResultsEl.style.color = 'var(--text-muted)';
 			}
 			
 			// Update the header with the new file name (preserves button event listeners)

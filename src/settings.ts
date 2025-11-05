@@ -1,3 +1,5 @@
+import { SEOResults } from "./types";
+
 /**
  * SEO Plugin Settings Interface
  * Defines all configurable options for the SEO plugin
@@ -81,7 +83,7 @@ export interface SEOSettings {
 	
 	// Cached scan results
 	/** Cached results from global scan */
-	cachedGlobalResults: any[];
+	cachedGlobalResults: SEOResults[];
 	/** Timestamp of last scan */
 	lastScanTimestamp: number;
 }
