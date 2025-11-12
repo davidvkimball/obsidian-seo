@@ -1,4 +1,4 @@
-import { App, TFile, Notice } from "obsidian";
+import { App, TFile } from "obsidian";
 import SEOPlugin from "./main";
 import { SEOResults } from "./types";
 import { SEOSettings } from "./settings";

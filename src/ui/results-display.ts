@@ -8,15 +8,6 @@ interface ObsidianWindow extends Window {
 }
 
 /**
- * Helper function to create SVG icons
- */
-function createSVGIcon(svgContent: string): SVGElement {
-	const parser = new DOMParser();
-	const doc = parser.parseFromString(svgContent, 'image/svg+xml');
-	return doc.documentElement as unknown as SVGElement;
-}
-
-/**
  * Helper function to create collapse icon
  */
 function createCollapseIcon(): HTMLElement {

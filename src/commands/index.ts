@@ -1,13 +1,6 @@
-import { Notice, TFile, TFolder } from "obsidian";
 import SEOPlugin from "../main";
 import { SEOResults } from "../types";
 import { PanelActions } from "../ui/panel-actions";
-
-interface SEOPanelView {
-	globalResults: SEOResults[];
-	actions: PanelActions;
-	render(): void;
-}
 
 /**
  * Registers all plugin commands with Obsidian
@@ -75,7 +68,7 @@ export function registerCommands(plugin: SEOPlugin) {
 					
 					const panel = globalPanels[0];
 					if (panel?.view) {
-						const seoPanel = panel.view as unknown as SEOPanelView;
+						const seoPanel = panel.view as unknown as { actions: PanelActions; render(): void };
 						
 						// Always trigger the refresh logic (same as clicking the refresh button)
 						await seoPanel.actions.refreshGlobalResults();

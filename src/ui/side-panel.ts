@@ -1,4 +1,4 @@
-import { ItemView, WorkspaceLeaf, TFile, Notice, setIcon } from "obsidian";
+import { ItemView, WorkspaceLeaf, TFile, setIcon } from "obsidian";
 import SEOPlugin from "../main";
 import { SEOResults } from "../types";
 import { SEOCurrentPanelViewType, SEOGlobalPanelViewType } from "./panel-constants";
@@ -6,11 +6,6 @@ import { getVaultFoldersInfo } from "./panel-utils";
 import { PanelActions } from "./panel-actions";
 import { ResultsDisplay } from "./results-display";
 import { PanelRenderer } from "./panel-renderer";
-
-interface SEOPanelView {
-	globalResults: SEOResults[];
-	render(): void;
-}
 
 type SortType = 'issues-desc' | 'issues-asc' | 'warnings-desc' | 'warnings-asc' | 'notices-desc' | 'notices-asc' | 'filename-asc' | 'filename-desc';
 

@@ -1,4 +1,4 @@
-import { Plugin, Notice, TFile } from "obsidian";
+import { Plugin } from "obsidian";
 import { SEOSettings, DEFAULT_SETTINGS } from "./settings";
 import { registerCommands } from "./commands";
 import { SEOSettingTab } from "./settings-tab";
@@ -8,11 +8,6 @@ import { PanelManager } from "./ui/panel-manager";
 import { handleError, withErrorHandling, validateRequiredParams } from "./utils/error-handler";
 import { seoCache, clearAllCache } from "./utils/cache-manager";
 import { PanelActions } from "./ui/panel-actions";
-
-interface SEOPanelView {
-	actions: PanelActions;
-	render(): void;
-}
 
 /**
  * Main SEO Plugin class for Obsidian
@@ -106,7 +101,7 @@ export default class SEOPlugin extends Plugin {
 												const panel = globalPanels[0];
 												if (panel?.view) {
 													// Cast to SEOSidePanel and trigger refresh
-													const seoPanel = panel.view as unknown as SEOPanelView;
+													const seoPanel = panel.view as unknown as { actions: PanelActions; render(): void };
 													// Trigger the refresh logic (same as clicking the refresh button)
 													await seoPanel.actions.refreshGlobalResults();
 													// Update the panel display with new results
