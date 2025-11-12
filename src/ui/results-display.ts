@@ -25,18 +25,6 @@ function createCollapseIcon(): HTMLElement {
 	return iconEl;
 }
 
-/**
- * Helper function to create status icons
- */
-function createStatusIcon(type: 'error' | 'warning' | 'notice' | 'success'): SVGElement {
-	const icons = {
-		error: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
-		warning: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-		notice: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>',
-		success: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>'
-	};
-	return createSVGIcon(icons[type]);
-}
 
 export class ResultsDisplay {
 	private isCollapsed: boolean = false; // Track collapse state (false = expanded, true = collapsed)
@@ -136,11 +124,11 @@ export class ResultsDisplay {
 				if (editorObj.scrollIntoView) {
 					try {
 						editorObj.scrollIntoView({ line: lineIndex, ch: 0 });
-					} catch (error) {
+					} catch {
 						// If that fails, try with just the line number
 						try {
 							editorObj.scrollIntoView(lineIndex);
-						} catch (error2) {
+						} catch {
 							// If all else fails, just set the cursor (already done above)
 						}
 					}
@@ -161,11 +149,11 @@ export class ResultsDisplay {
 								if (editorObj.removeHighlights) {
 									editorObj.removeHighlights();
 								}
-							} catch (highlightError) {
+							} catch {
 								// Ignore highlight removal errors
 							}
 						}, 2000);
-					} catch (error) {
+					} catch {
 						// Ignore highlight errors
 					}
 				}
@@ -200,18 +188,18 @@ export class ResultsDisplay {
 		
 		if (results.issuesCount > 0 || results.warningsCount > 0 || filteredNoticesCount > 0) {
 			scoreText.createEl('span', { text: ` (` });
-			const issuesCount = scoreText.createEl('span', { 
+			scoreText.createEl('span', { 
 				text: `${results.issuesCount} issues`,
 				cls: 'seo-issues-count-text'
 			});
 			scoreText.createEl('span', { text: ', ' });
-			const warningsCount = scoreText.createEl('span', { 
+			scoreText.createEl('span', { 
 				text: `${results.warningsCount} warnings`,
 				cls: 'seo-warnings-count-text'
 			});
 			if (filteredNoticesCount > 0) {
 				scoreText.createEl('span', { text: ', ' });
-				const noticesCount = scoreText.createEl('span', { 
+				scoreText.createEl('span', { 
 					text: `${filteredNoticesCount} notices`,
 					cls: 'seo-notices-count-text'
 				});

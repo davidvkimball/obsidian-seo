@@ -1,6 +1,5 @@
-import { Plugin, Notice, TFile, TFolder } from "obsidian";
+import { Notice, TFile, TFolder } from "obsidian";
 import SEOPlugin from "../main";
-import { runSEOCheck } from "../seo-checker";
 import { SEOResults } from "../types";
 import { PanelActions } from "../ui/panel-actions";
 
@@ -88,43 +87,4 @@ export function registerCommands(plugin: SEOPlugin) {
 		}
 	});
 
-}
-
-/**
- * Gets the list of files to check based on plugin settings
- * @param plugin - The SEO plugin instance
- * @returns Promise resolving to array of files to check
- */
-function getFilesToCheck(plugin: SEOPlugin): Promise<TFile[]> {
-	const { vault } = plugin.app;
-	const { scanDirectories, ignoreUnderscoreFiles } = plugin.settings;
-	
-	let files: TFile[];
-	
-	if (!scanDirectories.trim()) {
-		// Scan all markdown files
-		files = vault.getMarkdownFiles();
-	} else {
-		const directories = scanDirectories.split(',').map(dir => dir.trim());
-		files = [];
-		
-		for (const dir of directories) {
-			const folder = vault.getAbstractFileByPath(dir);
-			if (folder && folder instanceof TFolder) {
-				files.push(...vault.getMarkdownFiles().filter((file: TFile) => 
-					file.path.startsWith(dir + '/') || file.path === dir
-				));
-			}
-		}
-	}
-	
-	// Filter out files with underscore prefix if setting is enabled
-	if (ignoreUnderscoreFiles) {
-		files = files.filter(file => {
-			const fileName = file.basename;
-			return !fileName.startsWith('_');
-		});
-	}
-	
-	return Promise.resolve(files);
 }

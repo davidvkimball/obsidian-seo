@@ -27,9 +27,7 @@ export function checkHeadingOrder(content: string, file: TFile, settings: SEOSet
 	let lastHeadingLevel = null;
 	let hasHeading = false;
 	let hasH1 = false;
-	let firstHeadingLine = 0;
 	let inCodeBlock = false;
-	let codeBlockLanguage = '';
 	
 	for (let i = 0; i < originalLines.length; i++) {
 		const line = originalLines[i];
@@ -41,11 +39,9 @@ export function checkHeadingOrder(content: string, file: TFile, settings: SEOSet
 			if (inCodeBlock) {
 				// End of code block
 				inCodeBlock = false;
-				codeBlockLanguage = '';
 			} else {
 				// Start of code block
 				inCodeBlock = true;
-				codeBlockLanguage = codeBlockMatch[1] || '';
 			}
 			continue;
 		}
@@ -71,7 +67,6 @@ export function checkHeadingOrder(content: string, file: TFile, settings: SEOSet
 			// If this is the first heading, don't check for violations yet
 			if (lastHeadingLevel === null) {
 				lastHeadingLevel = currentLevel;
-				firstHeadingLine = lineNumber;
 				continue;
 			}
 			

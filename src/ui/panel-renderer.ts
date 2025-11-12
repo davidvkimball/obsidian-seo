@@ -3,15 +3,13 @@
  * Handles the complex rendering of both current and global panels
  */
 
-import { App, TFile } from "obsidian";
+import { App } from "obsidian";
 import SEOPlugin from "../main";
 import { SEOResults } from "../types";
 import { getVaultFoldersInfo } from "./panel-utils";
 import { PanelActions } from "./panel-actions";
 import { ResultsDisplay } from "./results-display";
 import { SEOSidePanel } from "./side-panel";
-
-type SortType = 'issues-desc' | 'issues-asc' | 'warnings-desc' | 'warnings-asc' | 'notices-desc' | 'notices-asc' | 'filename-asc' | 'filename-desc';
 
 export class PanelRenderer {
 	constructor(

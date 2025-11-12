@@ -1,6 +1,5 @@
 import { App, PluginSettingTab, Setting } from "obsidian";
 import SEOPlugin from "./main";
-import { SEOSettings } from "./settings";
 
 export class SEOSettingTab extends PluginSettingTab {
 	plugin: SEOPlugin;
@@ -116,7 +115,7 @@ export class SEOSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		const useFilenameAsSlugSetting = new Setting(containerEl)
+		new Setting(containerEl)
 			.setName('Use file/folder name as slug')
 			.setDesc('Use file/folder name as slug instead of a property')
 			.addToggle(toggle => toggle
@@ -187,7 +186,7 @@ export class SEOSettingTab extends PluginSettingTab {
 				}));
 
 		// Add performance warning
-		const warningEl = duplicateContentSetting.descEl.createEl('div', {
+		duplicateContentSetting.descEl.createEl('div', {
 			text: '⚠️ Warning: This feature can be very resource-intensive with large vaults and many notes. Disable for faster audits.',
 			cls: 'setting-item-description seo-warning-message'
 		});
@@ -321,7 +320,7 @@ export class SEOSettingTab extends PluginSettingTab {
 				}));
 
 		// Add warning for vault-wide external link checking
-		const vaultWarningEl = vaultCheckSetting.descEl.createEl('div', {
+		vaultCheckSetting.descEl.createEl('div', {
 			text: '⚠️ Warning: This will make vault audits extremely slow. Use the "Check external links" button instead for individual notes.',
 			cls: 'setting-item-description seo-warning-message'
 		});

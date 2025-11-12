@@ -38,7 +38,7 @@ export class ProgressIndicator extends Component {
 		this.progressBar = progressBarContainer.createDiv('seo-progress-bar');
 
 		// Create cancel button
-		const cancelButton = progressContainer.createEl('button', {
+		progressContainer.createEl('button', {
 			text: 'Cancel',
 			cls: 'seo-progress-cancel'
 		});

@@ -4,7 +4,6 @@
  */
 
 import { Notice } from "obsidian";
-import { SEOCheckResult } from "../types";
 
 /**
  * Error severity levels

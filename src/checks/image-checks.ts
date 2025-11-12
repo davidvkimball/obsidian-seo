@@ -26,8 +26,7 @@ export function checkImageNaming(content: string, file: TFile, settings: SEOSett
 	// Remove code blocks to avoid false positives
 	const cleanContent = removeCodeBlocks(content);
 	
-	// Find image references with line numbers
-	const lines = content.split('\n');
+	// Find image references
 	const imageMatches = cleanContent.match(/!\[[^\]]*\]\(([^)]+)\)/g);
 	if (imageMatches) {
 		imageMatches.forEach((match, index) => {

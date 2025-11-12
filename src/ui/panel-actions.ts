@@ -2,7 +2,6 @@ import { App, Notice, setIcon, Menu, TFile } from "obsidian";
 import { SEOResults } from "../types";
 import { SEOSettings } from "../settings";
 import { sortFiles } from "./panel-utils";
-import { SEOCurrentPanelViewType } from "./panel-constants";
 import { SEOSidePanel } from "./side-panel";
 
 import SEOPlugin from "../main";
@@ -118,7 +117,6 @@ export class PanelActions {
 
 	async refreshGlobalResults(abortSignal?: AbortSignal): Promise<SEOResults[]> {
 		let auditNotice: Notice | null = null;
-		let wasCancelled = false;
 		
 		try {
 			// Clear cache first to ensure fresh results
@@ -159,7 +157,6 @@ export class PanelActions {
 			}
 			
 			if (error instanceof Error && error.name === 'AbortError') {
-				wasCancelled = true;
 				console.debug('Vault audit cancelled by user');
 				new Notice('Vault audit cancelled.');
 				return [];
@@ -180,7 +177,7 @@ export class PanelActions {
 					// Method 1: Use getLeaf and open
 					const leaf = this.app.workspace.getLeaf();
 					await leaf.openFile(file);
-				} catch (error) {
+				} catch {
 					// Method 2: Fallback to openLinkText
 					await this.app.workspace.openLinkText(filePath, '', true);
 				}

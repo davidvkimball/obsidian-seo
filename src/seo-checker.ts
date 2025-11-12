@@ -1,6 +1,6 @@
 import { App, TFile, Notice } from "obsidian";
 import SEOPlugin from "./main";
-import { SEOResults, SEOCheckResult } from "./types";
+import { SEOResults } from "./types";
 import { SEOSettings } from "./settings";
 
 // Simple cache for SEO results
@@ -243,7 +243,7 @@ async function generateFileHash(file: TFile, app: App): Promise<string> {
 		const stat = await app.vault.adapter.stat(file.path);
 		// Simple hash combining content length and modification time
 		return `${content.length}-${stat?.mtime || Date.now()}`;
-	} catch (error) {
+	} catch {
 		return `${Date.now()}`; // Fallback to timestamp
 	}
 }

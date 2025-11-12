@@ -7,7 +7,6 @@ import { TFile } from "obsidian";
 import { SEOSettings } from "../settings";
 import { SEOCheckResult } from "../types";
 import { removeCodeBlocks } from "./utils/content-parser";
-import { getContextAroundLine } from "./utils/position-utils";
 
 /**
  * Checks meta description length and presence
@@ -671,7 +670,6 @@ export function checkKeywordInHeadings(content: string, file: TFile, settings: S
 	const keywordWords = keywordLower.split(/\s+/).filter(word => word.length > 0);
 	
 	let keywordFoundInH1 = false;
-	let foundH1Text = '';
 	
 	for (const h1 of h1Headings) {
 		const h1Lower = h1.text.toLowerCase();
@@ -679,7 +677,6 @@ export function checkKeywordInHeadings(content: string, file: TFile, settings: S
 		
 		if (allWordsFound) {
 			keywordFoundInH1 = true;
-			foundH1Text = h1.text;
 			break;
 		}
 	}

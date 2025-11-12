@@ -50,7 +50,6 @@ export class SEOSidePanel extends ItemView {
 		
 		// Listen for file changes to update current note panel
 		if (this.panelType === 'current') {
-			let activeLeafChangeTimeout: ReturnType<typeof setTimeout> | null = null;
 			this.registerEvent(this.app.workspace.on('active-leaf-change', () => {
 				// Cancel any ongoing audit when switching files
 				if (SEOSidePanel.globalAuditController) {
@@ -284,7 +283,7 @@ export class SEOSidePanel extends ItemView {
 			
 		} else {
 				// No results available, show message
-				const noResultsEl = this.containerEl.createEl('div', { 
+				this.containerEl.createEl('div', { 
 					cls: 'seo-info-note seo-no-results-message',
 					text: 'No SEO results available for this file. Click "Refresh" to run an audit.'
 				});
