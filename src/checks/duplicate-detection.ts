@@ -125,7 +125,7 @@ export class VaultDuplicateDetector {
 	private extractFileMetadata(file: TFile, content: string): FileMetadata {
 		// Extract frontmatter
 		const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---\n/);
-		const frontmatter: Record<string, any> = {};
+		const frontmatter: Record<string, unknown> = {};
 		
 		if (frontmatterMatch && frontmatterMatch[1]) {
 			const frontmatterContent = frontmatterMatch[1];
@@ -151,7 +151,8 @@ export class VaultDuplicateDetector {
 		// Extract title
 		let title = '';
 		if (this.settings.titleProperty && frontmatter[this.settings.titleProperty]) {
-			title = frontmatter[this.settings.titleProperty];
+			const titleValue = frontmatter[this.settings.titleProperty];
+			title = typeof titleValue === 'string' ? titleValue : file.basename;
 		} else if (this.settings.useFilenameAsTitle) {
 			title = file.basename;
 		} else {
@@ -161,7 +162,8 @@ export class VaultDuplicateDetector {
 		// Extract description
 		let description: string | undefined;
 		if (this.settings.descriptionProperty && frontmatter[this.settings.descriptionProperty]) {
-			description = frontmatter[this.settings.descriptionProperty];
+			const descValue = frontmatter[this.settings.descriptionProperty];
+			description = typeof descValue === 'string' ? descValue : undefined;
 		}
 
 		return {

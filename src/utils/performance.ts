@@ -20,7 +20,7 @@ interface PerformanceWithMemory extends Performance {
  * @param immediate - Execute immediately on first call
  * @returns Debounced function
  */
-export function debounce<T extends any[]>(
+export function debounce<T extends unknown[]>(
 	func: (...args: T) => void,
 	wait: number,
 	immediate: boolean = false
@@ -53,7 +53,7 @@ export function debounce<T extends any[]>(
  * @param wait - Wait time in milliseconds
  * @returns Throttled function
  */
-export function throttle<T extends any[]>(
+export function throttle<T extends unknown[]>(
 	func: (...args: T) => void,
 	wait: number
 ): (...args: T) => void {
@@ -277,7 +277,7 @@ export class BatchProcessor<T> {
 	 */
 	add(item: T): void {
 		this.queue.push(item);
-		this.processIfNeeded();
+		void this.processIfNeeded();
 	}
 
 	/**
@@ -286,7 +286,7 @@ export class BatchProcessor<T> {
 	 */
 	addBatch(items: T[]): void {
 		this.queue.push(...items);
-		this.processIfNeeded();
+		void this.processIfNeeded();
 	}
 
 	/**
@@ -335,13 +335,13 @@ export const performanceUtils = {
 	/**
 	 * Create a debounced function with default settings
 	 */
-	createDebounced: <T extends any[]>(func: (...args: T) => void, wait: number = 300) => 
+	createDebounced: <T extends unknown[]>(func: (...args: T) => void, wait: number = 300) => 
 		debounce(func, wait),
 
 	/**
 	 * Create a throttled function with default settings
 	 */
-	createThrottled: <T extends any[]>(func: (...args: T) => void, wait: number = 100) => 
+	createThrottled: <T extends unknown[]>(func: (...args: T) => void, wait: number = 100) => 
 		throttle(func, wait),
 
 	/**

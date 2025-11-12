@@ -438,7 +438,7 @@ export class PanelActions {
 			fileLink.addEventListener('click', (e) => {
 				e.preventDefault();
 				e.stopPropagation();
-				this.openFile(result.file);
+				void this.openFile(result.file);
 			});
 			
 			// Stats and audit button container

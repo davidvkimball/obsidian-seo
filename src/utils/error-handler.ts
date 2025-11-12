@@ -110,7 +110,7 @@ export async function withErrorHandling<T>(
  * @param fallback - Fallback value to return on error
  * @returns Safe async function
  */
-export function createSafeAsyncFunction<T extends any[], R>(
+export function createSafeAsyncFunction<T extends unknown[], R>(
 	fn: (...args: T) => Promise<R>,
 	context: string,
 	fallback: R
@@ -132,7 +132,7 @@ export function createSafeAsyncFunction<T extends any[], R>(
  * @throws SEOPluginError if any required parameter is missing
  */
 export function validateRequiredParams(
-	params: Record<string, any>,
+	params: Record<string, unknown>,
 	context: string
 ): void {
 	const missing = Object.entries(params)
@@ -156,7 +156,7 @@ export function validateRequiredParams(
  * @param context - Context for error reporting
  * @returns Debounced function with error handling
  */
-export function createDebouncedFunction<T extends any[], R>(
+export function createDebouncedFunction<T extends unknown[], R>(
 	fn: (...args: T) => Promise<R>,
 	delay: number,
 	context: string

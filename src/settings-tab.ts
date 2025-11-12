@@ -16,7 +16,7 @@ export class SEOSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl).setName('Global').setHeading();
 
-		// Directory settings
+		// Directory configuration
 		new Setting(containerEl)
 			.setName('Scan directories')
 			.setDesc('Comma-separated list of directory names to scan. Leave blank to scan all directories.')

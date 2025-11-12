@@ -23,7 +23,7 @@ export class PanelManager {
 		
 		if (existingLeaf) {
 			// If panel exists, just reveal it and make it active
-			this.app.workspace.revealLeaf(existingLeaf);
+			void this.app.workspace.revealLeaf(existingLeaf);
 			this.app.workspace.setActiveLeaf(existingLeaf);
 			
 			// Store reference for settings updates
@@ -33,7 +33,7 @@ export class PanelManager {
 			
 			// Ensure icon loads properly - use setTimeout for panel timing
 			if (existingLeaf.view instanceof SEOSidePanel) {
-				const panel = existingLeaf.view as SEOSidePanel;
+				const panel = existingLeaf.view;
 				if (typeof panel.forceIconRefresh === 'function') {
 					setTimeout(() => panel.forceIconRefresh(), 100);
 				}
@@ -46,15 +46,14 @@ export class PanelManager {
 				// Create the panel manually - this is the most reliable approach
 				const panel = new SEOSidePanel(this.plugin, panelType, leaf);
 				this.plugin.sidePanel = panel; // Store reference for settings updates
-				leaf.open(panel);
+				void leaf.open(panel);
 				this.app.workspace.setActiveLeaf(leaf);
 				
 				// Ensure icon loads properly after opening
 				setTimeout(() => {
 					if (leaf.view instanceof SEOSidePanel) {
-						const panel = leaf.view as SEOSidePanel;
-						if (typeof panel.forceIconRefresh === 'function') {
-							panel.forceIconRefresh();
+						if (typeof leaf.view.forceIconRefresh === 'function') {
+							leaf.view.forceIconRefresh();
 						}
 					}
 				}, 100);

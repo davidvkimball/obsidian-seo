@@ -88,7 +88,7 @@ export default class SEOPlugin extends Plugin {
 			// Add ribbon icon for easy access (default to global) with error handling
 			await withErrorHandling(
 				() => {
-					this.addRibbonIcon('search-check', 'Open SEO audit panel', async () => {
+					this.addRibbonIcon('search-check', 'Open SEO audit panel', () => {
 						try {
 							// Check if panel already exists
 							const existingPanels = this.app.workspace.getLeavesOfType('seo-global-panel');
@@ -98,23 +98,25 @@ export default class SEOPlugin extends Plugin {
 							
 							// Only trigger manual refresh if panel already existed (not first run)
 							if (!isFirstRun) {
-								void setTimeout(async () => {
-									try {
-										const globalPanels = this.app.workspace.getLeavesOfType('seo-global-panel');
-										if (globalPanels.length > 0) {
-											const panel = globalPanels[0];
-											if (panel?.view) {
-												// Cast to SEOSidePanel and trigger refresh
-												const seoPanel = panel.view as unknown as SEOPanelView;
-												// Trigger the refresh logic (same as clicking the refresh button)
-												await seoPanel.actions.refreshGlobalResults();
-												// Update the panel display with new results
-												seoPanel.render();
+								void setTimeout(() => {
+									void (async () => {
+										try {
+											const globalPanels = this.app.workspace.getLeavesOfType('seo-global-panel');
+											if (globalPanels.length > 0) {
+												const panel = globalPanels[0];
+												if (panel?.view) {
+													// Cast to SEOSidePanel and trigger refresh
+													const seoPanel = panel.view as unknown as SEOPanelView;
+													// Trigger the refresh logic (same as clicking the refresh button)
+													await seoPanel.actions.refreshGlobalResults();
+													// Update the panel display with new results
+													seoPanel.render();
+												}
 											}
+										} catch (error) {
+											handleError(error, 'ribbon icon panel refresh', true);
 										}
-									} catch (error) {
-										handleError(error, 'ribbon icon panel refresh', true);
-									}
+									})();
 								}, 500);
 							}
 							// If first run, let the panel's onOpen() handle the initial scan automatically

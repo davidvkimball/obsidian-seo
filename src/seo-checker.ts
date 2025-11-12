@@ -74,7 +74,7 @@ export async function runSEOCheck(plugin: SEOPlugin, files: TFile[], abortContro
 			const result = await checkFile(plugin, file, content, vaultDetector, abortController);
 			
 			// Cache the result
-			cacheResult(file, result, plugin);
+			void cacheResult(file, result, plugin);
 			results.push(result);
 		} catch (error) {
 			if (error instanceof Error && error.name === 'AbortError') {

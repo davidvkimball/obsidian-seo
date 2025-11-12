@@ -60,28 +60,30 @@ export function registerCommands(plugin: SEOPlugin) {
 		id: "run-global",
 		name: "Run vault audit",
 		icon: "search-check",
-		callback: async () => {
+		callback: () => {
 			plugin.openGlobalPanel();
 			
 			// Always check if panel opened successfully and run the audit
-			void setTimeout(async () => {
-				const globalPanels = plugin.app.workspace.getLeavesOfType('seo-global-panel');
-				
-				if (globalPanels.length === 0) {
-					// Fallback: try to open again
-					plugin.openGlobalPanel();
-					return;
-				}
-				
-				const panel = globalPanels[0];
-				if (panel?.view) {
-					const seoPanel = panel.view as unknown as SEOPanelView;
+			void setTimeout(() => {
+				void (async () => {
+					const globalPanels = plugin.app.workspace.getLeavesOfType('seo-global-panel');
 					
-					// Always trigger the refresh logic (same as clicking the refresh button)
-					await seoPanel.actions.refreshGlobalResults();
-					// Update the panel display with new results
-					seoPanel.render();
-				}
+					if (globalPanels.length === 0) {
+						// Fallback: try to open again
+						plugin.openGlobalPanel();
+						return;
+					}
+					
+					const panel = globalPanels[0];
+					if (panel?.view) {
+						const seoPanel = panel.view as unknown as SEOPanelView;
+						
+						// Always trigger the refresh logic (same as clicking the refresh button)
+						await seoPanel.actions.refreshGlobalResults();
+						// Update the panel display with new results
+						seoPanel.render();
+					}
+				})();
 			}, 300);
 		}
 	});

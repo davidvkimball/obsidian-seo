@@ -194,7 +194,7 @@ export class SEOSidePanel extends ItemView {
 		
 		// Force re-registration of the view with correct icon
 		if (this.leaf) {
-			this.leaf.setViewState({
+			void this.leaf.setViewState({
 				type: this.getViewType(),
 				state: this.leaf.view.getState()
 			});
@@ -403,7 +403,7 @@ export class SEOSidePanel extends ItemView {
 			const customEvent = event as CustomEvent;
 			this.currentSort = customEvent.detail.sortType;
 			this.plugin.settings.defaultSort = customEvent.detail.sortType;
-			this.plugin.saveSettings();
+			void this.plugin.saveSettings();
 			this.render();
 		});
 	}
@@ -592,7 +592,7 @@ export class SEOSidePanel extends ItemView {
 			}
 			
 			// Save updated results
-			this.plugin.saveSettings();
+			void this.plugin.saveSettings();
 			
 			// Update global panel if it's open
 			this.updateGlobalPanelIfOpen();
@@ -721,7 +721,7 @@ export class SEOSidePanel extends ItemView {
 			(sortType: string) => {
 				this.currentSort = sortType as SortType;
 				this.plugin.settings.defaultSort = sortType as SortType;
-				this.plugin.saveSettings();
+				void this.plugin.saveSettings();
 			},
 			(event: MouseEvent) => {
 				// Check if notices should be shown
@@ -735,7 +735,7 @@ export class SEOSidePanel extends ItemView {
 				this.actions.showSortMenu(event, issuesFiles, container, this.currentSort, (sortType: string) => {
 					this.currentSort = sortType as SortType;
 					this.plugin.settings.defaultSort = sortType as SortType;
-					this.plugin.saveSettings();
+					void this.plugin.saveSettings();
 				}, this.plugin.settings);
 			},
 			this.plugin.settings
