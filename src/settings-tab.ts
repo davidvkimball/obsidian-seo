@@ -14,7 +14,7 @@ export class SEOSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl('h2', { text: 'Global' });
+		new Setting(containerEl).setName('Global').setHeading();
 
 		// Directory settings
 		new Setting(containerEl)
@@ -42,7 +42,7 @@ export class SEOSettingTab extends PluginSettingTab {
 			.setName('Title prefix / suffix')
 			.setDesc('Specify an optional prefix or suffix that gets appended to your meta title - used to factor in character count for the title length check')
 			.addText(text => text
-				.setPlaceholder('- Author Name')
+				.setPlaceholder('Author name')
 				.setValue(this.plugin.settings.titlePrefixSuffix)
 				.onChange(async (value) => {
 					this.plugin.settings.titlePrefixSuffix = value;
@@ -60,7 +60,7 @@ export class SEOSettingTab extends PluginSettingTab {
 				}));
 
 		// Property names
-		containerEl.createEl('h2', { text: 'Property Names' });
+		new Setting(containerEl).setName('Property names').setHeading();
 
 		new Setting(containerEl)
 			.setName('Keyword property')
@@ -143,7 +143,7 @@ export class SEOSettingTab extends PluginSettingTab {
 		}
 
 		// Check toggles - in correct order
-		containerEl.createEl('h2', { text: 'Audit Options' });
+		new Setting(containerEl).setName('Audit options').setHeading();
 
 		new Setting(containerEl)
 			.setName('Check meta title length')
@@ -188,7 +188,7 @@ export class SEOSettingTab extends PluginSettingTab {
 
 		// Add performance warning
 		const warningEl = duplicateContentSetting.descEl.createEl('div', {
-			text: '⚠️ WARNING: This feature can be very resource-intensive with large vaults and many notes. Disable for faster audits.',
+			text: '⚠️ Warning: This feature can be very resource-intensive with large vaults and many notes. Disable for faster audits.',
 			cls: 'setting-item-description seo-warning-message'
 		});
 
@@ -322,12 +322,12 @@ export class SEOSettingTab extends PluginSettingTab {
 
 		// Add warning for vault-wide external link checking
 		const vaultWarningEl = vaultCheckSetting.descEl.createEl('div', {
-			text: '⚠️ WARNING: This will make vault audits extremely slow. Use the "Check external links" button instead for individual notes.',
+			text: '⚠️ Warning: This will make vault audits extremely slow. Use the "Check external links" button instead for individual notes.',
 			cls: 'setting-item-description seo-warning-message'
 		});
 
 		// Thresholds
-		containerEl.createEl('h2', { text: 'Thresholds' });
+		new Setting(containerEl).setName('Thresholds').setHeading();
 
 		new Setting(containerEl)
 			.setName('Minimum content length')

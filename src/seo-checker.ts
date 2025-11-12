@@ -1,6 +1,7 @@
-import { TFile, Notice } from "obsidian";
+import { App, TFile, Notice } from "obsidian";
 import SEOPlugin from "./main";
 import { SEOResults, SEOCheckResult } from "./types";
+import { SEOSettings } from "./settings";
 
 // Simple cache for SEO results
 interface CacheEntry {
@@ -236,18 +237,18 @@ async function checkFile(plugin: SEOPlugin, file: TFile, content: string, vaultD
 }
 
 // Cache helper functions
-async function generateFileHash(file: TFile, app: any): Promise<string> {
+async function generateFileHash(file: TFile, app: App): Promise<string> {
 	try {
 		const content = await app.vault.read(file);
 		const stat = await app.vault.adapter.stat(file.path);
 		// Simple hash combining content length and modification time
-		return `${content.length}-${stat.mtime}`;
+		return `${content.length}-${stat?.mtime || Date.now()}`;
 	} catch (error) {
 		return `${Date.now()}`; // Fallback to timestamp
 	}
 }
 
-function generateSettingsHash(settings: any): string {
+function generateSettingsHash(settings: SEOSettings): string {
 	// Create a hash of the settings that affect SEO checks
 	// This includes all settings that could change the results
 	const relevantSettings = {
@@ -270,15 +271,10 @@ function generateSettingsHash(settings: any): string {
 		checkBrokenLinks: settings.checkBrokenLinks,
 		checkNakedLinks: settings.checkNakedLinks,
 		checkHeadingOrder: settings.checkHeadingOrder,
-		checkKeywordDensity: settings.checkKeywordDensity,
-		checkMetaDescription: settings.checkMetaDescription,
 		checkTitleLength: settings.checkTitleLength,
 		checkImageNaming: settings.checkImageNaming,
 		checkDuplicateContent: settings.checkDuplicateContent,
 		checkReadingLevel: settings.checkReadingLevel,
-		checkKeywordInTitle: settings.checkKeywordInTitle,
-		checkKeywordInSlug: settings.checkKeywordInSlug,
-		checkSlugFormat: settings.checkSlugFormat,
 		// Thresholds that affect results
 		duplicateThreshold: settings.duplicateThreshold,
 		// Add other settings that affect SEO results

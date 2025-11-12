@@ -3,7 +3,7 @@
  * Checks for naked links, broken links, and external link issues
  */
 
-import { TFile } from "obsidian";
+import { App, TFile } from "obsidian";
 import { SEOSettings } from "../settings";
 import { SEOCheckResult } from "../types";
 import { removeHtmlAttributes } from "./utils/content-parser";
@@ -16,11 +16,11 @@ import { findLineNumberForImage, getContextAroundLine } from "./utils/position-u
  * @param settings - Plugin settings
  * @returns Array of SEO check results
  */
-export async function checkNakedLinks(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkNakedLinks(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.checkNakedLinks) {
-		return [];
+		return Promise.resolve([]);
 	}
 	
 	// Remove code blocks and HTML content to avoid false positives
@@ -28,7 +28,7 @@ export async function checkNakedLinks(content: string, file: TFile, settings: SE
 	
 	// Find naked links (URLs without markdown link syntax)
 	// Use negative lookbehind to avoid matching URLs within other URLs
-	const nakedLinks = cleanContent.match(/(?<!\]\()(?<!https?:\/\/[^\s\)]*\/)https?:\/\/[^\s\)]+/g);
+	const nakedLinks = cleanContent.match(/(?<!\]\()(?<!https?:\/\/[^\s)]*\/)https?:\/\/[^\s)]+/g);
 	if (nakedLinks) {
 		nakedLinks.forEach((link, index) => {
 			// Skip archival URLs as they are meant to be displayed as-is
@@ -63,7 +63,7 @@ export async function checkNakedLinks(content: string, file: TFile, settings: SE
 		});
 	}
 	
-	return results;
+	return Promise.resolve(results);
 }
 
 /**
@@ -74,11 +74,11 @@ export async function checkNakedLinks(content: string, file: TFile, settings: SE
  * @param app - Obsidian app instance (optional)
  * @returns Array of SEO check results
  */
-export async function checkBrokenLinks(content: string, file: TFile, settings: SEOSettings, app?: any): Promise<SEOCheckResult[]> {
+export function checkBrokenLinks(content: string, file: TFile, settings: SEOSettings, app?: App): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.checkBrokenLinks) {
-		return [];
+		return Promise.resolve([]);
 	}
 	
 	// Find wikilinks [[link]] and [[link|display text]]
@@ -275,7 +275,7 @@ export async function checkBrokenLinks(content: string, file: TFile, settings: S
 		});
 	}
 	
-	return results;
+	return Promise.resolve(results);
 }
 
 /**
@@ -286,12 +286,12 @@ export async function checkBrokenLinks(content: string, file: TFile, settings: S
  * @param app - Obsidian app instance (optional)
  * @returns Array of SEO check results
  */
-export async function checkPotentiallyBrokenLinks(content: string, file: TFile, settings: SEOSettings, app?: any): Promise<SEOCheckResult[]> {
+export async function checkPotentiallyBrokenLinks(content: string, file: TFile, settings: SEOSettings, app?: App): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
 	// Only run this check in publish mode (flexible relative links), and when enabled
 	if (!settings.checkPotentiallyBrokenLinks || !settings.publishMode) {
-		return [];
+		return Promise.resolve([]);
 	}
 	
 	// First, get the list of definitely broken links to avoid duplicates
@@ -469,7 +469,7 @@ export async function checkPotentiallyBrokenLinks(content: string, file: TFile, 
 				if (!resolvedLink) {
 					// File doesn't exist, check if there's a similar file (case sensitivity, spaces, etc.)
 					const allFiles = app.vault.getMarkdownFiles();
-					const similarFiles = allFiles.filter((f: any) => 
+					const similarFiles = allFiles.filter((f: TFile) => 
 						f.path.toLowerCase().includes(linkPath.toLowerCase()) ||
 						f.basename.toLowerCase().includes(linkPath.toLowerCase())
 					);
@@ -480,7 +480,7 @@ export async function checkPotentiallyBrokenLinks(content: string, file: TFile, 
 							path: linkPath,
 							displayText: displayText,
 							anchor: anchor,
-							suggestions: similarFiles.map((f: any) => f.path)
+							suggestions: similarFiles.map((f: TFile) => f.path)
 						});
 					}
 				}
@@ -514,5 +514,5 @@ export async function checkPotentiallyBrokenLinks(content: string, file: TFile, 
 		});
 	}
 	
-	return results;
+	return Promise.resolve(results);
 }

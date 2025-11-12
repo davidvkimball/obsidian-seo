@@ -16,11 +16,11 @@ import { getContextAroundLine } from "./utils/position-utils";
  * @param settings - Plugin settings
  * @returns Array of SEO check results
  */
-export async function checkMetaDescription(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkMetaDescription(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.descriptionProperty) {
-		return [];
+		return Promise.resolve([]);
 	}
 	
 	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
@@ -31,7 +31,7 @@ export async function checkMetaDescription(content: string, file: TFile, setting
 			suggestion: "Add frontmatter with description property",
 			severity: 'warning'
 		});
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	const frontmatter = frontmatterMatch[1];
@@ -42,7 +42,7 @@ export async function checkMetaDescription(content: string, file: TFile, setting
 			suggestion: "Add frontmatter with description property",
 			severity: 'warning'
 		});
-		return results;
+		return Promise.resolve(results);
 	}
 	const descriptionMatch = frontmatter.match(new RegExp(`^${settings.descriptionProperty}:\\s*(.+)$`, 'm'));
 	
@@ -53,7 +53,7 @@ export async function checkMetaDescription(content: string, file: TFile, setting
 			suggestion: `Add ${settings.descriptionProperty} to frontmatter`,
 			severity: 'warning'
 		});
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	let description = descriptionMatch[1].trim();
@@ -87,7 +87,7 @@ export async function checkMetaDescription(content: string, file: TFile, setting
 		});
 	}
 	
-	return results;
+	return Promise.resolve(results);
 }
 
 /**
@@ -97,11 +97,11 @@ export async function checkMetaDescription(content: string, file: TFile, setting
  * @param settings - Plugin settings
  * @returns Array of SEO check results
  */
-export async function checkTitleLength(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkTitleLength(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.checkTitleLength) {
-		return [];
+		return Promise.resolve([]);
 	}
 	
 	let title = '';
@@ -134,7 +134,7 @@ export async function checkTitleLength(content: string, file: TFile, settings: S
 	// Only check title length if we have a title from frontmatter or filename
 	// Don't show the check at all if no title is configured
 	if (!title) {
-		return results; // Return empty results - don't show the check
+		return Promise.resolve(results); // Return empty results - don't show the check
 	}
 	
 	// Apply prefix/suffix if configured (adds space for character count)
@@ -172,7 +172,7 @@ export async function checkTitleLength(content: string, file: TFile, settings: S
 		});
 	}
 	
-	return results;
+	return Promise.resolve(results);
 }
 
 /**
@@ -182,11 +182,11 @@ export async function checkTitleLength(content: string, file: TFile, settings: S
  * @param settings - Plugin settings
  * @returns Array of SEO check results
  */
-export async function checkKeywordDensity(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkKeywordDensity(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.keywordProperty) {
-		return [];
+		return Promise.resolve([]);
 	}
 	
 	// Get keyword from frontmatter
@@ -198,7 +198,7 @@ export async function checkKeywordDensity(content: string, file: TFile, settings
 			suggestion: "Add frontmatter with keyword property",
 			severity: 'warning'
 		});
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	const frontmatter = frontmatterMatch[1];
@@ -209,7 +209,7 @@ export async function checkKeywordDensity(content: string, file: TFile, settings
 			suggestion: "Add frontmatter with keyword property",
 			severity: 'warning'
 		});
-		return results;
+		return Promise.resolve(results);
 	}
 	// Parse line by line instead of using regex
 	const lines = frontmatter.split('\n');
@@ -230,7 +230,7 @@ export async function checkKeywordDensity(content: string, file: TFile, settings
 			message: `No ${settings.keywordProperty} defined in properties`,
 			severity: 'notice'
 		});
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	// Validate that the keyword is meaningful (not just a boolean or empty)
@@ -240,7 +240,7 @@ export async function checkKeywordDensity(content: string, file: TFile, settings
 			message: `No valid keyword defined in properties`,
 			severity: 'notice'
 		});
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	// Remove code blocks and frontmatter for keyword analysis
@@ -300,7 +300,7 @@ export async function checkKeywordDensity(content: string, file: TFile, settings
 			message: "No content found for keyword analysis",
 			severity: 'warning'
 		});
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	const density = (keywordCount / totalWords) * 100;
@@ -327,7 +327,7 @@ export async function checkKeywordDensity(content: string, file: TFile, settings
 		});
 	}
 	
-	return results;
+	return Promise.resolve(results);
 }
 
 /**
@@ -344,21 +344,21 @@ export async function checkKeywordDensity(content: string, file: TFile, settings
  * @param settings - Plugin settings
  * @returns Array of SEO check results
  */
-export async function checkKeywordInDescription(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkKeywordInDescription(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.keywordProperty || !settings.descriptionProperty) {
-		return [];
+		return Promise.resolve([]);
 	}
 	
 	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
 	if (!frontmatterMatch) {
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	const frontmatter = frontmatterMatch[1];
 	if (!frontmatter) {
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	// Parse line by line instead of using regex
@@ -376,7 +376,7 @@ export async function checkKeywordInDescription(content: string, file: TFile, se
 	
 	if (!foundKeywordLine || !keyword || keyword === 'false' || keyword === 'true' || keyword === 'null' || keyword === 'undefined') {
 		// No valid keyword, skip this check
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	// Get description from frontmatter
@@ -398,7 +398,7 @@ export async function checkKeywordInDescription(content: string, file: TFile, se
 			suggestion: "Add a meta description to your frontmatter",
 			severity: 'warning'
 		});
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	// Check if keyword appears in description (case-insensitive, flexible matching)
@@ -426,7 +426,7 @@ export async function checkKeywordInDescription(content: string, file: TFile, se
 		});
 	}
 	
-	return results;
+	return Promise.resolve(results);
 }
 
 /**
@@ -436,21 +436,21 @@ export async function checkKeywordInDescription(content: string, file: TFile, se
  * @param settings - Plugin settings
  * @returns Array of SEO check results
  */
-export async function checkTitleH1Uniqueness(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkTitleH1Uniqueness(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.titleProperty) {
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
 	if (!frontmatterMatch) {
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	const frontmatter = frontmatterMatch[1];
 	if (!frontmatter) {
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	// Get title from frontmatter
@@ -472,7 +472,7 @@ export async function checkTitleH1Uniqueness(content: string, file: TFile, setti
 	if (!metaTitle) {
 		// No title found in frontmatter - this check requires a title to be meaningful
 		// Skip silently as this is expected behavior when no title is set
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	// Get H1 heading
@@ -487,7 +487,7 @@ export async function checkTitleH1Uniqueness(content: string, file: TFile, setti
 				message: "Meta title and H1 are unique (prefix/suffix configured)",
 				severity: 'info'
 			});
-			return results;
+			return Promise.resolve(results);
 		}
 		
 		// The H1 is the title without prefix/suffix
@@ -527,7 +527,7 @@ export async function checkTitleH1Uniqueness(content: string, file: TFile, setti
 			suggestion: "Add an H1 heading to your content, or enable 'Title property is H1' if your static site generator creates H1s from the title",
 			severity: 'warning'
 		});
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	// Compare meta title and H1
@@ -549,7 +549,7 @@ export async function checkTitleH1Uniqueness(content: string, file: TFile, setti
 		});
 	}
 	
-	return results;
+	return Promise.resolve(results);
 }
 
 /**
@@ -559,21 +559,21 @@ export async function checkTitleH1Uniqueness(content: string, file: TFile, setti
  * @param settings - Plugin settings
  * @returns Array of SEO check results
  */
-export async function checkKeywordInHeadings(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkKeywordInHeadings(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.keywordProperty) {
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
 	if (!frontmatterMatch) {
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	const frontmatter = frontmatterMatch[1];
 	if (!frontmatter) {
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	// Parse line by line instead of using regex
@@ -595,7 +595,7 @@ export async function checkKeywordInHeadings(content: string, file: TFile, setti
 			message: `No ${settings.keywordProperty} defined in properties`,
 			severity: 'notice'
 		});
-		return results;
+		return Promise.resolve(results);
 	}
 
 	if (!keyword || keyword === 'false' || keyword === 'true' || keyword === 'null' || keyword === 'undefined') {
@@ -604,7 +604,7 @@ export async function checkKeywordInHeadings(content: string, file: TFile, setti
 			message: `No valid keyword defined in properties`,
 			severity: 'notice'
 		});
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	// Extract H1 headings only (most important for SEO)
@@ -663,7 +663,7 @@ export async function checkKeywordInHeadings(content: string, file: TFile, setti
 			suggestion: "Add an H1 heading to structure your content and include your target keyword",
 			severity: 'warning'
 		});
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	// Check if keyword appears in any H1 heading (flexible matching)
@@ -699,25 +699,25 @@ export async function checkKeywordInHeadings(content: string, file: TFile, setti
 		});
 	}
 	
-	return results;
+	return Promise.resolve(results);
 }
 
-export async function checkKeywordInTitle(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkKeywordInTitle(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.keywordProperty || !settings.titleProperty) {
-		return [];
+		return Promise.resolve([]);
 	}
 	
 	// Get keyword from frontmatter
 	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
 	if (!frontmatterMatch) {
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	const frontmatter = frontmatterMatch[1];
 	if (!frontmatter) {
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	// Parse line by line instead of using regex
@@ -749,7 +749,7 @@ export async function checkKeywordInTitle(content: string, file: TFile, settings
 			message: `No ${settings.keywordProperty} defined in properties`,
 			severity: 'notice'
 		});
-		return results;
+		return Promise.resolve(results);
 	}
 
 	if (!keyword || keyword === 'false' || keyword === 'true' || keyword === 'null' || keyword === 'undefined') {
@@ -758,12 +758,12 @@ export async function checkKeywordInTitle(content: string, file: TFile, settings
 			message: `No valid keyword defined in properties`,
 			severity: 'notice'
 		});
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	// Skip check if no title found
 	if (!foundTitleLine || !title) {
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	// Check if keyword appears in title (case-insensitive, generous matching)
@@ -791,5 +791,5 @@ export async function checkKeywordInTitle(content: string, file: TFile, settings
 		});
 	}
 	
-	return results;
+	return Promise.resolve(results);
 }

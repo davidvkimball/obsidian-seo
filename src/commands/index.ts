@@ -2,10 +2,11 @@ import { Plugin, Notice, TFile, TFolder } from "obsidian";
 import SEOPlugin from "../main";
 import { runSEOCheck } from "../seo-checker";
 import { SEOResults } from "../types";
+import { PanelActions } from "../ui/panel-actions";
 
 interface SEOPanelView {
 	globalResults: SEOResults[];
-	actions: any;
+	actions: PanelActions;
 	render(): void;
 }
 
@@ -16,33 +17,33 @@ interface SEOPanelView {
 export function registerCommands(plugin: SEOPlugin) {
 	// Open SEO Current Note panel only (without running audit)
 	plugin.addCommand({
-		id: "seo-open-current",
+		id: "open-current",
 		name: "Open current note audit",
 		icon: "search-check",
-		callback: async () => {
+		callback: () => {
 			plugin.openCurrentPanel();
 		}
 	});
 
 	// Open SEO Global panel only (without running audit)
 	plugin.addCommand({
-		id: "seo-open-global",
+		id: "open-global",
 		name: "Open vault audit",
 		icon: "search-check",
-		callback: async () => {
+		callback: () => {
 			plugin.openGlobalPanel();
 		}
 	});
 
 	// Run SEO Current Note audit (opens panel and runs audit)
 	plugin.addCommand({
-		id: "seo-run-current",
+		id: "run-current",
 		name: "Run current note audit",
 		icon: "search-check",
-		callback: async () => {
+		callback: () => {
 			plugin.openCurrentPanel();
 			// Wait for panel to open, then trigger the audit
-			setTimeout(async () => {
+			setTimeout(() => {
 				const currentPanel = plugin.app.workspace.getLeavesOfType('seo-current-panel')[0];
 				if (currentPanel && currentPanel.view) {
 					const checkBtn = currentPanel.view.containerEl.querySelector('.seo-top-btn') as HTMLButtonElement;
@@ -56,14 +57,14 @@ export function registerCommands(plugin: SEOPlugin) {
 
 	// Run SEO Global audit (opens panel and runs audit)
 	plugin.addCommand({
-		id: "seo-run-global",
+		id: "run-global",
 		name: "Run vault audit",
 		icon: "search-check",
 		callback: async () => {
 			plugin.openGlobalPanel();
 			
 			// Always check if panel opened successfully and run the audit
-			setTimeout(async () => {
+			void setTimeout(async () => {
 				const globalPanels = plugin.app.workspace.getLeavesOfType('seo-global-panel');
 				
 				if (globalPanels.length === 0) {
@@ -92,7 +93,7 @@ export function registerCommands(plugin: SEOPlugin) {
  * @param plugin - The SEO plugin instance
  * @returns Promise resolving to array of files to check
  */
-async function getFilesToCheck(plugin: SEOPlugin): Promise<TFile[]> {
+function getFilesToCheck(plugin: SEOPlugin): Promise<TFile[]> {
 	const { vault } = plugin.app;
 	const { scanDirectories, ignoreUnderscoreFiles } = plugin.settings;
 	
@@ -123,5 +124,5 @@ async function getFilesToCheck(plugin: SEOPlugin): Promise<TFile[]> {
 		});
 	}
 	
-	return files;
+	return Promise.resolve(files);
 }

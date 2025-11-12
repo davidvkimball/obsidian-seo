@@ -15,11 +15,11 @@ import { getContextAroundLine } from "./utils/position-utils";
  * @param settings - Plugin settings
  * @returns Array of SEO check results
  */
-export async function checkHeadingOrder(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkHeadingOrder(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.checkHeadingOrder) {
-		return [];
+		return Promise.resolve([]);
 	}
 	
 	// Work with original content for accurate line numbers
@@ -134,5 +134,5 @@ export async function checkHeadingOrder(content: string, file: TFile, settings: 
 		});
 	}
 	
-	return results;
+	return Promise.resolve(results);
 }

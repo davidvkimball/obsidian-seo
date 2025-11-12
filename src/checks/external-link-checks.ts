@@ -3,7 +3,7 @@
  * Checks for external links and broken external links with network requests
  */
 
-import { TFile } from "obsidian";
+import { TFile, requestUrl } from "obsidian";
 import { SEOSettings } from "../settings";
 import { SEOCheckResult } from "../types";
 import { findLineNumberForImage, getContextAroundLine } from "./utils/position-utils";
@@ -131,7 +131,7 @@ function extractValidExternalLinks(content: string): string[] {
 	}
 	
 	// Find naked URLs with improved regex and validation
-	const nakedUrls = cleanContent.match(/https?:\/\/[^\s\)\]]+/g);
+	const nakedUrls = cleanContent.match(/https?:\/\/[^\s)\]]+/g);
 	if (nakedUrls) {
 		// Get all markdown link URLs to exclude them from naked URLs
 		const markdownLinkUrls = new Set<string>(externalLinks);
@@ -169,11 +169,11 @@ function extractValidExternalLinks(content: string): string[] {
  * @param settings - Plugin settings
  * @returns Array of SEO check results (notices)
  */
-export async function checkExternalLinks(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkExternalLinks(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.checkExternalLinks) {
-		return [];
+		return Promise.resolve([]);
 	}
 	
 	// Use the improved link extraction
@@ -203,7 +203,7 @@ export async function checkExternalLinks(content: string, file: TFile, settings:
 		});
 	}
 	
-	return results;
+	return Promise.resolve(results);
 }
 
 /**
@@ -218,7 +218,7 @@ export async function checkExternalBrokenLinks(content: string, file: TFile, set
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.enableExternalLinkVaultCheck) {
-		return [];
+		return Promise.resolve([]);
 	}
 	
 	// Use the improved link extraction
@@ -230,103 +230,52 @@ export async function checkExternalBrokenLinks(content: string, file: TFile, set
 			message: "No external links found",
 			severity: 'info'
 		});
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	// Check each external link
 	for (const url of uniqueLinks) {
 		// Check for global cancellation before processing each link
 		if (abortController?.signal.aborted) {
-			console.log('External link check cancelled');
+			console.debug('External link check cancelled');
 			throw new DOMException('Operation was aborted', 'AbortError');
 		}
 		
-		let timeoutId: NodeJS.Timeout | null = null;
 		let linkIsBroken = false;
 		let errorMessage = '';
 		let suggestion = '';
 		
 		try {
-			const controller = new AbortController();
-			timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-			
-			// Use a more reliable approach: try HEAD request first, then GET if HEAD fails
-			try {
-				// First try HEAD request with CORS to get status codes
-				const response = await fetch(url, {
-					method: 'HEAD',
-					headers: {
-						'User-Agent': 'Mozilla/5.0 (compatible; Obsidian-SEO-Plugin/1.0)'
-					},
-					mode: 'cors',
-					signal: controller.signal
-				});
-				
-				if (timeoutId) clearTimeout(timeoutId);
-				
-				// Check the response status
-				if (!response.ok) {
-					linkIsBroken = true;
-					if (response.status >= 400 && response.status < 500) {
-						errorMessage = `External link error (${response.status}): ${url}`;
-						suggestion = `This link returned a ${response.status} error. The page may not exist or may require authentication.`;
-					} else if (response.status >= 500) {
-						errorMessage = `External link server error (${response.status}): ${url}`;
-						suggestion = `This link returned a ${response.status} server error. The server may be experiencing issues.`;
-					} else {
-						errorMessage = `External link error (${response.status}): ${url}`;
-						suggestion = `This link returned an unexpected status code: ${response.status}`;
-					}
+			// Use Obsidian's requestUrl
+			const response = await requestUrl({
+				url: url,
+				headers: {
+					'User-Agent': 'Mozilla/5.0 (compatible; Obsidian-SEO-Plugin/1.0)'
 				}
-			} catch (corsError) {
-				console.log(`CORS failed for ${url}, trying no-cors mode:`, corsError instanceof Error ? corsError.message : String(corsError));
-				// CORS failed, try GET request with no-cors to detect network issues
-				try {
-					const response = await fetch(url, {
-						method: 'GET',
-						headers: {
-							'User-Agent': 'Mozilla/5.0 (compatible; Obsidian-SEO-Plugin/1.0)',
-							'Range': 'bytes=0-0'
-						},
-						mode: 'no-cors',
-						signal: controller.signal
-					});
-					
-					if (timeoutId) clearTimeout(timeoutId);
-					
-					// With no-cors, we can't determine if it's broken from status codes
-					// But if we get here without error, assume it's working
-					// This is a fallback for sites that block CORS but are still accessible
-				} catch (networkError) {
-					const networkErrorMessage = networkError instanceof Error ? networkError.message : String(networkError);
-					console.log(`Network error for ${url}:`, networkErrorMessage);
-					
-					// Check if this is a CORS/security error rather than a genuine network failure
-					if (networkErrorMessage.includes('ERR_BLOCKED_BY_RESPONSE') || 
-						networkErrorMessage.includes('ERR_FAILED') || 
-						networkErrorMessage.includes('Failed to fetch')) {
-						// These are often CORS/security blocks, not actual broken links
-						// Don't mark as broken - just log for debugging
-						console.log(`Skipping ${url} due to CORS/security restrictions`);
-					} else {
-						// This is a genuine network error - the link is broken
-						linkIsBroken = true;
-						errorMessage = `External link unreachable: ${url}`;
-						suggestion = 'This link could not be reached. Check if the URL is correct or if the server is down.';
-					}
+			});
+			
+			// Check the response status
+			if (response.status >= 400) {
+				linkIsBroken = true;
+				if (response.status >= 400 && response.status < 500) {
+					errorMessage = `External link error (${response.status}): ${url}`;
+					suggestion = `This link returned a ${response.status} error. The page may not exist or may require authentication.`;
+				} else if (response.status >= 500) {
+					errorMessage = `External link server error (${response.status}): ${url}`;
+					suggestion = `This link returned a ${response.status} server error. The server may be experiencing issues.`;
+				} else {
+					errorMessage = `External link error (${response.status}): ${url}`;
+					suggestion = `This link returned an unexpected status code: ${response.status}`;
 				}
 			}
 			
-			if (timeoutId) clearTimeout(timeoutId);
-			
 		} catch (error) {
-			if (timeoutId) clearTimeout(timeoutId);
 			linkIsBroken = true;
 			
-			if (error instanceof Error && error.name === 'AbortError') {
+			if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('Timeout'))) {
 				errorMessage = `External link timeout: ${url}`;
 				suggestion = 'This link took too long to respond. The server might be slow or the link might be broken.';
-			} else if (error instanceof Error && (error.message.includes('Failed to fetch') || error.message.includes('net::ERR_'))) {
+			} else if (error instanceof Error && (error.message.includes('Failed to fetch') || error.message.includes('net::ERR_') || error.message.includes('NetworkError'))) {
 				errorMessage = `External link unreachable: ${url}`;
 				suggestion = 'This link could not be reached. Check if the URL is correct or if the server is down.';
 			} else {
@@ -380,7 +329,7 @@ export async function checkExternalBrokenLinks(content: string, file: TFile, set
 		}
 	}
 	
-	return results;
+	return Promise.resolve(results);
 }
 
 
@@ -391,7 +340,7 @@ export async function checkExternalBrokenLinks(content: string, file: TFile, set
  * @param settings - Plugin settings
  * @returns Array of SEO check results
  */
-export async function checkExternalLinksOnly(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkExternalLinksOnly(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	// This is a simplified version that just lists external links
 	return checkExternalLinks(content, file, settings);
 }

@@ -28,12 +28,15 @@ export class PanelManager {
 			
 			// Store reference for settings updates
 			if (existingLeaf.view instanceof SEOSidePanel) {
-				this.plugin.sidePanel = existingLeaf.view as SEOSidePanel;
+				this.plugin.sidePanel = existingLeaf.view;
 			}
 			
 			// Ensure icon loads properly - use setTimeout for panel timing
 			if (existingLeaf.view instanceof SEOSidePanel) {
-				setTimeout(() => (existingLeaf.view as SEOSidePanel).forceIconRefresh(), 100);
+				const panel = existingLeaf.view as SEOSidePanel;
+				if (typeof panel.forceIconRefresh === 'function') {
+					setTimeout(() => panel.forceIconRefresh(), 100);
+				}
 			}
 		} else {
 			// Create new panel in the right side - use the simple, direct approach
@@ -49,14 +52,17 @@ export class PanelManager {
 				// Ensure icon loads properly after opening
 				setTimeout(() => {
 					if (leaf.view instanceof SEOSidePanel) {
-						(leaf.view as SEOSidePanel).forceIconRefresh();
+						const panel = leaf.view as SEOSidePanel;
+						if (typeof panel.forceIconRefresh === 'function') {
+							panel.forceIconRefresh();
+						}
 					}
 				}, 100);
 			}
 		}
 	}
 
-	async getFilesToCheck(): Promise<TFile[]> {
+	getFilesToCheck(): Promise<TFile[]> {
 		const { vault } = this.app;
 		const { scanDirectories, ignoreUnderscoreFiles } = this.plugin.settings;
 		
@@ -87,6 +93,6 @@ export class PanelManager {
 			});
 		}
 		
-		return files;
+		return Promise.resolve(files);
 	}
 }

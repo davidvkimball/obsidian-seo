@@ -63,27 +63,27 @@ export {
 // Legacy functions that need to be moved or refactored
 // These are still in the original file and need to be addressed
 
-export async function checkNotices(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkNotices(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	// TODO: Move this to content-checks.ts
-	return [];
+	return Promise.resolve([]);
 }
 
-export async function checkKeywordInSlug(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkKeywordInSlug(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.keywordProperty) {
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	// Get keyword from frontmatter
 	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
 	if (!frontmatterMatch) {
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	const frontmatter = frontmatterMatch[1];
 	if (!frontmatter) {
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	// Parse line by line instead of using regex
@@ -105,7 +105,7 @@ export async function checkKeywordInSlug(content: string, file: TFile, settings:
 			message: `No ${settings.keywordProperty} defined in properties`,
 			severity: 'notice'
 		});
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	// Validate that the keyword is meaningful (not just a boolean or empty)
@@ -115,7 +115,7 @@ export async function checkKeywordInSlug(content: string, file: TFile, settings:
 			message: `No valid keyword defined in properties`,
 			severity: 'notice'
 		});
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	// Get the file slug (filename without extension)
@@ -141,17 +141,17 @@ export async function checkKeywordInSlug(content: string, file: TFile, settings:
 		});
 	}
 	
-	return results;
+	return Promise.resolve(results);
 }
 
-export async function checkSlugFormat(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkSlugFormat(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	// TODO: Move this to meta-checks.ts
-	return [];
+	return Promise.resolve([]);
 }
 
-export async function checkPotentiallyBrokenEmbeds(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkPotentiallyBrokenEmbeds(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	// TODO: Move this to link-checks.ts
-	return [];
+	return Promise.resolve([]);
 }
 
 export function getDisplayName(file: TFile, content: string, settings: SEOSettings): string {

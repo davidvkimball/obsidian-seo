@@ -117,10 +117,12 @@ export class PanelRenderer {
 		});
 		
 		// Use only click event to avoid double execution
-		auditCurrentBtn.addEventListener('click', async (event) => {
+		auditCurrentBtn.addEventListener('click', (event) => {
 			event.preventDefault();
 			event.stopPropagation();
-			await onRefreshClick(auditCurrentBtn);
+			void (async () => {
+				await onRefreshClick(auditCurrentBtn);
+			})();
 		});
 
 		// External links button (only show if enabled in settings and vault-wide is disabled)
@@ -129,19 +131,21 @@ export class PanelRenderer {
 				text: 'Check external links for 404s',
 				cls: 'seo-btn'
 			});
-			externalLinksBtn.addEventListener('click', async () => {
-				externalLinksBtn.disabled = true;
-				externalLinksBtn.textContent = 'This may take some time...';
-				externalLinksBtn.addClass('seo-btn-disabled');
+			externalLinksBtn.addEventListener('click', () => {
+				void (async () => {
+					externalLinksBtn.disabled = true;
+					externalLinksBtn.textContent = 'This may take some time...';
+					externalLinksBtn.addClass('seo-btn-disabled');
 				
-				try {
-					await onExternalLinksClick();
-				} finally {
-					externalLinksBtn.disabled = false;
-					externalLinksBtn.textContent = 'Check external links for 404s';
-					externalLinksBtn.removeClass('seo-btn-disabled');
-					externalLinksBtn.addClass('seo-btn-enabled');
-				}
+					try {
+						await onExternalLinksClick();
+					} finally {
+						externalLinksBtn.disabled = false;
+						externalLinksBtn.textContent = 'Check external links for 404s';
+						externalLinksBtn.removeClass('seo-btn-disabled');
+						externalLinksBtn.addClass('seo-btn-enabled');
+					}
+				})();
 			});
 		}
 	}
@@ -201,49 +205,51 @@ export class PanelRenderer {
 			cls: 'mod-cta seo-btn seo-refresh-btn',
 			attr: { 'data-refresh-btn': 'true' }
 		});
-		refreshBtn.addEventListener('click', async () => {
-			// Check if this is a cancel operation
-			if (refreshBtn.textContent === 'Cancel') {
-				// Cancel the ongoing audit
-				if (SEOSidePanel.globalAuditController) {
-					SEOSidePanel.globalAuditController.abort();
-					SEOSidePanel.globalAuditController = null;
-					console.log('Vault audit cancelled by user');
-				}
-				refreshBtn.textContent = 'Refresh';
-				refreshBtn.disabled = false;
-				return;
-			}
-			
-			// Start new audit
-			refreshBtn.textContent = 'Cancel';
-			refreshBtn.disabled = false; // Keep enabled so user can cancel
-			
-			// Create abort controller for vault audit
-			SEOSidePanel.globalAuditController = new AbortController();
-			
-			try {
-				const results = await this.actions.refreshGlobalResults(SEOSidePanel.globalAuditController?.signal);
-				if (results.length > 0) {
-					// Only dispatch completion event if audit wasn't cancelled
-					if (SEOSidePanel.globalAuditController && !SEOSidePanel.globalAuditController.signal.aborted) {
-						containerEl.dispatchEvent(new CustomEvent('seo-refresh-complete', { 
-							detail: { results } 
-						}));
+		refreshBtn.addEventListener('click', () => {
+			void (async () => {
+				// Check if this is a cancel operation
+				if (refreshBtn.textContent === 'Cancel') {
+					// Cancel the ongoing audit
+					if (SEOSidePanel.globalAuditController) {
+						SEOSidePanel.globalAuditController.abort();
+						SEOSidePanel.globalAuditController = null;
+						console.debug('Vault audit cancelled by user');
 					}
+					refreshBtn.textContent = 'Refresh';
+					refreshBtn.disabled = false;
+					return;
 				}
-			} catch (error) {
-				// Handle cancellation or other errors
-				if (error instanceof Error && error.name === 'AbortError') {
-					console.log('Vault audit cancelled in panel renderer');
-					// Don't dispatch completion event for cancelled audits
-				} else {
-					console.error('Error in vault audit:', error);
+				
+				// Start new audit
+				refreshBtn.textContent = 'Cancel';
+				refreshBtn.disabled = false; // Keep enabled so user can cancel
+				
+				// Create abort controller for vault audit
+				SEOSidePanel.globalAuditController = new AbortController();
+				
+				try {
+					const results = await this.actions.refreshGlobalResults(SEOSidePanel.globalAuditController?.signal);
+					if (results.length > 0) {
+						// Only dispatch completion event if audit wasn't cancelled
+						if (SEOSidePanel.globalAuditController && !SEOSidePanel.globalAuditController.signal.aborted) {
+							containerEl.dispatchEvent(new CustomEvent('seo-refresh-complete', { 
+								detail: { results } 
+							}));
+						}
+					}
+				} catch (error) {
+					// Handle cancellation or other errors
+					if (error instanceof Error && error.name === 'AbortError') {
+						console.debug('Vault audit cancelled in panel renderer');
+						// Don't dispatch completion event for cancelled audits
+					} else {
+						console.error('Error in vault audit:', error);
+					}
+				} finally {
+					refreshBtn.textContent = 'Refresh';
+					refreshBtn.disabled = false;
 				}
-			} finally {
-				refreshBtn.textContent = 'Refresh';
-				refreshBtn.disabled = false;
-			}
+			})();
 		});
 
 		// Render issues list with sorting

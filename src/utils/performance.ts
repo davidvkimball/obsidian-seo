@@ -59,7 +59,7 @@ export function throttle<T extends any[]>(
 ): (...args: T) => void {
 	let inThrottle: boolean = false;
 
-	return function executedFunction(this: any, ...args: T) {
+	return function executedFunction(this: unknown, ...args: T) {
 		if (!inThrottle) {
 			func.apply(this, args);
 			inThrottle = true;

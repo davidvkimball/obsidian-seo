@@ -56,7 +56,7 @@ export class SEOSidePanel extends ItemView {
 				if (SEOSidePanel.globalAuditController) {
 					SEOSidePanel.globalAuditController.abort();
 					SEOSidePanel.globalAuditController = null;
-					console.log('Audit cancelled due to file switch');
+					console.debug('Audit cancelled due to file switch');
 				}
 				
 				// Don't re-render if we're currently refreshing
@@ -115,20 +115,16 @@ export class SEOSidePanel extends ItemView {
 				// Create a new results container and render results
 				const newResultsContainer = this.containerEl.createEl('div', { cls: 'seo-results-container' });
 				
-				// Create a new ResultsDisplay instance with the new container
-				const tempResultsDisplay = new ResultsDisplay(
-					newResultsContainer,
-					async (filePath: string) => await this.actions.openFile(filePath),
-					async (filePath: string) => await this.actions.openFileAndAudit(filePath)
-				);
-				tempResultsDisplay.renderResults(result);
+				// Reuse existing ResultsDisplay instance to preserve collapse states
+				this.resultsDisplay.updateContainer(newResultsContainer);
+				this.resultsDisplay.renderResults(result);
 				
 				// Update global results if they exist (but don't trigger re-render)
 				this.updateGlobalResultsIfExists(result);
 			}
 		} catch (error) {
 			if (error instanceof Error && error.name === 'AbortError') {
-				console.log('Audit was cancelled');
+				console.debug('Audit was cancelled');
 				return;
 			}
 			console.error('Error in refresh button:', error);
@@ -216,7 +212,7 @@ export class SEOSidePanel extends ItemView {
 				iconEl.setAttribute('data-icon', 'search-check');
 				// Force a re-render by temporarily changing the attribute
 				iconEl.setAttribute('data-icon', '');
-				iconEl.offsetHeight; // Force reflow
+				void iconEl.offsetHeight; // Force reflow
 				iconEl.setAttribute('data-icon', 'search-check');
 			}
 			
@@ -224,7 +220,7 @@ export class SEOSidePanel extends ItemView {
 			const headerEl = this.containerEl.querySelector('.view-header') as HTMLElement;
 			if (headerEl) {
 				headerEl.addClass('seo-header-hidden');
-				headerEl.offsetHeight; // Force reflow
+				void headerEl.offsetHeight; // Force reflow
 				headerEl.removeClass('seo-header-hidden');
 				headerEl.addClass('seo-header-visible');
 			}
@@ -234,7 +230,7 @@ export class SEOSidePanel extends ItemView {
 		}, 50); // Reduced timeout for faster correction
 	}
 
-	async updateCurrentNoteResults(file: TFile) {
+	updateCurrentNoteResults(file: TFile) {
 		if (!file || !file.path.endsWith('.md')) {
 			return;
 		}
@@ -336,7 +332,7 @@ export class SEOSidePanel extends ItemView {
 		}
 	}
 
-	async updateResults(results: SEOResults[]) {
+	updateResults(results: SEOResults[]) {
 		this.globalResults = results;
 		this.render();
 	}
@@ -467,10 +463,12 @@ export class SEOSidePanel extends ItemView {
 				});
 				
 				// Use only click event to avoid double execution
-				auditCurrentBtn.addEventListener('click', async (event) => {
+				auditCurrentBtn.addEventListener('click', (event) => {
 					event.preventDefault();
 					event.stopPropagation();
-					await this.handleRefreshClick(auditCurrentBtn);
+					void (async () => {
+						await this.handleRefreshClick(auditCurrentBtn);
+					})();
 				});
 
 				// External links button (only show if enabled in settings and vault-wide is disabled)
@@ -479,25 +477,27 @@ export class SEOSidePanel extends ItemView {
 						text: 'Check external links for 404s',
 						cls: 'seo-btn'
 					});
-					externalLinksBtn.addEventListener('click', async () => {
-						externalLinksBtn.disabled = true;
-						externalLinksBtn.textContent = 'This may take some time...';
-						externalLinksBtn.addClass('seo-btn-disabled');
-						
-						try {
-							const result = await this.actions.checkExternalLinks();
-							if (result) {
-								this.currentNoteResults = result;
-								// Update global results if they exist
-								this.updateGlobalResultsIfExists(result);
-								this.render();
+					externalLinksBtn.addEventListener('click', () => {
+						void (async () => {
+							externalLinksBtn.disabled = true;
+							externalLinksBtn.textContent = 'This may take some time...';
+							externalLinksBtn.addClass('seo-btn-disabled');
+							
+							try {
+								const result = await this.actions.checkExternalLinks();
+								if (result) {
+									this.currentNoteResults = result;
+									// Update global results if they exist
+									this.updateGlobalResultsIfExists(result);
+									this.render();
+								}
+							} finally {
+								externalLinksBtn.disabled = false;
+								externalLinksBtn.textContent = 'Check external links for 404s';
+								externalLinksBtn.removeClass('seo-btn-disabled');
+								externalLinksBtn.addClass('seo-btn-enabled');
 							}
-						} finally {
-							externalLinksBtn.disabled = false;
-							externalLinksBtn.textContent = 'Check external links for 404s';
-							externalLinksBtn.removeClass('seo-btn-disabled');
-							externalLinksBtn.addClass('seo-btn-enabled');
-						}
+						})();
 					});
 				}
 			}
@@ -677,7 +677,7 @@ export class SEOSidePanel extends ItemView {
 			const globalPanel = globalPanels[0];
 			
 			if (globalPanel?.view && globalPanel.view instanceof SEOSidePanel) {
-				const seoPanel = globalPanel.view as SEOSidePanel;
+				const seoPanel = globalPanel.view;
 				// Update the global results in the panel
 				seoPanel.globalResults = [...this.plugin.settings.cachedGlobalResults];
 				// Re-render the panel
@@ -696,20 +696,22 @@ export class SEOSidePanel extends ItemView {
 			cls: 'mod-cta seo-btn seo-refresh-btn',
 			attr: { 'data-refresh-btn': 'true' }
 		});
-		refreshBtn.addEventListener('click', async () => {
-			refreshBtn.textContent = 'Refreshing...';
-			refreshBtn.disabled = true;
-			
-			try {
-				const results = await this.actions.refreshGlobalResults();
-				if (results.length > 0) {
-					this.globalResults = results;
-					this.render();
+		refreshBtn.addEventListener('click', () => {
+			void (async () => {
+				refreshBtn.textContent = 'Refreshing...';
+				refreshBtn.disabled = true;
+				
+				try {
+					const results = await this.actions.refreshGlobalResults();
+					if (results.length > 0) {
+						this.globalResults = results;
+						this.render();
+					}
+				} finally {
+					refreshBtn.textContent = 'Refresh';
+					refreshBtn.disabled = false;
 				}
-			} finally {
-				refreshBtn.textContent = 'Refresh';
-				refreshBtn.disabled = false;
-			}
+			})();
 		});
 
 		// Render issues list with sorting

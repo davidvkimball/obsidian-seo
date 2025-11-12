@@ -39,7 +39,7 @@ function createStatusIcon(type: 'error' | 'warning' | 'notice' | 'success'): SVG
 }
 
 export class ResultsDisplay {
-	private isCollapsed: boolean = true; // Track collapse state
+	private isCollapsed: boolean = false; // Track collapse state (false = expanded, true = collapsed)
 	private individualCollapseStates: Map<string, boolean> = new Map(); // Track individual item collapse states
 	
 	constructor(
@@ -74,19 +74,12 @@ export class ResultsDisplay {
 		await this.onFileClick(activeFile.path);
 		
 		// Get the markdown view - try different approaches
-		// Note: Using any for Obsidian's internal view types that don't have public type definitions
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		let markdownView: any = null;
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		let editor: any = null;
+		// Note: Using unknown for Obsidian's internal view types that don't have public type definitions
+		let markdownView: unknown = null;
+		let editor: unknown = null;
 			
-			// Try direct access to active leaf
-			if (app.workspace.activeLeaf) {
-				markdownView = app.workspace.activeLeaf.view;
-			}
-			
-			// Try getting leaves of type markdown
-			if (!markdownView && app.workspace.getLeavesOfType) {
+			// Try getting leaves of type markdown (replacement for deprecated activeLeaf)
+			if (app.workspace.getLeavesOfType) {
 				const leaves = app.workspace.getLeavesOfType('markdown');
 				if (leaves.length > 0) {
 					markdownView = leaves[0]?.view;
@@ -108,49 +101,73 @@ export class ResultsDisplay {
 				return;
 			}
 
-			editor = markdownView.editor;
+			// Type guard for markdown view with editor property
+			if (typeof markdownView === 'object' && markdownView !== null && 'editor' in markdownView) {
+				editor = (markdownView as { editor: unknown }).editor;
+			}
+			
 			if (!editor) {
 				console.warn('No editor found in markdown view');
 				return;
 			}
 
+			// Type guard for editor with required methods
+			if (typeof editor !== 'object' || editor === null) {
+				console.warn('Editor is not an object');
+				return;
+			}
+			
+			const editorObj = editor as {
+				setCursor?: (pos: { line: number; ch: number }) => void;
+				scrollIntoView?: (pos: { line: number; ch: number } | number) => void;
+				getLine?: (line: number) => { length: number };
+				addHighlights?: (highlights: Array<{ from: { line: number; ch: number }; to: { line: number; ch: number } }>) => void;
+				removeHighlights?: () => void;
+			};
+
 			// Navigate to the specific line
-			if (position.line) {
+			if (position.line && editorObj.setCursor) {
 				const lineIndex = Math.max(0, position.line - 1);
 				
 				// Set cursor position
-				editor.setCursor({ line: lineIndex, ch: 0 });
+				editorObj.setCursor({ line: lineIndex, ch: 0 });
 				
 				// Simple scroll to line - no fancy stuff
-				try {
-					editor.scrollIntoView({ line: lineIndex, ch: 0 });
-				} catch (error) {
-					// If that fails, try with just the line number
+				if (editorObj.scrollIntoView) {
 					try {
-						editor.scrollIntoView(lineIndex);
-					} catch (error2) {
-						// If all else fails, just set the cursor (already done above)
+						editorObj.scrollIntoView({ line: lineIndex, ch: 0 });
+					} catch (error) {
+						// If that fails, try with just the line number
+						try {
+							editorObj.scrollIntoView(lineIndex);
+						} catch (error2) {
+							// If all else fails, just set the cursor (already done above)
+						}
 					}
 				}
 				
 				// Highlight the line briefly
-				try {
-					const lineLength = editor.getLine(lineIndex).length;
-					editor.addHighlights([{
-						from: { line: lineIndex, ch: 0 },
-						to: { line: lineIndex, ch: lineLength }
-					}]);
-					
-					// Remove highlight after 2 seconds
-					setTimeout(() => {
-						try {
-							editor.removeHighlights();
-						} catch (highlightError) {
-							// Ignore highlight removal errors
-						}
-					}, 2000);
-				} catch (highlightError) {
-					// Ignore highlight errors
+				if (editorObj.getLine && editorObj.addHighlights && editorObj.removeHighlights) {
+					try {
+						const lineLength = editorObj.getLine(lineIndex).length;
+						editorObj.addHighlights([{
+							from: { line: lineIndex, ch: 0 },
+							to: { line: lineIndex, ch: lineLength }
+						}]);
+						
+						// Remove highlight after 2 seconds
+						setTimeout(() => {
+							try {
+								if (editorObj.removeHighlights) {
+									editorObj.removeHighlights();
+								}
+							} catch (highlightError) {
+								// Ignore highlight removal errors
+							}
+						}, 2000);
+					} catch (error) {
+						// Ignore highlight errors
+					}
 				}
 			}
 		} catch (error) {
@@ -336,10 +353,12 @@ export class ResultsDisplay {
 					});
 					
 					// Add click handler for navigation
-					messageEl.addEventListener('click', async (e) => {
+					messageEl.addEventListener('click', (e) => {
 						e.preventDefault();
 						e.stopPropagation();
-						await this.navigateToPosition(result.position!);
+						void (async () => {
+							await this.navigateToPosition(result.position!);
+						})();
 					});
 					
 					// Add visual indicator that it's clickable
@@ -371,16 +390,18 @@ export class ResultsDisplay {
 						}
 						
 						// Use event delegation on the suggestion element
-						suggestionEl.addEventListener('click', async (e) => {
-							const target = e.target as HTMLElement;
-							if (target && target.tagName === 'A' && target.hasAttribute('data-file-path')) {
-								e.preventDefault();
-								e.stopPropagation();
-								const filePath = target.getAttribute('data-file-path');
-								if (filePath) {
-									await this.onFileClick(filePath);
+						suggestionEl.addEventListener('click', (e) => {
+							void (async () => {
+								const target = e.target as HTMLElement;
+								if (target && target.tagName === 'A' && target.hasAttribute('data-file-path')) {
+									e.preventDefault();
+									e.stopPropagation();
+									const filePath = target.getAttribute('data-file-path');
+									if (filePath) {
+										await this.onFileClick(filePath);
+									}
 								}
-							}
+							})();
 						});
 					} else {
 						suggestionEl.textContent = result.suggestion;
@@ -466,7 +487,7 @@ export class ResultsDisplay {
 		} else {
 			scoreNumber.addClass('seo-score-poor');
 		}
-		scoreStat.createEl('div', { cls: 'seo-stat-label', text: 'Average Score' });
+		scoreStat.createEl('div', { cls: 'seo-stat-label', text: 'Average score' });
 		
 		// Issues count with color coding
 		const issuesStat = statsGrid.createEl('div', { cls: 'seo-stat-item' });
@@ -546,9 +567,11 @@ export class ResultsDisplay {
 				cls: 'seo-file-link',
 				href: '#'
 			});
-			fileLink.addEventListener('click', async (e) => {
+			fileLink.addEventListener('click', (e) => {
 				e.preventDefault();
-				await this.onFileClick(result.file);
+				void (async () => {
+					await this.onFileClick(result.file);
+				})();
 			});
 			
 			// Stats and audit button container
@@ -571,10 +594,12 @@ export class ResultsDisplay {
 				attr: { 'aria-label': 'Audit this note' }
 			});
 			setIcon(auditBtn, 'search-check');
-			auditBtn.addEventListener('click', async (e) => {
+			auditBtn.addEventListener('click', (e) => {
 				e.preventDefault();
 				e.stopPropagation();
-				await this.onFileAudit(result.file);
+				void (async () => {
+					await this.onFileAudit(result.file);
+				})();
 			});
 		});
 
@@ -656,9 +681,11 @@ export class ResultsDisplay {
 				cls: 'seo-file-link',
 				href: '#'
 			});
-			fileLink.addEventListener('click', async (e) => {
+			fileLink.addEventListener('click', (e) => {
 				e.preventDefault();
-				await this.onFileClick(result.file);
+				void (async () => {
+					await this.onFileClick(result.file);
+				})();
 			});
 			
 			// Stats and audit button container
@@ -678,10 +705,12 @@ export class ResultsDisplay {
 				attr: { 'aria-label': 'Audit this note' }
 			});
 			setIcon(auditBtn, 'search-check');
-			auditBtn.addEventListener('click', async (e) => {
+			auditBtn.addEventListener('click', (e) => {
 				e.preventDefault();
 				e.stopPropagation();
-				await this.onFileAudit(result.file);
+				void (async () => {
+					await this.onFileAudit(result.file);
+				})();
 			});
 		});
 

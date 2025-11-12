@@ -16,11 +16,11 @@ import { findLineNumberForImage, getContextAroundLine } from "./utils/position-u
  * @param settings - Plugin settings
  * @returns Array of SEO check results
  */
-export async function checkImageNaming(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkImageNaming(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.checkImageNaming) {
-		return [];
+		return Promise.resolve([]);
 	}
 	
 	// Remove code blocks to avoid false positives
@@ -110,5 +110,5 @@ export async function checkImageNaming(content: string, file: TFile, settings: S
 		});
 	}
 	
-	return results;
+	return Promise.resolve(results);
 }

@@ -52,39 +52,39 @@ export {
 
 // Legacy functions that need to be moved or refactored
 // These are still in the original file and need to be addressed
-export async function checkExternalBrokenLinks(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkExternalBrokenLinks(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	// TODO: Move this to link-checks.ts
-	return [];
+	return Promise.resolve([]);
 }
 
-export async function checkExternalLinks(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkExternalLinks(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	// TODO: Move this to link-checks.ts
-	return [];
+	return Promise.resolve([]);
 }
 
-export async function checkExternalLinksOnly(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkExternalLinksOnly(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	// TODO: Move this to link-checks.ts
-	return [];
+	return Promise.resolve([]);
 }
 
-export async function checkNotices(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkNotices(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	// TODO: Move this to content-checks.ts
-	return [];
+	return Promise.resolve([]);
 }
 
-export async function checkKeywordInSlug(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkKeywordInSlug(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	// TODO: Move this to meta-checks.ts
-	return [];
+	return Promise.resolve([]);
 }
 
-export async function checkSlugFormat(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkSlugFormat(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	// TODO: Move this to meta-checks.ts
-	return [];
+	return Promise.resolve([]);
 }
 
-export async function checkPotentiallyBrokenEmbeds(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkPotentiallyBrokenEmbeds(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	// TODO: Move this to link-checks.ts
-	return [];
+	return Promise.resolve([]);
 }
 
 export function getDisplayName(file: TFile, content: string, settings: SEOSettings): string {

@@ -17,11 +17,11 @@ import { findLineNumberForImage, getContextAroundLine } from "./utils/position-u
  * @param settings - Plugin settings
  * @returns Array of SEO check results
  */
-export async function checkAltText(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkAltText(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.checkAltText) {
-		return [];
+		return Promise.resolve([]);
 	}
 	
 	// Remove code blocks to avoid false positives
@@ -130,5 +130,5 @@ export async function checkAltText(content: string, file: TFile, settings: SEOSe
 		}
 	}
 	
-	return results;
+	return Promise.resolve(results);
 }

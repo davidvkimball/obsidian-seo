@@ -7,9 +7,10 @@ import { SEOCurrentPanelViewType, SEOGlobalPanelViewType } from "./ui/panel-cons
 import { PanelManager } from "./ui/panel-manager";
 import { handleError, withErrorHandling, validateRequiredParams } from "./utils/error-handler";
 import { seoCache, clearAllCache } from "./utils/cache-manager";
+import { PanelActions } from "./ui/panel-actions";
 
 interface SEOPanelView {
-	actions: any;
+	actions: PanelActions;
 	render(): void;
 }
 
@@ -49,7 +50,7 @@ export default class SEOPlugin extends Plugin {
 
 			// Register the side panel views with error handling
 			await withErrorHandling(
-				async () => {
+				() => {
 					this.registerView(SEOCurrentPanelViewType, (leaf) => {
 						const panel = new SEOSidePanel(this, 'current', leaf);
 						this.sidePanel = panel; // Store reference for settings updates
@@ -67,7 +68,7 @@ export default class SEOPlugin extends Plugin {
 
 			// Register commands with error handling
 			await withErrorHandling(
-				async () => {
+				() => {
 					registerCommands(this);
 				},
 				'command registration',
@@ -76,7 +77,7 @@ export default class SEOPlugin extends Plugin {
 
 			// Add settings tab with error handling
 			await withErrorHandling(
-				async () => {
+				() => {
 					this.addSettingTab(new SEOSettingTab(this.app, this));
 				},
 				'settings tab registration',
@@ -86,7 +87,7 @@ export default class SEOPlugin extends Plugin {
 
 			// Add ribbon icon for easy access (default to global) with error handling
 			await withErrorHandling(
-				async () => {
+				() => {
 					this.addRibbonIcon('search-check', 'Open SEO audit panel', async () => {
 						try {
 							// Check if panel already exists
@@ -97,7 +98,7 @@ export default class SEOPlugin extends Plugin {
 							
 							// Only trigger manual refresh if panel already existed (not first run)
 							if (!isFirstRun) {
-								setTimeout(async () => {
+								void setTimeout(async () => {
 									try {
 										const globalPanels = this.app.workspace.getLeavesOfType('seo-global-panel');
 										if (globalPanels.length > 0) {

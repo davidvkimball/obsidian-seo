@@ -91,7 +91,7 @@ export function handleError(
  * @returns Promise that resolves to the function result or fallback
  */
 export async function withErrorHandling<T>(
-	fn: () => Promise<T>,
+	fn: () => Promise<T> | T,
 	context: string,
 	fallback: T
 ): Promise<T> {
@@ -169,14 +169,16 @@ export function createDebouncedFunction<T extends any[], R>(
 				clearTimeout(timeoutId);
 			}
 
-			timeoutId = setTimeout(async () => {
-				try {
-					const result = await fn(...args);
-					resolve(result);
-				} catch (error) {
-					handleError(error, context, true);
-					resolve(undefined);
-				}
+			timeoutId = setTimeout(() => {
+				void (async () => {
+					try {
+						const result = await fn(...args);
+						resolve(result);
+					} catch (error) {
+						handleError(error, context, true);
+						resolve(undefined);
+					}
+				})();
 			}, delay);
 		});
 	};

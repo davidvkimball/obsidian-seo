@@ -17,11 +17,11 @@ import { VaultDuplicateDetector } from "./duplicate-detection";
  * @param settings - Plugin settings
  * @returns Array of SEO check results
  */
-export async function checkContentLength(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkContentLength(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.checkContentLength) {
-		return [];
+		return Promise.resolve([]);
 	}
 	
 	// Remove only frontmatter and code blocks - count everything a reader would see
@@ -47,7 +47,7 @@ export async function checkContentLength(content: string, file: TFile, settings:
 		});
 	}
 	
-	return results;
+	return Promise.resolve(results);
 }
 
 /**
@@ -57,11 +57,11 @@ export async function checkContentLength(content: string, file: TFile, settings:
  * @param settings - Plugin settings
  * @returns Array of SEO check results
  */
-export async function checkReadingLevel(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkReadingLevel(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.checkReadingLevel) {
-		return [];
+		return Promise.resolve([]);
 	}
 	
 	// Remove code blocks and frontmatter for reading level analysis
@@ -77,7 +77,7 @@ export async function checkReadingLevel(content: string, file: TFile, settings: 
 			message: "No readable content found for reading level analysis",
 			severity: 'info'
 		});
-		return results;
+		return Promise.resolve(results);
 	}
 	
 	// Calculate Flesch-Kincaid reading level
@@ -104,7 +104,7 @@ export async function checkReadingLevel(content: string, file: TFile, settings: 
 		});
 	}
 	
-	return results;
+	return Promise.resolve(results);
 }
 
 /**
@@ -114,11 +114,11 @@ export async function checkReadingLevel(content: string, file: TFile, settings: 
  * @param settings - Plugin settings
  * @returns Array of SEO check results
  */
-export async function checkDuplicateContent(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+export function checkDuplicateContent(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
 	
 	if (!settings.checkDuplicateContent) {
-		return [];
+		return Promise.resolve([]);
 	}
 	
 	// This is a simplified version - in a real implementation, you'd compare against other files
@@ -166,7 +166,7 @@ export async function checkDuplicateContent(content: string, file: TFile, settin
 		});
 	}
 	
-	return results;
+	return Promise.resolve(results);
 }
 
 /**

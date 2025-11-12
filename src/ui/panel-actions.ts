@@ -160,7 +160,7 @@ export class PanelActions {
 			
 			if (error instanceof Error && error.name === 'AbortError') {
 				wasCancelled = true;
-				console.log('Vault audit cancelled by user');
+				console.debug('Vault audit cancelled by user');
 				new Notice('Vault audit cancelled.');
 				return [];
 			}
@@ -466,10 +466,12 @@ export class PanelActions {
 				attr: { 'aria-label': 'Audit this note' }
 			});
 			setIcon(auditBtn, 'search-check');
-			auditBtn.addEventListener('click', async (e) => {
+			auditBtn.addEventListener('click', (e) => {
 				e.preventDefault();
 				e.stopPropagation();
-				await this.openFileAndAudit(result.file);
+				void (async () => {
+					await this.openFileAndAudit(result.file);
+				})();
 			});
 		});
 	}
