@@ -1,5 +1,4 @@
 import SEOPlugin from "../main";
-import { SEOResults } from "../types";
 import { PanelActions } from "../ui/panel-actions";
 
 /**
