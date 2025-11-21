@@ -383,5 +383,17 @@ export class SEOSettingTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					}
 				}));
+
+		// Ribbon icon toggle at the bottom
+		new Setting(containerEl)
+			.setName('Show ribbon icon')
+			.setDesc('Show or hide the wizard icon in the left sidebar ribbon')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.showRibbonIcon)
+				.onChange(async (value) => {
+					this.plugin.settings.showRibbonIcon = value;
+					await this.plugin.saveSettings();
+					await this.plugin.toggleRibbonIcon();
+				}));
 	}
 }

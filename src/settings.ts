@@ -70,6 +70,8 @@ export interface SEOSettings {
 	// UI settings
 	/** Default sort order for results display */
 	defaultSort: 'issues-desc' | 'issues-asc' | 'warnings-desc' | 'warnings-asc' | 'notices-desc' | 'notices-asc' | 'filename-asc' | 'filename-desc';
+	/** Whether to show the ribbon icon */
+	showRibbonIcon: boolean;
 	
 	// Thresholds
 	/** Minimum content length in characters */
@@ -117,6 +119,7 @@ export const DEFAULT_SETTINGS: SEOSettings = {
 	skipH1Check: false,
 	publishMode: false,
 	defaultSort: 'issues-desc',
+	showRibbonIcon: true,
 	minContentLength: 300,
 	keywordDensityMin: 1,
 	keywordDensityMax: 2,

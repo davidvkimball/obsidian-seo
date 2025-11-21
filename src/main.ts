@@ -17,6 +17,7 @@ export default class SEOPlugin extends Plugin {
 	settings!: SEOSettings;
 	private panelManager: PanelManager | null = null;
 	public sidePanel: SEOSidePanel | null = null;
+	private ribbonIcon: HTMLElement | null = null;
 
 	/**
 	 * Plugin initialization - called when the plugin is loaded
@@ -81,48 +82,50 @@ export default class SEOPlugin extends Plugin {
 
 
 			// Add ribbon icon for easy access (default to global) with error handling
-			await withErrorHandling(
-				() => {
-					this.addRibbonIcon('search-check', 'Open SEO audit panel', () => {
-						try {
-							// Check if panel already exists
-							const existingPanels = this.app.workspace.getLeavesOfType('seo-global-panel');
-							const isFirstRun = existingPanels.length === 0;
-							
-							this.openGlobalPanel();
-							
-							// Only trigger manual refresh if panel already existed (not first run)
-							if (!isFirstRun) {
-								void setTimeout(() => {
-									void (async () => {
-										try {
-											const globalPanels = this.app.workspace.getLeavesOfType('seo-global-panel');
-											if (globalPanels.length > 0) {
-												const panel = globalPanels[0];
-												if (panel?.view) {
-													// Cast to SEOSidePanel and trigger refresh
-													const seoPanel = panel.view as unknown as { actions: PanelActions; render(): void };
-													// Trigger the refresh logic (same as clicking the refresh button)
-													await seoPanel.actions.refreshGlobalResults();
-													// Update the panel display with new results
-													seoPanel.render();
+			if (this.settings.showRibbonIcon) {
+				await withErrorHandling(
+					() => {
+						this.ribbonIcon = this.addRibbonIcon('search-check', 'Open SEO audit panel', () => {
+							try {
+								// Check if panel already exists
+								const existingPanels = this.app.workspace.getLeavesOfType('seo-global-panel');
+								const isFirstRun = existingPanels.length === 0;
+								
+								this.openGlobalPanel();
+								
+								// Only trigger manual refresh if panel already existed (not first run)
+								if (!isFirstRun) {
+									void setTimeout(() => {
+										void (async () => {
+											try {
+												const globalPanels = this.app.workspace.getLeavesOfType('seo-global-panel');
+												if (globalPanels.length > 0) {
+													const panel = globalPanels[0];
+													if (panel?.view) {
+														// Cast to SEOSidePanel and trigger refresh
+														const seoPanel = panel.view as unknown as { actions: PanelActions; render(): void };
+														// Trigger the refresh logic (same as clicking the refresh button)
+														await seoPanel.actions.refreshGlobalResults();
+														// Update the panel display with new results
+														seoPanel.render();
+													}
 												}
+											} catch (error) {
+												handleError(error, 'ribbon icon panel refresh', true);
 											}
-										} catch (error) {
-											handleError(error, 'ribbon icon panel refresh', true);
-										}
-									})();
-								}, 500);
+										})();
+									}, 500);
+								}
+								// If first run, let the panel's onOpen() handle the initial scan automatically
+							} catch (error) {
+								handleError(error, 'ribbon icon click handler', true);
 							}
-							// If first run, let the panel's onOpen() handle the initial scan automatically
-						} catch (error) {
-							handleError(error, 'ribbon icon click handler', true);
-						}
-					});
-				},
-				'ribbon icon registration',
-				undefined
-			);
+						});
+					},
+					'ribbon icon registration',
+					undefined
+				);
+			}
 		} catch (error) {
 			handleError(error, 'plugin initialization', true);
 		}
@@ -265,5 +268,82 @@ export default class SEOPlugin extends Plugin {
 				}
 			});
 		});
+	}
+
+	/**
+	 * Toggles the ribbon icon visibility
+	 * Adds or removes the ribbon icon based on the setting
+	 */
+	async toggleRibbonIcon() {
+		try {
+			if (this.settings.showRibbonIcon) {
+				// Add ribbon icon if it doesn't exist
+				if (!this.ribbonIcon) {
+					this.ribbonIcon = this.addRibbonIcon('search-check', 'Open SEO audit panel', () => {
+						try {
+							// Check if panel already exists
+							const existingPanels = this.app.workspace.getLeavesOfType('seo-global-panel');
+							const isFirstRun = existingPanels.length === 0;
+							
+							this.openGlobalPanel();
+							
+							// Only trigger manual refresh if panel already existed (not first run)
+							if (!isFirstRun) {
+								void setTimeout(() => {
+									void (async () => {
+										try {
+											const globalPanels = this.app.workspace.getLeavesOfType('seo-global-panel');
+											if (globalPanels.length > 0) {
+												const panel = globalPanels[0];
+												if (panel?.view) {
+													// Cast to SEOSidePanel and trigger refresh
+													const seoPanel = panel.view as unknown as { actions: PanelActions; render(): void };
+													// Trigger the refresh logic (same as clicking the refresh button)
+													await seoPanel.actions.refreshGlobalResults();
+													// Update the panel display with new results
+													seoPanel.render();
+												}
+											}
+										} catch (error) {
+											handleError(error, 'ribbon icon panel refresh', true);
+										}
+									})();
+								}, 500);
+							}
+							// If first run, let the panel's onOpen() handle the initial scan automatically
+						} catch (error) {
+							handleError(error, 'ribbon icon click handler', true);
+						}
+					});
+				}
+			} else {
+				// Remove ribbon icon if it exists
+				if (this.ribbonIcon) {
+					// Store reference before removal
+					const iconToRemove = this.ribbonIcon;
+					this.ribbonIcon = null;
+					// Remove from DOM completely - this also removes it from the context menu
+					iconToRemove.remove();
+					// Force multiple refresh triggers to ensure context menu is updated
+					this.app.workspace.trigger('layout-change');
+					// Also try to find and remove any orphaned context menu items
+					setTimeout(() => {
+						// Find any context menu items that might reference this icon
+						const contextMenus = document.querySelectorAll('.menu');
+						contextMenus.forEach(menu => {
+							const items = menu.querySelectorAll('.menu-item');
+							items.forEach(item => {
+								const text = item.textContent?.trim();
+								if (text === 'Open SEO audit panel') {
+									item.remove();
+								}
+							});
+						});
+					}, 100);
+				}
+			}
+		} catch (error) {
+			handleError(error, 'toggling ribbon icon', true);
+		}
 	}
 }
