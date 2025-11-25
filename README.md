@@ -4,6 +4,10 @@ A comprehensive SEO analysis plugin for Obsidian that helps you optimize your no
 
 ![obsidian-seo-preview](https://github.com/user-attachments/assets/f015bae8-1c71-49f0-b9b8-0d7443249460)
 
+## Made for Vault CMS
+
+Part of the [Vault CMS](https://github.com/davidvkimball/vault-cms) project.
+
 ## Features
 
 ### **SEO Auditing**
