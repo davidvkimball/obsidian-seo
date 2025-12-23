@@ -59,14 +59,18 @@ export class PanelRenderer {
 			} else {
 				if (globalResults.length > 0) {
 					this.renderGlobalResults(containerEl, globalResults);
-				} else {
-					const noGlobal = containerEl.createEl('div', { cls: 'seo-no-results' });
-					noGlobal.createEl('p', { text: 'Click "Audit all notes" to audit your files in your configured directories.' });
-				}
+			} else {
+				const noGlobal = containerEl.createEl('div', { cls: 'seo-no-results' });
+				// False positive: Contains quoted text which is already in sentence case
+				// eslint-disable-next-line obsidianmd/ui/sentence-case
+				noGlobal.createEl('p', { text: 'Click "Audit all notes" to audit your files in your configured directories.' });
+			}
 			}
 
 		} catch (error) {
 			console.error('Error rendering SEO panel:', error);
+			// False positive: "SEO" is a proper noun (acronym) and should be capitalized
+			// eslint-disable-next-line obsidianmd/ui/sentence-case
 			containerEl.createEl('div', { text: 'Error loading SEO panel. Please try again.' });
 		}
 	}
@@ -179,6 +183,8 @@ export class PanelRenderer {
 			
 		} else {
 			const noResults = containerEl.createEl('div', { cls: 'seo-no-results' });
+			// False positive: Contains quoted text which is already in sentence case
+			// eslint-disable-next-line obsidianmd/ui/sentence-case
 			noResults.createEl('p', { text: 'Open a markdown file and click "Refresh" to audit it.' });
 		}
 	}

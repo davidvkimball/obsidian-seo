@@ -197,7 +197,9 @@ export class ResultsDisplay {
 			}
 			scoreText.createEl('span', { text: ')' });
 		} else {
+			// False positive: Text is already in sentence case; exclamation mark is appropriate for success message
 			scoreText.createEl('span', { 
+				// eslint-disable-next-line obsidianmd/ui/sentence-case
 				text: ' (All checks passed!)',
 				cls: 'seo-success'
 			});

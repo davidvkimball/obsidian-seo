@@ -148,7 +148,7 @@ async function checkFile(plugin: SEOPlugin, file: TFile, content: string, vaultD
 			if (result.message.includes('Broken link') && !result.passed) {
 				weight = 10;
 				points = 0; // Major penalty for broken links
-			} else if (result.message.includes('title') && !result.passed && result.message.includes('No frontmatter')) {
+			} else if (result.message.includes('title') && !result.passed && result.message.includes('No properties')) {
 				weight = 10;
 				points = 0; // Major penalty for missing titles entirely
 			}

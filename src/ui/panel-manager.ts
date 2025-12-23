@@ -10,20 +10,20 @@ export class PanelManager {
 	) {}
 
 	openCurrentPanel() {
-		this.openPanel(SEOCurrentPanelViewType, 'current');
+		void this.openPanel(SEOCurrentPanelViewType, 'current');
 	}
 
 	openGlobalPanel() {
-		this.openPanel(SEOGlobalPanelViewType, 'global');
+		void this.openPanel(SEOGlobalPanelViewType, 'global');
 	}
 
-	private openPanel(viewType: string, panelType: 'current' | 'global') {
+	private async openPanel(viewType: string, panelType: 'current' | 'global') {
 		// Try to find existing panel first
 		const existingLeaf = this.app.workspace.getLeavesOfType(viewType)[0];
 		
 		if (existingLeaf) {
 			// If panel exists, just reveal it and make it active
-			void this.app.workspace.revealLeaf(existingLeaf);
+			await this.app.workspace.revealLeaf(existingLeaf);
 			this.app.workspace.setActiveLeaf(existingLeaf);
 			
 			// Store reference for settings updates
@@ -46,7 +46,7 @@ export class PanelManager {
 				// Create the panel manually - this is the most reliable approach
 				const panel = new SEOSidePanel(this.plugin, panelType, leaf);
 				this.plugin.sidePanel = panel; // Store reference for settings updates
-				void leaf.open(panel);
+				await leaf.open(panel);
 				this.app.workspace.setActiveLeaf(leaf);
 				
 				// Ensure icon loads properly after opening

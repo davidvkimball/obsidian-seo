@@ -85,6 +85,8 @@ export default class SEOPlugin extends Plugin {
 			if (this.settings.showRibbonIcon) {
 				await withErrorHandling(
 					() => {
+						// False positive: "SEO" is a proper noun (acronym) and should be capitalized
+						// eslint-disable-next-line obsidianmd/ui/sentence-case
 						this.ribbonIcon = this.addRibbonIcon('search-check', 'Open SEO audit panel', () => {
 							try {
 								// Check if panel already exists
@@ -153,7 +155,8 @@ export default class SEOPlugin extends Plugin {
 	 */
 	async loadSettings() {
 		try {
-			this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+			const loadedData = await this.loadData() as Partial<SEOSettings>;
+			this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
 		} catch (error) {
 			handleError(error, 'loading settings', true);
 			// Fallback to default settings
@@ -278,8 +281,10 @@ export default class SEOPlugin extends Plugin {
 		try {
 			if (this.settings.showRibbonIcon) {
 				// Add ribbon icon if it doesn't exist
-				if (!this.ribbonIcon) {
-					this.ribbonIcon = this.addRibbonIcon('search-check', 'Open SEO audit panel', () => {
+			if (!this.ribbonIcon) {
+				// False positive: "SEO" is a proper noun (acronym) and should be capitalized
+				// eslint-disable-next-line obsidianmd/ui/sentence-case
+				this.ribbonIcon = this.addRibbonIcon('search-check', 'Open SEO audit panel', () => {
 						try {
 							// Check if panel already exists
 							const existingPanels = this.app.workspace.getLeavesOfType('seo-global-panel');

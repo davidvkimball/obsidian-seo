@@ -278,10 +278,12 @@ export class SEOSidePanel extends ItemView {
 			
 		} else {
 				// No results available, show message
-				this.containerEl.createEl('div', { 
-					cls: 'seo-info-note seo-no-results-message',
-					text: 'No SEO results available for this file. Click "Refresh" to run an audit.'
-				});
+			// False positive: "SEO" is a proper noun (acronym) and should be capitalized
+			this.containerEl.createEl('div', { 
+				cls: 'seo-info-note seo-no-results-message',
+				// eslint-disable-next-line obsidianmd/ui/sentence-case
+				text: 'No SEO results available for this file. Click "Refresh" to run an audit.'
+			});
 			}
 			
 			// Update the header with the new file name (preserves button event listeners)
@@ -352,7 +354,9 @@ export class SEOSidePanel extends ItemView {
 		const loadingContainer = containerEl.createEl('div', { cls: 'seo-loading-container' });
 		const spinnerEl = loadingContainer.createEl('div', { cls: 'seo-loading-spinner' });
 		setIcon(spinnerEl, 'loader-circle');
+		// False positive: "SEO" is a proper noun (acronym) and should be capitalized
 		loadingContainer.createEl('h3', { 
+			// eslint-disable-next-line obsidianmd/ui/sentence-case
 			text: 'Running SEO audit...',
 			cls: 'seo-loading-title'
 		});
@@ -388,13 +392,13 @@ export class SEOSidePanel extends ItemView {
 
 		// Handle custom events from the renderer
 		this.containerEl.addEventListener('seo-refresh-complete', (event: Event) => {
-			const customEvent = event as CustomEvent;
+			const customEvent = event as CustomEvent<{ results: SEOResults[] }>;
 			this.globalResults = customEvent.detail.results;
 			this.render();
 		});
 
 		this.containerEl.addEventListener('seo-sort-change', (event: Event) => {
-			const customEvent = event as CustomEvent;
+			const customEvent = event as CustomEvent<{ sortType: SortType }>;
 			this.currentSort = customEvent.detail.sortType;
 			this.plugin.settings.defaultSort = customEvent.detail.sortType;
 			void this.plugin.saveSettings();
@@ -525,6 +529,8 @@ export class SEOSidePanel extends ItemView {
 					
 				} else {
 					const noResults = containerEl.createEl('div', { cls: 'seo-no-results' });
+					// False positive: Contains quoted text which is already in sentence case
+					// eslint-disable-next-line obsidianmd/ui/sentence-case
 					noResults.createEl('p', { text: 'Open a markdown file and click "Refresh" to audit it.' });
 				}
 			} else {
@@ -532,12 +538,16 @@ export class SEOSidePanel extends ItemView {
 					this.renderGlobalResults(containerEl);
 				} else {
 					const noGlobal = containerEl.createEl('div', { cls: 'seo-no-results' });
+					// False positive: Contains quoted text which is already in sentence case
+					// eslint-disable-next-line obsidianmd/ui/sentence-case
 					noGlobal.createEl('p', { text: 'Click "Audit all notes" to audit your files in your configured directories.' });
 				}
 			}
 
 		} catch (error) {
 			console.error('Error rendering SEO panel:', error);
+			// False positive: "SEO" is a proper noun (acronym) and should be capitalized
+			// eslint-disable-next-line obsidianmd/ui/sentence-case
 			this.containerEl.createEl('div', { text: 'Error loading SEO panel. Please try again.' });
 		}
 	}
@@ -659,6 +669,8 @@ export class SEOSidePanel extends ItemView {
 		} else {
 			// No results available, show prompt
 			const noResults = this.containerEl.createEl('div', { cls: 'seo-no-results' });
+			// False positive: Contains quoted text which is already in sentence case
+			// eslint-disable-next-line obsidianmd/ui/sentence-case
 			noResults.createEl('p', { text: 'Open a markdown file and click "Refresh" to audit it.' });
 		}
 	}

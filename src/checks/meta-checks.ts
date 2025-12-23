@@ -26,8 +26,8 @@ export function checkMetaDescription(content: string, file: TFile, settings: SEO
 	if (!frontmatterMatch) {
 		results.push({
 			passed: false,
-			message: "No frontmatter found",
-			suggestion: "Add frontmatter with description property",
+			message: "No properties found",
+			suggestion: "Add properties with description property",
 			severity: 'warning'
 		});
 		return Promise.resolve(results);
@@ -37,8 +37,8 @@ export function checkMetaDescription(content: string, file: TFile, settings: SEO
 	if (!frontmatter) {
 		results.push({
 			passed: false,
-			message: "No frontmatter content found",
-			suggestion: "Add frontmatter with description property",
+			message: "No properties content found",
+			suggestion: "Add properties with description property",
 			severity: 'warning'
 		});
 		return Promise.resolve(results);
@@ -48,8 +48,8 @@ export function checkMetaDescription(content: string, file: TFile, settings: SEO
 	if (!descriptionMatch || !descriptionMatch[1]) {
 		results.push({
 			passed: false,
-			message: `No ${settings.descriptionProperty} found in frontmatter`,
-			suggestion: `Add ${settings.descriptionProperty} to frontmatter`,
+			message: `No ${settings.descriptionProperty} found in properties`,
+			suggestion: `Add ${settings.descriptionProperty} to properties`,
 			severity: 'warning'
 		});
 		return Promise.resolve(results);
@@ -193,8 +193,8 @@ export function checkKeywordDensity(content: string, file: TFile, settings: SEOS
 	if (!frontmatterMatch) {
 		results.push({
 			passed: false,
-			message: "No frontmatter found",
-			suggestion: "Add frontmatter with keyword property",
+			message: "No properties found",
+			suggestion: "Add properties with keyword property",
 			severity: 'warning'
 		});
 		return Promise.resolve(results);
@@ -204,8 +204,8 @@ export function checkKeywordDensity(content: string, file: TFile, settings: SEOS
 	if (!frontmatter) {
 		results.push({
 			passed: false,
-			message: "No frontmatter content found",
-			suggestion: "Add frontmatter with keyword property",
+			message: "No properties content found",
+			suggestion: "Add properties with keyword property",
 			severity: 'warning'
 		});
 		return Promise.resolve(results);
@@ -394,7 +394,7 @@ export function checkKeywordInDescription(content: string, file: TFile, settings
 		results.push({
 			passed: false,
 			message: "No description found",
-			suggestion: "Add a meta description to your frontmatter",
+			suggestion: "Add a meta description to your properties",
 			severity: 'warning'
 		});
 		return Promise.resolve(results);

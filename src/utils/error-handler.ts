@@ -160,7 +160,7 @@ export function createDebouncedFunction<T extends unknown[], R>(
 	delay: number,
 	context: string
 ) {
-	let timeoutId: NodeJS.Timeout | null = null;
+	let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
 	return async (...args: T): Promise<R | undefined> => {
 		return new Promise((resolve) => {

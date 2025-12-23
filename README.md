@@ -26,7 +26,7 @@ Part of the [Vault CMS](https://github.com/davidvkimball/vault-cms) project.
 
 #### **Technical SEO**
 - **Title Optimization** - Proper title length and structure
-- **Meta Description** - Frontmatter description validation
+- **Meta Description** - Properties description validation
 - **Keyword in Title** - Ensures keywords appear in titles
 - **Keyword in Description** - Validates keyword presence in descriptions
 - **Keyword in Slug** - Checks keyword inclusion in filenames
