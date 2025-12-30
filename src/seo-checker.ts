@@ -261,6 +261,7 @@ function generateSettingsHash(settings: SEOSettings): string {
 		checkContentLength: settings.checkContentLength,
 		minContentLength: settings.minContentLength,
 		scanDirectories: settings.scanDirectories || '',
+		enableMDXSupport: settings.enableMDXSupport,
 		// External link checking settings
 		checkExternalLinks: settings.checkExternalLinks,
 		enableExternalLinkVaultCheck: settings.enableExternalLinkVaultCheck,

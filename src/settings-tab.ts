@@ -72,6 +72,22 @@ export class SEOSettingTab extends PluginSettingTab {
 
 		globalGroup.addSetting((setting) => {
 			setting
+				// False positive: "MDX" is a proper noun (acronym) and should be capitalized
+				// eslint-disable-next-line obsidianmd/ui/sentence-case
+				.setName('Enable MDX file support')
+				// False positive: "MDX" is a proper noun (acronym) and should be capitalized
+				// eslint-disable-next-line obsidianmd/ui/sentence-case
+				.setDesc('Process MDX files in addition to Markdown files. MDX files use the same frontmatter format as Markdown.')
+				.addToggle(toggle => toggle
+					.setValue(this.plugin.settings.enableMDXSupport)
+					.onChange(async (value) => {
+						this.plugin.settings.enableMDXSupport = value;
+						await this.plugin.saveSettings();
+					}));
+		});
+
+		globalGroup.addSetting((setting) => {
+			setting
 				.setName('Show ribbon icon')
 				.setDesc('Show or hide the wizard icon in the left sidebar ribbon')
 				.addToggle(toggle => toggle

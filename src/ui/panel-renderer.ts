@@ -10,6 +10,7 @@ import { getVaultFoldersInfo } from "./panel-utils";
 import { PanelActions } from "./panel-actions";
 import { ResultsDisplay } from "./results-display";
 import { SEOSidePanel } from "./side-panel";
+import { isSupportedFile } from "../utils/file-utils";
 
 export class PanelRenderer {
 	constructor(
@@ -80,7 +81,7 @@ export class PanelRenderer {
 	 */
 	private renderCurrentNoteHeader(header: HTMLElement, currentNoteResults: SEOResults | null) {
 		const activeFile = this.app.workspace.getActiveFile();
-		if (activeFile && activeFile.path.endsWith('.md')) {
+		if (activeFile && isSupportedFile(activeFile, this.plugin.settings)) {
 			const filenameEl = header.createEl('div', { cls: 'seo-filename' });
 			
 			// Get the correct display name based on the current active file
@@ -183,9 +184,8 @@ export class PanelRenderer {
 			
 		} else {
 			const noResults = containerEl.createEl('div', { cls: 'seo-no-results' });
-			// False positive: Contains quoted text which is already in sentence case
-			// eslint-disable-next-line obsidianmd/ui/sentence-case
-			noResults.createEl('p', { text: 'Open a markdown file and click "Refresh" to audit it.' });
+			const fileTypeText = this.plugin.settings.enableMDXSupport ? 'markdown or MDX file' : 'markdown file';
+			noResults.createEl('p', { text: `Open a ${fileTypeText} and click "Refresh" to audit it.` });
 		}
 	}
 

@@ -3,6 +3,7 @@ import { SEOResults } from "../types";
 import { SEOSettings } from "../settings";
 import { sortFiles } from "./panel-utils";
 import { SEOSidePanel } from "./side-panel";
+import { isSupportedFile } from "../utils/file-utils";
 
 import SEOPlugin from "../main";
 
@@ -46,10 +47,10 @@ export class PanelActions {
 
 	async checkCurrentNote(abortSignal?: AbortSignal): Promise<SEOResults | null> {
 		const activeFile = this.app.workspace.getActiveFile();
-		if (!activeFile || !activeFile.path.endsWith('.md')) {
+		if (!activeFile || !isSupportedFile(activeFile, this.plugin.settings)) {
 			// False positive: Text is already in sentence case
 			// eslint-disable-next-line obsidianmd/ui/sentence-case
-			new Notice('Please open a markdown file first.');
+			new Notice('Please open a markdown or MDX file first.');
 			return null;
 		}
 
@@ -84,10 +85,10 @@ export class PanelActions {
 
 	async checkExternalLinks(): Promise<SEOResults | null> {
 		const activeFile = this.app.workspace.getActiveFile();
-		if (!activeFile || !activeFile.path.endsWith('.md')) {
+		if (!activeFile || !isSupportedFile(activeFile, this.plugin.settings)) {
 			// False positive: Text is already in sentence case
 			// eslint-disable-next-line obsidianmd/ui/sentence-case
-			new Notice('Please open a markdown file first.');
+			new Notice('Please open a markdown or MDX file first.');
 			return null;
 		}
 
@@ -134,9 +135,8 @@ export class PanelActions {
 			// Get files to check
 		const files = await this.plugin.getFilesToCheck();
 		if (files.length === 0) {
-			// False positive: Text is already in sentence case
-			// eslint-disable-next-line obsidianmd/ui/sentence-case
-			new Notice('No markdown files found in configured directories.');
+			const fileTypeText = this.plugin.settings.enableMDXSupport ? 'markdown or MDX files' : 'markdown files';
+			new Notice(`No ${fileTypeText} found in configured directories.`);
 			return [];
 		}
 			

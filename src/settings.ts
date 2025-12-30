@@ -10,6 +10,8 @@ export interface SEOSettings {
 	scanDirectories: string;
 	/** Ignore files that begin with an underscore */
 	ignoreUnderscoreFiles: boolean;
+	/** Enable MDX file support (in addition to MD files) */
+	enableMDXSupport: boolean;
 	
 	// Property names
 	/** Frontmatter property name for keywords */
@@ -93,6 +95,7 @@ export interface SEOSettings {
 export const DEFAULT_SETTINGS: SEOSettings = {
 	scanDirectories: "",
 	ignoreUnderscoreFiles: false,
+	enableMDXSupport: false,
 	keywordProperty: "",
 	descriptionProperty: "",
 	titleProperty: "",

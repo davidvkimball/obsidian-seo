@@ -2,6 +2,7 @@ import { App, TFile, TFolder } from "obsidian";
 import SEOPlugin from "../main";
 import { SEOSidePanel } from "./side-panel";
 import { SEOCurrentPanelViewType, SEOGlobalPanelViewType } from "./panel-constants";
+import { isSupportedFile } from "../utils/file-utils";
 
 export class PanelManager {
 	constructor(
@@ -63,13 +64,21 @@ export class PanelManager {
 
 	getFilesToCheck(): Promise<TFile[]> {
 		const { vault } = this.app;
-		const { scanDirectories, ignoreUnderscoreFiles } = this.plugin.settings;
+		const { scanDirectories, ignoreUnderscoreFiles, enableMDXSupport } = this.plugin.settings;
 		
 		let files: TFile[];
 		
 		if (!scanDirectories.trim()) {
 			// Scan all markdown files
 			files = vault.getMarkdownFiles();
+			
+			// Add MDX files if enabled
+			if (enableMDXSupport) {
+				const mdxFiles = vault.getFiles().filter((file): file is TFile => 
+					file instanceof TFile && file.extension.toLowerCase() === 'mdx'
+				);
+				files = [...files, ...mdxFiles];
+			}
 		} else {
 			const directories = scanDirectories.split(',').map(dir => dir.trim());
 			files = [];
@@ -77,12 +86,27 @@ export class PanelManager {
 			for (const dir of directories) {
 				const folder = vault.getAbstractFileByPath(dir);
 				if (folder && folder instanceof TFolder) {
-					files.push(...vault.getMarkdownFiles().filter(file => 
+					// Get markdown files
+					const mdFiles = vault.getMarkdownFiles().filter(file => 
 						file.path.startsWith(dir + '/') || file.path === dir
-					));
+					);
+					files.push(...mdFiles);
+					
+					// Add MDX files if enabled
+					if (enableMDXSupport) {
+						const mdxFiles = vault.getFiles().filter((file): file is TFile => 
+							file instanceof TFile && 
+							file.extension.toLowerCase() === 'mdx' &&
+							(file.path.startsWith(dir + '/') || file.path === dir)
+						);
+						files.push(...mdxFiles);
+					}
 				}
 			}
 		}
+		
+		// Filter to only supported file types
+		files = files.filter(file => isSupportedFile(file, this.plugin.settings));
 		
 		// Filter out files with underscore prefix if setting is enabled
 		if (ignoreUnderscoreFiles) {

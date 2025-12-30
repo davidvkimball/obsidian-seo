@@ -6,6 +6,7 @@ import { getVaultFoldersInfo } from "./panel-utils";
 import { PanelActions } from "./panel-actions";
 import { ResultsDisplay } from "./results-display";
 import { PanelRenderer } from "./panel-renderer";
+import { isSupportedFile } from "../utils/file-utils";
 
 type SortType = 'issues-desc' | 'issues-asc' | 'warnings-desc' | 'warnings-asc' | 'notices-desc' | 'notices-asc' | 'filename-asc' | 'filename-desc';
 
@@ -304,7 +305,7 @@ export class SEOSidePanel extends ItemView {
 			const filenameEl = header.querySelector('.seo-filename');
 			if (filenameEl) {
 				const activeFile = this.app.workspace.getActiveFile();
-				if (activeFile && activeFile.path.endsWith('.md')) {
+				if (activeFile && isSupportedFile(activeFile, this.plugin.settings)) {
 					// Get the correct display name based on the current active file
 					let displayName = activeFile.path;
 					
@@ -423,7 +424,7 @@ export class SEOSidePanel extends ItemView {
 			// Show current note file path if available
 			if (this.panelType === 'current') {
 				const activeFile = this.app.workspace.getActiveFile();
-				if (activeFile && activeFile.path.endsWith('.md')) {
+				if (activeFile && isSupportedFile(activeFile, this.plugin.settings)) {
 					const filenameEl = header.createEl('div', { cls: 'seo-filename' });
 					
 					// Get the correct display name based on the current active file
@@ -529,9 +530,8 @@ export class SEOSidePanel extends ItemView {
 					
 				} else {
 					const noResults = containerEl.createEl('div', { cls: 'seo-no-results' });
-					// False positive: Contains quoted text which is already in sentence case
-					// eslint-disable-next-line obsidianmd/ui/sentence-case
-					noResults.createEl('p', { text: 'Open a markdown file and click "Refresh" to audit it.' });
+					const fileTypeText = this.plugin.settings.enableMDXSupport ? 'markdown or MDX file' : 'markdown file';
+					noResults.createEl('p', { text: `Open a ${fileTypeText} and click "Refresh" to audit it.` });
 				}
 			} else {
 				if (this.globalResults.length > 0) {
@@ -606,7 +606,7 @@ export class SEOSidePanel extends ItemView {
 	private updateDisplayName(): void {
 		// Update display name and results for the new file
 		const activeFile = this.app.workspace.getActiveFile();
-		if (activeFile && activeFile.path.endsWith('.md')) {
+		if (activeFile && isSupportedFile(activeFile, this.plugin.settings)) {
 			// Update the display name
 			const filenameEl = this.containerEl.querySelector('.seo-filename');
 			if (filenameEl) {
