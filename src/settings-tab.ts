@@ -15,7 +15,7 @@ export class SEOSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		// Global group
-		const globalGroup = createSettingsGroup(containerEl, 'Global');
+		const globalGroup = createSettingsGroup(containerEl, 'Global', 'seo');
 
 		globalGroup.addSetting((setting) => {
 			setting
@@ -100,7 +100,7 @@ export class SEOSettingTab extends PluginSettingTab {
 		});
 
 		// Property names group
-		const propertyNamesGroup = createSettingsGroup(containerEl, 'Property names');
+		const propertyNamesGroup = createSettingsGroup(containerEl, 'Property names', 'seo');
 
 		propertyNamesGroup.addSetting((setting) => {
 			setting
@@ -216,7 +216,7 @@ export class SEOSettingTab extends PluginSettingTab {
 		}
 
 		// Audit options group
-		const auditOptionsGroup = createSettingsGroup(containerEl, 'Audit options');
+		const auditOptionsGroup = createSettingsGroup(containerEl, 'Audit options', 'seo');
 
 		auditOptionsGroup.addSetting((setting) => {
 			setting
@@ -442,7 +442,7 @@ export class SEOSettingTab extends PluginSettingTab {
 		});
 
 		// Thresholds group
-		const thresholdsGroup = createSettingsGroup(containerEl, 'Thresholds');
+		const thresholdsGroup = createSettingsGroup(containerEl, 'Thresholds', 'seo');
 
 		thresholdsGroup.addSetting((setting) => {
 			setting
