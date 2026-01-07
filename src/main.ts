@@ -277,7 +277,7 @@ export default class SEOPlugin extends Plugin {
 	 * Toggles the ribbon icon visibility
 	 * Adds or removes the ribbon icon based on the setting
 	 */
-	async toggleRibbonIcon() {
+	toggleRibbonIcon() {
 		try {
 			if (this.settings.showRibbonIcon) {
 				// Add ribbon icon if it doesn't exist

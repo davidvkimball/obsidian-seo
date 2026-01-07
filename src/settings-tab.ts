@@ -95,7 +95,7 @@ export class SEOSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.showRibbonIcon = value;
 						await this.plugin.saveSettings();
-						await this.plugin.toggleRibbonIcon();
+						this.plugin.toggleRibbonIcon();
 					}));
 		});
 

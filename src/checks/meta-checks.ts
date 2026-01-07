@@ -386,6 +386,11 @@ export function checkKeywordInDescription(content: string, file: TFile, settings
 		if (line.startsWith(settings.descriptionProperty + ':')) {
 			foundDescriptionLine = true;
 			description = line.substring(settings.descriptionProperty.length + 1).trim();
+			// Remove surrounding quotes if present
+			if ((description.startsWith('"') && description.endsWith('"')) || 
+				(description.startsWith("'") && description.endsWith("'"))) {
+				description = description.slice(1, -1);
+			}
 			break;
 		}
 	}
@@ -404,13 +409,17 @@ export function checkKeywordInDescription(content: string, file: TFile, settings
 	const keywordLower = keyword.toLowerCase();
 	const descriptionLower = description.toLowerCase();
 	
-	// Split keyword into words for more flexible matching
-	const keywordWords = keywordLower.split(/\s+/).filter(word => word.length > 0);
+	// First check if the full keyword phrase appears (exact phrase match)
+	const fullPhraseFound = descriptionLower.includes(keywordLower);
 	
-	// Check if all keyword words appear in the description
+	// Also check if all keyword words appear individually (flexible matching)
+	const keywordWords = keywordLower.split(/\s+/).filter(word => word.length > 0);
 	const allWordsFound = keywordWords.every(word => descriptionLower.includes(word));
 	
-	if (allWordsFound) {
+	// Pass if either the full phrase is found OR all words are found
+	const keywordFound = fullPhraseFound || allWordsFound;
+	
+	if (keywordFound) {
 		results.push({
 			passed: true,
 			message: `Keyword found in description`,
@@ -673,9 +682,15 @@ export function checkKeywordInHeadings(content: string, file: TFile, settings: S
 	
 	for (const h1 of h1Headings) {
 		const h1Lower = h1.text.toLowerCase();
+		
+		// First check if the full keyword phrase appears (exact phrase match)
+		const fullPhraseFound = h1Lower.includes(keywordLower);
+		
+		// Also check if all keyword words appear individually (flexible matching)
 		const allWordsFound = keywordWords.every(word => h1Lower.includes(word));
 		
-		if (allWordsFound) {
+		// Pass if either the full phrase is found OR all words are found
+		if (fullPhraseFound || allWordsFound) {
 			keywordFoundInH1 = true;
 			break;
 		}
@@ -736,6 +751,11 @@ export function checkKeywordInTitle(content: string, file: TFile, settings: SEOS
 		if (line.startsWith(settings.titleProperty + ':')) {
 			foundTitleLine = true;
 			title = line.substring(settings.titleProperty.length + 1).trim();
+			// Remove surrounding quotes if present
+			if ((title.startsWith('"') && title.endsWith('"')) || 
+				(title.startsWith("'") && title.endsWith("'"))) {
+				title = title.slice(1, -1);
+			}
 			break;
 		}
 	}
@@ -767,13 +787,17 @@ export function checkKeywordInTitle(content: string, file: TFile, settings: SEOS
 	const titleLower = title.toLowerCase();
 	const keywordLower = keyword.toLowerCase();
 	
-	// Split keyword into words for more flexible matching
-	const keywordWords = keywordLower.split(/\s+/).filter(word => word.length > 0);
+	// First check if the full keyword phrase appears (exact phrase match)
+	const fullPhraseFound = titleLower.includes(keywordLower);
 	
-	// Check if all keyword words appear in the title
+	// Also check if all keyword words appear individually (flexible matching)
+	const keywordWords = keywordLower.split(/\s+/).filter(word => word.length > 0);
 	const allWordsFound = keywordWords.every(word => titleLower.includes(word));
 	
-	if (allWordsFound) {
+	// Pass if either the full phrase is found OR all words are found
+	const keywordFound = fullPhraseFound || allWordsFound;
+	
+	if (keywordFound) {
 		results.push({
 			passed: true,
 			message: `Keyword found in title`,
