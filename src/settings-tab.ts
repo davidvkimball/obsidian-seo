@@ -77,7 +77,7 @@ export class SEOSettingTab extends PluginSettingTab {
 				.setName('Enable MDX file support')
 				// False positive: "MDX" is a proper noun (acronym) and should be capitalized
 				// eslint-disable-next-line obsidianmd/ui/sentence-case
-				.setDesc('Process MDX files in addition to Markdown files. MDX files use the same frontmatter format as Markdown.')
+				.setDesc('Process MDX files in addition to Markdown files. MDX files use the same properties format as Markdown.')
 				.addToggle(toggle => toggle
 					.setValue(this.plugin.settings.enableMDXSupport)
 					.onChange(async (value) => {

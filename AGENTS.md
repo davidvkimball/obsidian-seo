@@ -65,6 +65,8 @@ The plugin uses a weighted scoring system (40-100 range) that prioritizes critic
 
 ### Project-Specific Conventions
 
+- **Terminology: Use "properties" not "frontmatter"**: Obsidian prefers the term "properties" over "frontmatter" or "front-matter" when referring to YAML metadata at the top of markdown files. All documentation, code comments, and UI text should use "properties" to align with Obsidian's official terminology.
+
 - **Settings Organization**: Settings organized in logical groups: Global, Property names, Audit options, Thresholds
 - **Check System**: Modular files in `src/checks/` for individual SEO check implementations
 - **UI Architecture**: Panel-based architecture with side panels for current note and vault-wide audits
