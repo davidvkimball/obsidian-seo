@@ -244,6 +244,7 @@ export async function checkExternalBrokenLinks(content: string, file: TFile, set
 		let linkIsBroken = false;
 		let errorMessage = '';
 		let suggestion = '';
+		let severity: 'error' | 'warning' = 'error';
 		
 		try {
 			// Use Obsidian's requestUrl
@@ -255,7 +256,13 @@ export async function checkExternalBrokenLinks(content: string, file: TFile, set
 			});
 			
 			// Check the response status
-			if (response.status >= 400) {
+			if (response.status === 403) {
+				// 403 often indicates bot protection, not a broken link
+				linkIsBroken = true;
+				errorMessage = `External link access restricted (403): ${url}`;
+				suggestion = 'This link returned a 403 Forbidden error. This may indicate bot protection (like Cloudflare) rather than a broken link. Please verify manually.';
+				severity = 'warning';
+			} else if (response.status >= 400) {
 				linkIsBroken = true;
 				if (response.status >= 400 && response.status < 500) {
 					errorMessage = `External link error (${response.status}): ${url}`;
@@ -279,8 +286,10 @@ export async function checkExternalBrokenLinks(content: string, file: TFile, set
 				errorMessage = `External link unreachable: ${url}`;
 				suggestion = 'This link could not be reached. Check if the URL is correct or if the server is down.';
 			} else {
+				// Generic errors (often caused by bot protection) should be warnings, not errors
 				errorMessage = `External link error: ${url}`;
-				suggestion = 'This link could not be verified. Please check the URL manually.';
+				suggestion = 'This link could not be verified. This may be due to bot protection, network issues, or a broken link. Please check the URL manually.';
+				severity = 'warning';
 			}
 		}
 		
@@ -300,7 +309,7 @@ export async function checkExternalBrokenLinks(content: string, file: TFile, set
 				passed: false,
 				message: errorMessage,
 				suggestion: suggestion,
-				severity: 'error',
+				severity: severity,
 				position: {
 					line: lineNumber,
 					searchText: url,
