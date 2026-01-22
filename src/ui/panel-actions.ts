@@ -96,22 +96,22 @@ export class PanelActions {
 			// Temporarily enable external broken links checking and disable external links
 			const originalVaultSetting = this.plugin.settings.enableExternalLinkVaultCheck;
 			const originalExternalSetting = this.plugin.settings.checkExternalLinks;
-			
+
 			this.plugin.settings.enableExternalLinkVaultCheck = true;
 			this.plugin.settings.checkExternalLinks = false; // Disable the notice-based check
-			
+
 			// Clear cache first to ensure fresh results
 			const { clearCacheForFile } = await import("../seo-checker");
 			clearCacheForFile(activeFile.path);
-			
+
 			// Import and run SEO check directly with external broken links enabled
 			const { runSEOCheck } = await import("../seo-checker");
 			const results = await runSEOCheck(this.plugin, [activeFile]);
-			
+
 			// Restore original settings
 			this.plugin.settings.enableExternalLinkVaultCheck = originalVaultSetting;
 			this.plugin.settings.checkExternalLinks = originalExternalSetting;
-			
+
 			if (results.length > 0) {
 				new Notice('External links check complete.');
 				return results[0] || null;
@@ -121,6 +121,54 @@ export class PanelActions {
 			console.error('Error checking external links:', error);
 			new Notice('Error checking external links. Check console for details.');
 			return null;
+		}
+	}
+
+	async checkAllExternalLinks(): Promise<SEOResults[]> {
+		try {
+			// Get files to check
+			const files = await this.plugin.getFilesToCheck();
+			if (files.length === 0) {
+				const fileTypeText = this.plugin.settings.enableMDXSupport ? 'markdown or MDX files' : 'markdown files';
+				new Notice(`No ${fileTypeText} found in configured directories.`);
+				return [];
+			}
+
+			// Temporarily enable external broken links checking and disable external links
+			const originalVaultSetting = this.plugin.settings.enableExternalLinkVaultCheck;
+			const originalExternalSetting = this.plugin.settings.checkExternalLinks;
+
+			this.plugin.settings.enableExternalLinkVaultCheck = true;
+			this.plugin.settings.checkExternalLinks = false; // Disable the notice-based check
+
+			// Clear cache first to ensure fresh results
+			const { clearAllCache } = await import("../seo-checker");
+			clearAllCache();
+
+			// Show notification for large scans
+			if (files.length > 20) {
+				new Notice(`Checking external links for 404s on ${files.length} files... This may take a moment.`);
+			}
+
+			// Import and run SEO check directly with external broken links enabled
+			const { runSEOCheck } = await import("../seo-checker");
+			const results = await runSEOCheck(this.plugin, files);
+
+			// Restore original settings
+			this.plugin.settings.enableExternalLinkVaultCheck = originalVaultSetting;
+			this.plugin.settings.checkExternalLinks = originalExternalSetting;
+
+			// Save results to settings for backward compatibility
+			this.plugin.settings.cachedGlobalResults = results;
+			this.plugin.settings.lastScanTimestamp = Date.now();
+			await this.plugin.saveSettings();
+
+			new Notice(`External links check complete with ${results.length} files.`);
+			return results;
+		} catch (error) {
+			console.error('Error checking all external links:', error);
+			new Notice('Error checking external links. Check console for details.');
+			return [];
 		}
 	}
 

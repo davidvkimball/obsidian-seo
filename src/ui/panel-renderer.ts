@@ -204,11 +204,41 @@ export class PanelRenderer {
 		tempResultsDisplay.renderGlobalResults(globalResults, this.plugin.settings);
 
 		// Add refresh button below stats
-		const refreshBtn = containerEl.createEl('button', { 
+		const refreshBtn = containerEl.createEl('button', {
 			text: 'Refresh',
 			cls: 'mod-cta seo-btn seo-refresh-btn',
 			attr: { 'data-refresh-btn': 'true' }
 		});
+
+		// External links button (only show if enabled in settings and vault-wide is disabled)
+		if (this.plugin.settings.enableExternalLinkButton && !this.plugin.settings.enableExternalLinkVaultCheck) {
+			const externalLinksBtn = containerEl.createEl('button', {
+				text: 'Check all 404s',
+				cls: 'seo-btn'
+			});
+			externalLinksBtn.addEventListener('click', () => {
+				void (async () => {
+					externalLinksBtn.disabled = true;
+					externalLinksBtn.textContent = 'Checking...';
+					externalLinksBtn.addClass('seo-btn-disabled');
+
+					try {
+						const results = await this.actions.checkAllExternalLinks();
+						if (results.length > 0) {
+							// Dispatch completion event to update the panel
+							containerEl.dispatchEvent(new CustomEvent('seo-refresh-complete', {
+								detail: { results }
+							}));
+						}
+					} finally {
+						externalLinksBtn.disabled = false;
+						externalLinksBtn.textContent = 'Check all 404s';
+						externalLinksBtn.removeClass('seo-btn-disabled');
+						externalLinksBtn.addClass('seo-btn-enabled');
+					}
+				})();
+			});
+		}
 		refreshBtn.addEventListener('click', () => {
 			void (async () => {
 				// Check if this is a cancel operation
