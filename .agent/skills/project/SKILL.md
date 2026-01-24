@@ -1,34 +1,33 @@
 ---
 name: project
-description: Project-specific architecture, maintenance tasks, and unique conventions for this repository. Load when performing project-wide maintenance or working with the core architecture.
+description: Project-specific architecture, maintenance tasks, and unique conventions for SEO.
 ---
 
-# Project Context
+# SEO Project Skill
 
-This skill provides the unique context and architectural details for the **Obsidian Sample Plugin Plus** repository.
+Ensure your public-facing notes are optimized for search engines and AI. This plugin audits and manages note frontmatter for SEO purposes, specifically targeting users of publishing platforms.
 
-## Purpose
+## Core Architecture
 
-To provide guidance on project-specific structures and tasks that differ from general Obsidian development patterns.
-
-## When to Use
-
-Load this skill when:
-- Understanding the repository's unique architecture.
-- Performing recurring maintenance tasks.
-- Following project-specific coding conventions.
-
-## Project Overview
-
-- **Architecture**: Organized structure with main code in `src/main.ts` and settings in `src/settings.ts`.
-- **Reference Management**: Uses a `.ref` folder with symlinks to centralized Obsidian repositories for API and documentation.
-
-## Maintenance Tasks
-
-- **Sync References**: Run the setup scripts (`scripts/setup-ref-links.*`) to update symlinks to the 6 core Obsidian projects.
-- **Update Skills**: Use `node scripts/update-agents.mjs "Description"` after syncing or updating reference materials.
+- **SEO Auditing**: Logic focused on analyzing note content and frontmatter for SEO best practices.
+- **Metadata Management**: automates the injection and maintenance of `description`, `keywords`, and `tags` for export.
+- **UI Feedback**: Uses a 14KB `styles.css` to provide visual SEO scores and warning indicators in the editor.
 
 ## Project-Specific Conventions
 
-- **Organized Source**: Prefer keeping logic separated into files within `src/` rather than bloating `main.ts`.
-- **Ref Symlinks**: Always use the `.ref/` path when looking up API documentation to ensure parity with the central reference store.
+- **AI Optimization**: Includes specific logic for ensuring notes are readable and indexable by LLMs and search bots.
+- **Frontmatter Standards**: Maps internal note data to standard meta-tag structures.
+- **Responsive Audit**: Designed to provide immediate feedback as the user writes in the editor.
+
+## Key Files
+
+- `src/main.ts`: Main auditing logic and command/view registration.
+- `manifest.json`: Plugin registration and id (`seo`).
+- `styles.css`: SEO score indicators and auditor UI components.
+- `esbuild.config.mjs`: Standard build configuration.
+
+## Maintenance Tasks
+
+- **Search Algorithm Sync**: Periodically audit the "best practices" recommendations against current SEO standards.
+- **Frontmatter Mapping**: Ensure injected tags are compatible with popular publishing platforms (e.g., Quartz, Jekyll, Astro).
+- **Mobile UX**: Verify that SEO indicators don't clutter the interface on smaller screens.
