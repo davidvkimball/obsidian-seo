@@ -16,28 +16,28 @@ import { removeCodeBlocks } from "./utils/content-parser";
  */
 function isValidUrl(url: string): boolean {
 	// Check if URL contains HTML entities or malformed characters
-	if (url.includes('&gt;') || url.includes('&lt;') || url.includes('&amp;') || 
+	if (url.includes('&gt;') || url.includes('&lt;') || url.includes('&amp;') ||
 		url.includes('&quot;') || url.includes('&apos;') || url.includes('&nbsp;')) {
 		return false;
 	}
-	
+
 	// Check if URL contains HTML tags or malformed HTML
 	if (url.includes('<') || url.includes('>') || url.includes('"') || url.includes("'")) {
 		return false;
 	}
-	
+
 	// Check if URL ends with HTML-like fragments
 	if (url.endsWith('&gt;') || url.endsWith('&lt;') || url.endsWith('&amp;') ||
 		url.endsWith('&quot;') || url.endsWith('&apos;') || url.endsWith('&nbsp;')) {
 		return false;
 	}
-	
+
 	// Check if URL contains suspicious patterns that indicate HTML fragments
 	if (url.includes('/a&gt;') || url.includes('/p&gt;') || url.includes('/div&gt;') ||
 		url.includes('/span&gt;') || url.includes('/img&gt;') || url.includes('/script&gt;')) {
 		return false;
 	}
-	
+
 	// Basic URL format validation
 	try {
 		const urlObj = new URL(url);
@@ -50,7 +50,7 @@ function isValidUrl(url: string): boolean {
 			return false;
 		}
 		// Ensure hostname doesn't contain suspicious characters
-		if (urlObj.hostname.includes('<') || urlObj.hostname.includes('>') || 
+		if (urlObj.hostname.includes('<') || urlObj.hostname.includes('>') ||
 			urlObj.hostname.includes('"') || urlObj.hostname.includes("'")) {
 			return false;
 		}
@@ -68,16 +68,16 @@ function isValidUrl(url: string): boolean {
 function extractValidExternalLinks(content: string): string[] {
 	// Use the content parser to remove code blocks, HTML, and other non-content
 	const cleanContent = removeCodeBlocks(content);
-	
+
 	const externalLinks: string[] = [];
-	
+
 	// Find markdown links with http/https URLs using manual parsing to handle nested brackets
 	let pos = 0;
 	while (pos < cleanContent.length) {
 		// Find the next opening bracket
 		const openBracket = cleanContent.indexOf('[', pos);
 		if (openBracket === -1) break;
-		
+
 		// Find the matching closing bracket
 		let bracketCount = 1;
 		let closeBracket = openBracket + 1;
@@ -89,13 +89,13 @@ function extractValidExternalLinks(content: string): string[] {
 			}
 			closeBracket++;
 		}
-		
+
 		if (bracketCount > 0) {
 			// No matching closing bracket found
 			pos = openBracket + 1;
 			continue;
 		}
-		
+
 		// Check if there's a URL part after the closing bracket
 		if (closeBracket < cleanContent.length && cleanContent[closeBracket] === '(') {
 			// Find the matching closing parenthesis
@@ -109,18 +109,18 @@ function extractValidExternalLinks(content: string): string[] {
 				}
 				closeParen++;
 			}
-			
+
 			if (parenCount === 0) {
 				// We found a complete markdown link
 				const linkUrl = cleanContent.substring(closeBracket + 1, closeParen - 1);
-				
+
 				// Check if it's an external URL
 				if (linkUrl.startsWith('http://') || linkUrl.startsWith('https://')) {
 					if (isValidUrl(linkUrl)) {
 						externalLinks.push(linkUrl);
 					}
 				}
-				
+
 				pos = closeParen;
 			} else {
 				pos = closeBracket;
@@ -129,34 +129,34 @@ function extractValidExternalLinks(content: string): string[] {
 			pos = closeBracket;
 		}
 	}
-	
+
 	// Find naked URLs with improved regex and validation
 	const nakedUrls = cleanContent.match(/https?:\/\/[^\s)\]]+/g);
 	if (nakedUrls) {
 		// Get all markdown link URLs to exclude them from naked URLs
 		const markdownLinkUrls = new Set<string>(externalLinks);
-		
+
 		nakedUrls.forEach(url => {
 			// Skip if URL is already in a markdown link
 			if (markdownLinkUrls.has(url)) {
 				return;
 			}
-			
+
 			// Skip archival URLs as they are meant to be displayed as-is
-			if (url.includes('web.archive.org/web/') || 
+			if (url.includes('web.archive.org/web/') ||
 				url.includes('archive.today/') ||
 				url.includes('archive.is/') ||
 				url.includes('web.archive.org/save/')) {
 				return;
 			}
-			
+
 			// Validate the URL before adding it
 			if (isValidUrl(url)) {
 				externalLinks.push(url);
 			}
 		});
 	}
-	
+
 	// Remove duplicates
 	return [...new Set(externalLinks)];
 }
@@ -171,14 +171,14 @@ function extractValidExternalLinks(content: string): string[] {
  */
 export function checkExternalLinks(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
-	
+
 	if (!settings.checkExternalLinks) {
 		return Promise.resolve([]);
 	}
-	
+
 	// Use the improved link extraction
 	const uniqueLinks = extractValidExternalLinks(content);
-	
+
 	if (uniqueLinks.length > 0) {
 		// List each external link as a notice
 		uniqueLinks.forEach((url, index) => {
@@ -202,9 +202,61 @@ export function checkExternalLinks(content: string, file: TFile, settings: SEOSe
 			severity: 'info'
 		});
 	}
-	
+
 	return Promise.resolve(results);
 }
+
+// External link cache settings
+const EXTERNAL_LINK_CACHE_TTL = 3600000; // 1 hour in ms
+const externalLinkCache = new Map<string, { result: SEOCheckResult | null, timestamp: number }>();
+
+// Rate limiting settings
+const MAX_CONCURRENT_REQUESTS = 5;
+const REQUEST_DELAY_MS = 200;
+
+class RateLimiter {
+	private queue: Array<{ fn: () => Promise<any>, resolve: (val: any) => void, reject: (err: any) => void }> = [];
+	private activeRequests = 0;
+	private lastRequestTime = 0;
+
+	async schedule<T>(fn: () => Promise<T>): Promise<T> {
+		return new Promise((resolve, reject) => {
+			this.queue.push({ fn, resolve, reject });
+			this.processQueue();
+		});
+	}
+
+	private async processQueue() {
+		if (this.activeRequests >= MAX_CONCURRENT_REQUESTS || this.queue.length === 0) {
+			return;
+		}
+
+		const now = Date.now();
+		const timeSinceLastRequest = now - this.lastRequestTime;
+
+		if (timeSinceLastRequest < REQUEST_DELAY_MS) {
+			setTimeout(() => this.processQueue(), REQUEST_DELAY_MS - timeSinceLastRequest);
+			return;
+		}
+
+		const { fn, resolve, reject } = this.queue.shift()!;
+		this.activeRequests++;
+		this.lastRequestTime = Date.now();
+
+		try {
+			const result = await fn();
+			resolve(result);
+		} catch (error) {
+			reject(error);
+		} finally {
+			this.activeRequests--;
+			// Small delay before processing next to ensure spacing
+			setTimeout(() => this.processQueue(), REQUEST_DELAY_MS);
+		}
+	}
+}
+
+const limiter = new RateLimiter();
 
 /**
  * Checks for broken external links with network requests
@@ -216,14 +268,14 @@ export function checkExternalLinks(content: string, file: TFile, settings: SEOSe
  */
 export async function checkExternalBrokenLinks(content: string, file: TFile, settings: SEOSettings, abortController?: AbortController): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
-	
+
 	if (!settings.enableExternalLinkVaultCheck) {
 		return Promise.resolve([]);
 	}
-	
+
 	// Use the improved link extraction
 	const uniqueLinks = extractValidExternalLinks(content);
-	
+
 	if (uniqueLinks.length === 0) {
 		results.push({
 			passed: true,
@@ -232,93 +284,91 @@ export async function checkExternalBrokenLinks(content: string, file: TFile, set
 		});
 		return Promise.resolve(results);
 	}
-	
+
 	// Check each external link
-	for (const url of uniqueLinks) {
-		// Check for global cancellation before processing each link
+	const checkTasks = uniqueLinks.map(async (url) => {
+		// Check for global cancellation
 		if (abortController?.signal.aborted) {
-			console.debug('External link check cancelled');
-			throw new DOMException('Operation was aborted', 'AbortError');
+			return null;
 		}
-		
-		let linkIsBroken = false;
-		let errorMessage = '';
-		let suggestion = '';
-		let severity: 'error' | 'warning' = 'error';
-		
-		try {
-			// Use Obsidian's requestUrl
-			const response = await requestUrl({
-				url: url,
-				headers: {
-					'User-Agent': 'Mozilla/5.0 (compatible; Obsidian-SEO-Plugin/1.0)'
-				}
-			});
-			
-			// Check the response status
-			if (response.status === 403) {
-				// 403 often indicates bot protection, not a broken link
-				linkIsBroken = true;
-				errorMessage = `External link access restricted (403): ${url}`;
-				suggestion = 'This link returned a 403 Forbidden error. This may indicate bot protection (like Cloudflare) rather than a broken link. Please verify manually.';
-				severity = 'warning';
-			} else if (response.status >= 400) {
-				linkIsBroken = true;
-				if (response.status >= 400 && response.status < 500) {
+
+		// Check cache first
+		const cached = externalLinkCache.get(url);
+		if (cached && (Date.now() - cached.timestamp < EXTERNAL_LINK_CACHE_TTL)) {
+			return cached.result;
+		}
+
+		// Use rate limiter for the actual request
+		return await limiter.schedule(async () => {
+			if (abortController?.signal.aborted) return null;
+
+			let linkIsBroken = false;
+			let errorMessage = '';
+			let suggestion = '';
+			let severity: 'error' | 'warning' = 'error';
+
+			try {
+				const response = await requestUrl({
+					url: url,
+					headers: {
+						'User-Agent': 'Mozilla/5.0 (compatible; Obsidian-SEO-Plugin/1.0)'
+					},
+					throw: false // Handle status codes manually
+				});
+
+				if (response.status === 403) {
+					linkIsBroken = true;
+					errorMessage = `External link access restricted (403): ${url}`;
+					suggestion = 'This link returned a 403 Forbidden error. This may indicate bot protection rather than a broken link.';
+					severity = 'warning';
+				} else if (response.status >= 400) {
+					linkIsBroken = true;
 					errorMessage = `External link error (${response.status}): ${url}`;
-					suggestion = `This link returned a ${response.status} error. The page may not exist or may require authentication.`;
-				} else if (response.status >= 500) {
-					errorMessage = `External link server error (${response.status}): ${url}`;
-					suggestion = `This link returned a ${response.status} server error. The server may be experiencing issues.`;
-				} else {
-					errorMessage = `External link error (${response.status}): ${url}`;
-					suggestion = `This link returned an unexpected status code: ${response.status}`;
+					suggestion = `This link returned a ${response.status} error.`;
 				}
-			}
-			
-		} catch (error) {
-			linkIsBroken = true;
-			
-			if (error instanceof Error && (error.message.includes('timeout') || error.message.includes('Timeout'))) {
-				errorMessage = `External link timeout: ${url}`;
-				suggestion = 'This link took too long to respond. The server might be slow or the link might be broken.';
-			} else if (error instanceof Error && (error.message.includes('Failed to fetch') || error.message.includes('net::ERR_') || error.message.includes('NetworkError'))) {
+			} catch (error) {
+				linkIsBroken = true;
 				errorMessage = `External link unreachable: ${url}`;
-				suggestion = 'This link could not be reached. Check if the URL is correct or if the server is down.';
-			} else {
-				// Generic errors (often caused by bot protection) should be warnings, not errors
-				errorMessage = `External link error: ${url}`;
-				suggestion = 'This link could not be verified. This may be due to bot protection, network issues, or a broken link. Please check the URL manually.';
+				suggestion = 'Check if the URL is correct or if the server is down.';
 				severity = 'warning';
 			}
-		}
-		
-		// If we detected a broken link, add it to results
-		if (linkIsBroken) {
-			const lines = content.split('\n');
-			let lineNumber = 1;
-			for (let i = 0; i < lines.length; i++) {
-				const line = lines[i];
-				if (line && url && line.includes(url)) {
-					lineNumber = i + 1;
-					break;
+
+			let result: SEOCheckResult | null = null;
+			if (linkIsBroken) {
+				const lines = content.split('\n');
+				let lineNumber = 1;
+				for (let i = 0; i < lines.length; i++) {
+					const line = lines[i];
+					if (line && line.includes(url)) {
+						lineNumber = i + 1;
+						break;
+					}
 				}
+
+				result = {
+					passed: false,
+					message: errorMessage,
+					suggestion: suggestion,
+					severity: severity,
+					position: {
+						line: lineNumber,
+						searchText: url,
+						context: getContextAroundLine(content, lineNumber)
+					}
+				};
 			}
-			
-			results.push({
-				passed: false,
-				message: errorMessage,
-				suggestion: suggestion,
-				severity: severity,
-				position: {
-					line: lineNumber,
-					searchText: url,
-					context: getContextAroundLine(content, lineNumber)
-				}
-			});
-		}
-	}
-	
+
+			// Cache the result (even if null/passed)
+			externalLinkCache.set(url, { result, timestamp: Date.now() });
+			return result;
+		});
+	});
+
+	const taskResults = await Promise.all(checkTasks);
+	taskResults.forEach(r => {
+		if (r) results.push(r);
+	});
+
 	// If no errors were found, add success message
 	if (results.length === 0 && uniqueLinks.length > 0) {
 		results.push({
@@ -327,8 +377,8 @@ export async function checkExternalBrokenLinks(content: string, file: TFile, set
 			severity: 'info'
 		});
 	} else if (uniqueLinks.length > 0) {
-		// Add summary message when there are both working and broken links
-		const workingLinks = uniqueLinks.length - results.filter(r => !r.passed).length;
+		const brokenCount = results.filter(r => !r.passed).length;
+		const workingLinks = uniqueLinks.length - brokenCount;
 		if (workingLinks > 0) {
 			results.push({
 				passed: true,
@@ -337,8 +387,8 @@ export async function checkExternalBrokenLinks(content: string, file: TFile, set
 			});
 		}
 	}
-	
-	return Promise.resolve(results);
+
+	return results;
 }
 
 

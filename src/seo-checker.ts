@@ -14,9 +14,9 @@ interface CacheEntry {
 const cache = new Map<string, CacheEntry>();
 const CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 import {
-	checkAltText, 
-	checkNakedLinks, 
-	checkHeadingOrder, 
+	checkAltText,
+	checkNakedLinks,
+	checkHeadingOrder,
 	checkKeywordDensity,
 	checkBrokenLinks,
 	checkExternalLinks,
@@ -37,30 +37,30 @@ import {
 	checkSlugFormat,
 	getDisplayName
 } from "./checks";
-import { 
-	checkDuplicateTitles, 
-	checkDuplicateDescriptions, 
-	checkVaultDuplicateContent 
+import {
+	checkDuplicateTitles,
+	checkDuplicateDescriptions,
+	checkVaultDuplicateContent
 } from "./checks/content-checks";
 import { VaultDuplicateDetector } from "./checks/duplicate-detection";
 
 export async function runSEOCheck(plugin: SEOPlugin, files: TFile[], abortController?: AbortController): Promise<SEOResults[]> {
 	const results: SEOResults[] = [];
-	
+
 	// Create vault detector for duplicate detection
 	const vaultDetector = new VaultDuplicateDetector(plugin.app, plugin.settings);
-	
+
 	// Collect vault data if duplicate detection is enabled
 	if (plugin.settings.checkDuplicateContent) {
 		await vaultDetector.collectVaultData();
 	}
-	
+
 	for (const file of files) {
 		// Check for cancellation before processing each file
 		if (abortController?.signal.aborted) {
 			throw new DOMException('Operation was aborted', 'AbortError');
 		}
-		
+
 		try {
 			// Check cache first
 			const cachedResult = getCachedResult(file, plugin);
@@ -68,11 +68,11 @@ export async function runSEOCheck(plugin: SEOPlugin, files: TFile[], abortContro
 				results.push(cachedResult);
 				continue;
 			}
-			
+
 			// Run fresh check
 			const content = await plugin.app.vault.read(file);
 			const result = await checkFile(plugin, file, content, vaultDetector, abortController);
-			
+
 			// Cache the result
 			void cacheResult(file, result, plugin);
 			results.push(result);
@@ -83,7 +83,7 @@ export async function runSEOCheck(plugin: SEOPlugin, files: TFile[], abortContro
 			console.error(`Error checking file ${file.path}:`, error);
 		}
 	}
-	
+
 	// Don't show notification here - let the calling code handle it
 	return results;
 }
@@ -103,7 +103,7 @@ async function checkFile(plugin: SEOPlugin, file: TFile, content: string, vaultD
 		contentLength: await checkContentLength(content, file, plugin.settings),
 		duplicateTitles: await checkDuplicateTitles(content, file, plugin.settings, vaultDetector),
 		duplicateDescriptions: await checkDuplicateDescriptions(content, file, plugin.settings, vaultDetector),
-		duplicateContent: plugin.settings.checkDuplicateContent 
+		duplicateContent: plugin.settings.checkDuplicateContent
 			? await checkVaultDuplicateContent(content, file, plugin.settings, vaultDetector)
 			: await checkDuplicateContent(content, file, plugin.settings),
 		altText: await checkAltText(content, file, plugin.settings),
@@ -112,7 +112,7 @@ async function checkFile(plugin: SEOPlugin, file: TFile, content: string, vaultD
 		brokenLinks: await checkBrokenLinks(content, file, plugin.settings, plugin.app),
 		potentiallyBrokenLinks: await checkPotentiallyBrokenLinks(content, file, plugin.settings, plugin.app),
 		potentiallyBrokenEmbeds: await checkNotices(content, file, plugin.settings),
-		externalBrokenLinks: plugin.settings.enableExternalLinkVaultCheck 
+		externalBrokenLinks: plugin.settings.enableExternalLinkVaultCheck
 			? await checkExternalBrokenLinks(content, file, plugin.settings, abortController)
 			: (plugin.settings.checkExternalLinks ? await checkExternalLinks(content, file, plugin.settings) : []),
 		readingLevel: await checkReadingLevel(content, file, plugin.settings)
@@ -123,107 +123,80 @@ async function checkFile(plugin: SEOPlugin, file: TFile, content: string, vaultD
 	const issuesCount = allResults.filter(r => r.severity === 'error').length;
 	const warningsCount = allResults.filter(r => r.severity === 'warning').length;
 	const noticesCount = allResults.filter(r => r.severity === 'notice').length;
-	
-	// Improved SEO scoring system with weighted checks and no double penalties
-	let overallScore: number;
-	
-	if (allResults.length === 0) {
-		overallScore = 100;
+
+	// Calculate weighted SEO scoring system (0-100)
+	let overallScore = 0;
+
+	// 1. Title optimization (15 points)
+	const titleResults = [...checks.titleLength, ...checks.titleH1Uniqueness];
+	if (titleResults.length > 0) {
+		const passedCount = titleResults.filter(r => r.passed).length;
+		overallScore += (passedCount / titleResults.length) * 15;
 	} else {
-		// Calculate weighted base score (no double penalties)
-		let weightedScore = 0;
-		let totalWeight = 0;
-		
-		// Weight checks by SEO importance (exclude notices from scoring)
-		allResults.forEach(result => {
-			// Skip notices - they don't affect the score
-			if (result.severity === 'notice') {
-				return;
-			}
-			
-			let weight = 1; // Default weight
-			let points = 0;
-			
-			// Critical SEO factors (10x weight)
-			if (result.message.includes('Broken link') && !result.passed) {
-				weight = 10;
-				points = 0; // Major penalty for broken links
-			} else if (result.message.includes('title') && !result.passed && result.message.includes('No properties')) {
-				weight = 10;
-				points = 0; // Major penalty for missing titles entirely
-			}
-			// Important SEO factors (5x weight)
-			else if (result.message.includes('alt text') && !result.passed) {
-				weight = 5;
-				points = 0; // Significant penalty for missing alt text
-			} else if (result.message.includes('meta description') && !result.passed) {
-				weight = 5;
-				points = 0; // Significant penalty for missing meta description
-			}
-			// Critical keyword factors (8x weight) - keywords are extremely important for SEO
-			// Only apply high weight to actual keyword optimization failures, not missing keyword definitions
-			else if (result.message.includes('keyword') && !result.passed && 
-				(result.message.includes('density') || result.message.includes('not found in title') || result.message.includes('not found in slug'))) {
-				weight = 8;
-				points = 0; // High penalty for keyword optimization issues
-			}
-			// Moderate SEO factors (3x weight)
-			else if (result.message.includes('content length') && !result.passed) {
-				weight = 3;
-				points = 0; // Moderate penalty for content issues
-			}
-			// Minor-Moderate SEO factors (2x weight) - title length issues
-			else if (result.message.includes('title') && !result.passed && (result.message.includes('too short') || result.message.includes('too long'))) {
-				weight = 2;
-				points = 0; // Minor-moderate penalty for title length issues
-			}
-			// Minor SEO factors (1x weight) - reading level moved here as it's less critical
-			else if (result.message.includes('reading level') && !result.passed) {
-				weight = 1;
-				points = 0; // Minor penalty for readability issues
-			}
-			// Other minor SEO factors (1x weight)
-			else if (result.severity === 'warning' && !result.passed) {
-				weight = 1;
-				points = 0; // Minor penalty for warnings
-			}
-			// Passed checks get full points
-			else if (result.passed) {
-				points = 100; // Full points for passed checks
-			}
-			
-			weightedScore += points * weight;
-			totalWeight += weight;
-		});
-		
-		// Calculate base score from weighted average
-		const baseScore = totalWeight > 0 ? weightedScore / totalWeight : 100;
-		
-		// Apply additional penalties for critical issues (but not double-counting)
-		let additionalPenalty = 0;
-		
-		// Broken links: additional 2 points each (beyond the weight penalty)
-		const brokenLinks = allResults.filter(r => 
-			r.severity === 'error' && !r.passed && r.message.includes('Broken link')
-		).length;
-		additionalPenalty += Math.min(brokenLinks * 2, 10);
-		
-		// Missing alt text: additional 1 point each
-		const missingAltText = allResults.filter(r => 
-			r.severity === 'error' && !r.passed && r.message.includes('alt text')
-		).length;
-		additionalPenalty += Math.min(missingAltText * 1, 5);
-		
-		// Warnings: 0.5 points each (minor impact)
-		const warnings = allResults.filter(r => r.severity === 'warning' && !r.passed).length;
-		additionalPenalty += Math.min(warnings * 0.5, 5);
-		
-		// Apply penalties with reasonable caps
-		additionalPenalty = Math.min(additionalPenalty, 20);
-		
-		// Calculate final score
-		overallScore = Math.max(40, Math.min(100, baseScore - additionalPenalty));
+		overallScore += 15; // Assume pass if no checks
 	}
+
+	// 2. Meta description (15 points)
+	const metaResults = checks.metaDescription;
+	if (metaResults.length > 0) {
+		const passedCount = metaResults.filter(r => r.passed).length;
+		overallScore += (passedCount / metaResults.length) * 15;
+	} else {
+		overallScore += 15;
+	}
+
+	// 3. Heading hierarchy (15 points)
+	const headingResults = checks.headingOrder;
+	if (headingResults.length > 0) {
+		const passedCount = headingResults.filter(r => r.passed).length;
+		overallScore += (passedCount / headingResults.length) * 15;
+	} else {
+		overallScore += 15;
+	}
+
+	// 4. Content quality (20 points)
+	const contentResults = [...checks.contentLength, ...checks.readingLevel];
+	if (contentResults.length > 0) {
+		const passedCount = contentResults.filter(r => r.passed).length;
+		overallScore += (passedCount / contentResults.length) * 20;
+	} else {
+		overallScore += 20;
+	}
+
+	// 5. Image alt text (10 points)
+	const altTextResults = checks.altText;
+	if (altTextResults.length > 0) {
+		const passedCount = altTextResults.filter(r => r.passed).length;
+		overallScore += (passedCount / altTextResults.length) * 10;
+	} else {
+		overallScore += 10;
+	}
+
+	// 6. Link health (15 points)
+	const linkResults = [...checks.brokenLinks, ...checks.nakedLinks];
+	if (linkResults.length > 0) {
+		const passedCount = linkResults.filter(r => r.passed).length;
+		overallScore += (passedCount / linkResults.length) * 15;
+	} else {
+		overallScore += 15;
+	}
+
+	// 7. Keyword usage (10 points)
+	const keywordResults = [
+		...checks.keywordDensity,
+		...checks.keywordInTitle,
+		...checks.keywordInDescription,
+		...checks.keywordInHeadings,
+		...checks.keywordInSlug
+	];
+	if (keywordResults.length > 0) {
+		const passedCount = keywordResults.filter(r => r.passed).length;
+		overallScore += (passedCount / keywordResults.length) * 10;
+	} else {
+		overallScore += 10;
+	}
+
+	overallScore = Math.round(Math.max(0, Math.min(100, overallScore)));
 
 	return {
 		file: file.path,
@@ -280,7 +253,7 @@ function generateSettingsHash(settings: SEOSettings): string {
 		duplicateThreshold: settings.duplicateThreshold,
 		// Add other settings that affect SEO results
 	};
-	
+
 	// Simple hash of the settings object
 	return JSON.stringify(relevantSettings);
 }
@@ -290,20 +263,20 @@ function getCachedResult(file: TFile, plugin: SEOPlugin): SEOResults | null {
 	if (!entry) {
 		return null;
 	}
-	
+
 	const now = Date.now();
 	const isExpired = (now - entry.timestamp) > CACHE_EXPIRY_MS;
-	
+
 	// Check if settings have changed
 	const currentSettingsHash = generateSettingsHash(plugin.settings);
 	const settingsChanged = entry.settingsHash !== currentSettingsHash;
-	
+
 	if (isExpired || settingsChanged) {
 		// Remove expired or invalidated entry
 		cache.delete(file.path);
 		return null;
 	}
-	
+
 	return entry.result;
 }
 

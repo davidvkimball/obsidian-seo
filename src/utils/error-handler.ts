@@ -16,6 +16,15 @@ export enum ErrorSeverity {
 }
 
 /**
+ * Result of an error handling operation
+ */
+export interface ErrorResult {
+	message: string;
+	severity: ErrorSeverity;
+	suggestion?: string;
+}
+
+/**
  * Custom error class for SEO plugin errors
  */
 export class SEOPluginError extends Error {
@@ -72,10 +81,10 @@ export function handleError(
 
 	// Show notice to user if requested
 	if (showNotice) {
-		const noticeMessage = suggestion 
+		const noticeMessage = suggestion
 			? `${message} - ${suggestion}`
 			: message;
-		
+
 		new Notice(noticeMessage, 5000);
 	}
 

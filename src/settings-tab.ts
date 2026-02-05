@@ -4,6 +4,7 @@ import { createSettingsGroup } from "./utils/settings-compat";
 
 export class SEOSettingTab extends PluginSettingTab {
 	plugin: SEOPlugin;
+	public icon = 'lucide-search-check';
 
 	constructor(app: App, plugin: SEOPlugin) {
 		super(app, plugin);
@@ -20,17 +21,17 @@ export class SEOSettingTab extends PluginSettingTab {
 		globalGroup.addSetting((setting) => {
 			setting
 				.setName('Scan directories')
-			.setDesc('Comma-separated list of directory names to scan. Leave blank to scan all directories.')
-			.addText(text => {
-				// False positive: "like blog, posts, public" is a placeholder example, not UI text
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
-				text.setPlaceholder('like blog, posts, public');
-				text.setValue(this.plugin.settings.scanDirectories);
-				text.onChange(async (value) => {
-					this.plugin.settings.scanDirectories = value;
-					await this.plugin.saveSettings();
+				.setDesc('Comma-separated list of directory names to scan. Leave blank to scan all directories.')
+				.addText(text => {
+					// False positive: "like blog, posts, public" is a placeholder example, not UI text
+					// eslint-disable-next-line obsidianmd/ui/sentence-case
+					text.setPlaceholder('like blog, posts, public');
+					text.setValue(this.plugin.settings.scanDirectories);
+					text.onChange(async (value) => {
+						this.plugin.settings.scanDirectories = value;
+						await this.plugin.saveSettings();
+					});
 				});
-			});
 		});
 
 		globalGroup.addSetting((setting) => {

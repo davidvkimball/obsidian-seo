@@ -18,29 +18,29 @@ import { findLineNumberForImage, getContextAroundLine } from "./utils/position-u
  */
 export function checkNakedLinks(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
-	
+
 	if (!settings.checkNakedLinks) {
 		return Promise.resolve([]);
 	}
-	
+
 	// Remove code blocks and HTML content to avoid false positives
 	const cleanContent = removeHtmlAttributes(content);
-	
+
 	// Find naked links (URLs without markdown link syntax)
 	// Use negative lookbehind to avoid matching URLs within other URLs
 	const nakedLinks = cleanContent.match(/(?<!\]\()(?<!https?:\/\/[^\s)]*\/)https?:\/\/[^\s)]+/g);
 	if (nakedLinks) {
 		nakedLinks.forEach((link, index) => {
 			// Skip archival URLs as they are meant to be displayed as-is
-			if (link.includes('web.archive.org/web/') || 
+			if (link.includes('web.archive.org/web/') ||
 				link.includes('archive.today/') ||
 				link.includes('archive.is/') ||
 				link.includes('web.archive.org/save/')) {
 				return;
 			}
-			
+
 			const lineNumber = findLineNumberForImage(content, link);
-			
+
 			results.push({
 				passed: false,
 				message: `Naked link found: ${link}`,
@@ -54,7 +54,7 @@ export function checkNakedLinks(content: string, file: TFile, settings: SEOSetti
 			});
 		});
 	}
-	
+
 	if (results.length === 0) {
 		results.push({
 			passed: true,
@@ -62,7 +62,7 @@ export function checkNakedLinks(content: string, file: TFile, settings: SEOSetti
 			severity: 'info'
 		});
 	}
-	
+
 	return Promise.resolve(results);
 }
 
@@ -76,50 +76,50 @@ export function checkNakedLinks(content: string, file: TFile, settings: SEOSetti
  */
 export function checkBrokenLinks(content: string, file: TFile, settings: SEOSettings, app?: App): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
-	
+
 	if (!settings.checkBrokenLinks) {
 		return Promise.resolve([]);
 	}
-	
+
 	// Find wikilinks [[link]] and [[link|display text]]
 	// First find all wikilinks in the original content
 	const allWikilinks = content.match(/\[\[([^\]]+)\]\]/g);
 	if (allWikilinks) {
 		const brokenLinks = [];
-		
+
 		for (const wikilink of allWikilinks) {
 			// Check if this link is inside a code block
 			const linkStart = content.indexOf(wikilink);
 			if (linkStart === -1) continue;
-			
+
 			// Check if the link is inside a code block by looking at content before it
 			const contentBeforeLink = content.substring(0, linkStart);
 			const codeBlockMatches = contentBeforeLink.match(/```[\s\S]*?```|~~~[\s\S]*?~~~/g);
-			
+
 			// Count unclosed code blocks
 			const openCodeBlocks = (contentBeforeLink.match(/```/g) || []).length - (codeBlockMatches || []).length;
 			const openTildeBlocks = (contentBeforeLink.match(/~~~/g) || []).length - (codeBlockMatches || []).length;
-			
+
 			// Skip if we're inside a code block
 			if (openCodeBlocks > 0 || openTildeBlocks > 0) {
 				continue;
 			}
 			const linkMatch = wikilink.match(/\[\[([^\]]+)\]\]/);
 			if (!linkMatch || !linkMatch[1]) continue;
-			
+
 			const linkText = linkMatch[1];
-			
+
 			// Parse wikilink: handle both [[path|display]] and [[path#anchor|display]] formats
 			let linkPath: string;
 			let displayText: string;
 			let anchor: string | null = null;
-			
+
 			// Check if there's a display text separator
 			if (linkText.includes('|')) {
 				const parts = linkText.split('|');
 				const linkPart = parts[0] || '';
 				displayText = parts[1] || linkPart;
-				
+
 				// Check if link part has an anchor
 				if (linkPart.includes('#')) {
 					const anchorParts = linkPart.split('#');
@@ -140,12 +140,12 @@ export function checkBrokenLinks(content: string, file: TFile, settings: SEOSett
 					displayText = linkText;
 				}
 			}
-			
+
 			// Check if the linked file exists using Obsidian's link resolution
 			if (app) {
 				// Use Obsidian's built-in link resolution to check if the link works
 				const resolvedLink = app.metadataCache.getFirstLinkpathDest(linkPath, file.path);
-				
+
 				if (!resolvedLink) {
 					brokenLinks.push({
 						link: wikilink,
@@ -156,17 +156,17 @@ export function checkBrokenLinks(content: string, file: TFile, settings: SEOSett
 				}
 			}
 		}
-		
+
 		if (brokenLinks.length > 0) {
 			brokenLinks.forEach(({ link, path, displayText, anchor }) => {
 				const lineNumber = findLineNumberForImage(content, link);
-				
+
 				// Create a more helpful suggestion message
 				let suggestion = `Check if the file "${path}.md" exists or update the link`;
 				if (anchor) {
 					suggestion += ` (anchor: #${anchor})`;
 				}
-				
+
 				results.push({
 					passed: false,
 					message: `Broken internal link: ${displayText}`,
@@ -181,7 +181,7 @@ export function checkBrokenLinks(content: string, file: TFile, settings: SEOSett
 			});
 		}
 	}
-	
+
 	// Find markdown links [text](url) - check for relative/internal links (exclude images)
 	// First find all markdown links in the original content
 	const allMarkdownLinks = content.match(/\[([^\]]+)\]\(([^)]+)\)/g);
@@ -190,66 +190,66 @@ export function checkBrokenLinks(content: string, file: TFile, settings: SEOSett
 			// Check if this link is inside a code block
 			const linkStart = content.indexOf(markdownLink);
 			if (linkStart === -1) continue;
-			
+
 			// Check if the link is inside a code block by looking at content before it
 			const contentBeforeLink = content.substring(0, linkStart);
 			const codeBlockMatches = contentBeforeLink.match(/```[\s\S]*?```|~~~[\s\S]*?~~~/g);
-			
+
 			// Count unclosed code blocks
 			const openCodeBlocks = (contentBeforeLink.match(/```/g) || []).length - (codeBlockMatches || []).length;
 			const openTildeBlocks = (contentBeforeLink.match(/~~~/g) || []).length - (codeBlockMatches || []).length;
-			
+
 			// Skip if we're inside a code block
 			if (openCodeBlocks > 0 || openTildeBlocks > 0) {
 				continue;
 			}
-			
+
 			const linkMatch = markdownLink.match(/\[([^\]]+)\]\(([^)]+)\)/);
 			if (!linkMatch || !linkMatch[1] || !linkMatch[2]) continue;
-			
+
 			const linkText = linkMatch[1];
 			const linkUrl = linkMatch[2];
-			
+
 			// Skip image links and linked images - they should not be checked as broken links
 			if (markdownLink.startsWith('![') || linkText.startsWith('![')) {
 				continue;
 			}
-			
+
 			// Check if it's a relative/internal link (not external)
 			if (!linkUrl.startsWith('http://') && !linkUrl.startsWith('https://') && !linkUrl.startsWith('mailto:') && !linkUrl.startsWith('#')) {
 				// This is a relative/internal link
-				
+
 				// Check if flexible relative path check is enabled (publish mode)
 				if (settings.publishMode && linkUrl.startsWith('/')) {
 					// In publish mode, absolute paths like /about/ are considered valid for static site generators
 					// Skip these links - they should be handled by the potentially broken links check
 					continue;
 				}
-				
+
 				if (app) {
 					// Strip anchor from link URL before resolution (same as wikilinks)
 					let linkPath = linkUrl;
 					let anchor: string | null = null;
-					
+
 					if (linkPath.includes('#')) {
 						const anchorParts = linkPath.split('#');
 						linkPath = anchorParts[0] || '';
 						anchor = anchorParts[1] || null;
 					}
-					
+
 					// Use Obsidian's link resolution to check if the link works
 					const resolvedLink = app.metadataCache.getFirstLinkpathDest(linkPath, file.path);
-					
+
 					if (!resolvedLink) {
 						const lineNumber = findLineNumberForImage(content, markdownLink);
-						
+
 						// Create a more helpful suggestion message (same format as wikilinks)
 						let suggestedPath = linkPath.endsWith('.md') ? linkPath : linkPath + '.md';
 						let suggestion = `Check if the file "${suggestedPath}" exists or update the link`;
 						if (anchor) {
 							suggestion += ` (anchor: #${anchor})`;
 						}
-						
+
 						results.push({
 							passed: false,
 							message: `Broken internal link: ${linkText}`,
@@ -266,7 +266,7 @@ export function checkBrokenLinks(content: string, file: TFile, settings: SEOSett
 			}
 		}
 	}
-	
+
 	if (results.length === 0) {
 		results.push({
 			passed: true,
@@ -274,7 +274,7 @@ export function checkBrokenLinks(content: string, file: TFile, settings: SEOSett
 			severity: 'info'
 		});
 	}
-	
+
 	return Promise.resolve(results);
 }
 
@@ -288,22 +288,22 @@ export function checkBrokenLinks(content: string, file: TFile, settings: SEOSett
  */
 export async function checkPotentiallyBrokenLinks(content: string, file: TFile, settings: SEOSettings, app?: App): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
-	
+
 	// Only run this check in publish mode (flexible relative links), and when enabled
 	if (!settings.checkPotentiallyBrokenLinks || !settings.publishMode) {
 		return Promise.resolve([]);
 	}
-	
+
 	// First, get the list of definitely broken links to avoid duplicates
 	const brokenLinksResults = await checkBrokenLinks(content, file, settings, app);
 	const definitelyBrokenLinks = new Set<string>();
-	
+
 	brokenLinksResults.forEach(result => {
 		if (!result.passed && result.position?.searchText) {
 			definitelyBrokenLinks.add(result.position.searchText);
 		}
 	});
-	
+
 	// Find markdown links that might be flexible relative links (exclude images and linked images)
 	// Use a manual approach to properly handle nested brackets
 	let pos = 0;
@@ -311,19 +311,19 @@ export async function checkPotentiallyBrokenLinks(content: string, file: TFile, 
 		// Find the next opening bracket
 		const openBracket = content.indexOf('[', pos);
 		if (openBracket === -1) break;
-		
+
 		// Check if this is inside a code block
 		const contentBeforeBracket = content.substring(0, openBracket);
 		const codeBlockMatches = contentBeforeBracket.match(/```[\s\S]*?```|~~~[\s\S]*?~~~/g);
 		const openCodeBlocks = (contentBeforeBracket.match(/```/g) || []).length - (codeBlockMatches || []).length;
 		const openTildeBlocks = (contentBeforeBracket.match(/~~~/g) || []).length - (codeBlockMatches || []).length;
-		
+
 		// Skip if we're inside a code block
 		if (openCodeBlocks > 0 || openTildeBlocks > 0) {
 			pos = openBracket + 1;
 			continue;
 		}
-		
+
 		// Find the matching closing bracket
 		let bracketCount = 1;
 		let closeBracket = openBracket + 1;
@@ -335,13 +335,13 @@ export async function checkPotentiallyBrokenLinks(content: string, file: TFile, 
 			}
 			closeBracket++;
 		}
-		
+
 		if (bracketCount > 0) {
 			// No matching closing bracket found
 			pos = openBracket + 1;
 			continue;
 		}
-		
+
 		// Check if there's a URL part after the closing bracket
 		if (closeBracket < content.length && content[closeBracket] === '(') {
 			// Find the matching closing parenthesis
@@ -355,20 +355,20 @@ export async function checkPotentiallyBrokenLinks(content: string, file: TFile, 
 				}
 				closeParen++;
 			}
-			
+
 			if (parenCount === 0) {
 				// We found a complete markdown link
 				const linkText = content.substring(openBracket + 1, closeBracket - 1);
 				const linkUrl = content.substring(closeBracket + 1, closeParen - 1);
 				const fullLink = content.substring(openBracket, closeParen);
-				
+
 				// Skip if this is a linked image (link text starts with ![)
 				// Linked images should be handled by external link checks, not potentially broken link checks
 				if (linkText.startsWith('![')) {
 					pos = closeParen;
 					continue;
 				}
-				
+
 				// Check if it's a flexible relative link (publish mode)
 				// Only check for relative paths, not external URLs
 				if (settings.publishMode && linkUrl.startsWith('/') && !linkUrl.startsWith('http://') && !linkUrl.startsWith('https://')) {
@@ -385,7 +385,7 @@ export async function checkPotentiallyBrokenLinks(content: string, file: TFile, 
 						}
 					});
 				}
-				
+
 				pos = closeParen;
 			} else {
 				pos = closeBracket;
@@ -394,52 +394,52 @@ export async function checkPotentiallyBrokenLinks(content: string, file: TFile, 
 			pos = closeBracket;
 		}
 	}
-	
+
 	// Find wikilinks that might be broken
 	// First find all wikilinks in the original content
 	const allWikilinks = content.match(/\[\[([^\]]+)\]\]/g);
 	if (allWikilinks) {
 		const potentiallyBroken = [];
-		
+
 		for (const wikilink of allWikilinks) {
 			// Check if this link is inside a code block
 			const linkStart = content.indexOf(wikilink);
 			if (linkStart === -1) continue;
-			
+
 			// Check if the link is inside a code block by looking at content before it
 			const contentBeforeLink = content.substring(0, linkStart);
 			const codeBlockMatches = contentBeforeLink.match(/```[\s\S]*?```|~~~[\s\S]*?~~~/g);
-			
+
 			// Count unclosed code blocks
 			const openCodeBlocks = (contentBeforeLink.match(/```/g) || []).length - (codeBlockMatches || []).length;
 			const openTildeBlocks = (contentBeforeLink.match(/~~~/g) || []).length - (codeBlockMatches || []).length;
-			
+
 			// Skip if we're inside a code block
 			if (openCodeBlocks > 0 || openTildeBlocks > 0) {
 				continue;
 			}
-			
+
 			const linkMatch = wikilink.match(/\[\[([^\]]+)\]\]/);
 			if (!linkMatch || !linkMatch[1]) continue;
-			
+
 			// Skip if this link is already flagged as definitely broken
 			if (definitelyBrokenLinks.has(wikilink)) {
 				continue;
 			}
-			
+
 			const linkText = linkMatch[1];
-			
+
 			// Parse wikilink: handle both [[path|display]] and [[path#anchor|display]] formats
 			let linkPath: string;
 			let displayText: string;
 			let anchor: string | null = null;
-			
+
 			// Check if there's a display text separator
 			if (linkText.includes('|')) {
 				const parts = linkText.split('|');
 				const linkPart = parts[0] || '';
 				displayText = parts[1] || linkPart;
-				
+
 				// Check if link part has an anchor
 				if (linkPart.includes('#')) {
 					const anchorParts = linkPart.split('#');
@@ -460,20 +460,20 @@ export async function checkPotentiallyBrokenLinks(content: string, file: TFile, 
 					displayText = linkText;
 				}
 			}
-			
+
 			// Check for common issues that might indicate broken links
 			if (app && linkPath) {
 				// Use Obsidian's link resolution to check if the link works
 				const resolvedLink = app.metadataCache.getFirstLinkpathDest(linkPath, file.path);
-				
+
 				if (!resolvedLink) {
 					// File doesn't exist, check if there's a similar file (case sensitivity, spaces, etc.)
 					const allFiles = app.vault.getMarkdownFiles();
-					const similarFiles = allFiles.filter((f: TFile) => 
+					const similarFiles = allFiles.filter((f: TFile) =>
 						f.path.toLowerCase().includes(linkPath.toLowerCase()) ||
 						f.basename.toLowerCase().includes(linkPath.toLowerCase())
 					);
-					
+
 					if (similarFiles.length > 0) {
 						potentiallyBroken.push({
 							link: wikilink,
@@ -486,11 +486,11 @@ export async function checkPotentiallyBrokenLinks(content: string, file: TFile, 
 				}
 			}
 		}
-		
+
 		if (potentiallyBroken.length > 0) {
 			potentiallyBroken.forEach(({ link, path, displayText, suggestions }) => {
 				const lineNumber = findLineNumberForImage(content, link);
-				
+
 				results.push({
 					passed: false,
 					message: `Potentially broken link: ${displayText}`,
@@ -505,7 +505,7 @@ export async function checkPotentiallyBrokenLinks(content: string, file: TFile, 
 			});
 		}
 	}
-	
+
 	if (results.length === 0) {
 		results.push({
 			passed: true,
@@ -513,6 +513,18 @@ export async function checkPotentiallyBrokenLinks(content: string, file: TFile, 
 			severity: 'info'
 		});
 	}
-	
+
 	return Promise.resolve(results);
+}
+
+/**
+ * Checks for potentially broken embeds
+ * @param content - The markdown content to check
+ * @param file - The file being checked
+ * @param settings - Plugin settings
+ * @returns Array of SEO check results
+ */
+export function checkPotentiallyBrokenEmbeds(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+	// TODO: Implement actual embed check logic if needed
+	return Promise.resolve([]);
 }

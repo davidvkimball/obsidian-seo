@@ -17,11 +17,11 @@ import { removeCodeBlocks } from "./utils/content-parser";
  */
 export function checkMetaDescription(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
-	
+
 	if (!settings.descriptionProperty) {
 		return Promise.resolve([]);
 	}
-	
+
 	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
 	if (!frontmatterMatch) {
 		results.push({
@@ -32,7 +32,7 @@ export function checkMetaDescription(content: string, file: TFile, settings: SEO
 		});
 		return Promise.resolve(results);
 	}
-	
+
 	const frontmatter = frontmatterMatch[1];
 	if (!frontmatter) {
 		results.push({
@@ -44,7 +44,7 @@ export function checkMetaDescription(content: string, file: TFile, settings: SEO
 		return Promise.resolve(results);
 	}
 	const descriptionMatch = frontmatter.match(new RegExp(`^${settings.descriptionProperty}:\\s*(.+)$`, 'm'));
-	
+
 	if (!descriptionMatch || !descriptionMatch[1]) {
 		results.push({
 			passed: false,
@@ -54,16 +54,16 @@ export function checkMetaDescription(content: string, file: TFile, settings: SEO
 		});
 		return Promise.resolve(results);
 	}
-	
+
 	let description = descriptionMatch[1].trim();
-	
+
 	// Remove surrounding quotes if present
-	if ((description.startsWith('"') && description.endsWith('"')) || 
+	if ((description.startsWith('"') && description.endsWith('"')) ||
 		(description.startsWith("'") && description.endsWith("'"))) {
 		description = description.slice(1, -1);
 	}
 	const length = description.length;
-	
+
 	if (length < 120) {
 		results.push({
 			passed: false,
@@ -85,7 +85,7 @@ export function checkMetaDescription(content: string, file: TFile, settings: SEO
 			severity: 'info'
 		});
 	}
-	
+
 	return Promise.resolve(results);
 }
 
@@ -98,13 +98,13 @@ export function checkMetaDescription(content: string, file: TFile, settings: SEO
  */
 export function checkTitleLength(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
-	
+
 	if (!settings.checkTitleLength) {
 		return Promise.resolve([]);
 	}
-	
+
 	let title = '';
-	
+
 	// Check frontmatter first
 	if (settings.titleProperty) {
 		const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
@@ -116,12 +116,12 @@ export function checkTitleLength(content: string, file: TFile, settings: SEOSett
 			}
 		}
 	}
-	
+
 	// Fallback to filename if enabled
 	if (!title && settings.useFilenameAsTitle) {
 		title = file.basename;
 	}
-	
+
 	// Fallback to first H1 heading
 	if (!title) {
 		const h1Match = content.match(/^#\s+(.+)$/m);
@@ -129,19 +129,19 @@ export function checkTitleLength(content: string, file: TFile, settings: SEOSett
 			title = h1Match[1].trim();
 		}
 	}
-	
+
 	// Only check title length if we have a title from frontmatter or filename
 	// Don't show the check at all if no title is configured
 	if (!title) {
 		return Promise.resolve(results); // Return empty results - don't show the check
 	}
-	
+
 	// Apply prefix/suffix if configured (adds space for character count)
 	const fullTitle = settings.titlePrefixSuffix ? `${title} ${settings.titlePrefixSuffix}` : title;
 	const length = fullTitle.length;
-	
+
 	if (length < 30) {
-		const message = settings.titlePrefixSuffix 
+		const message = settings.titlePrefixSuffix
 			? `Title too short: ${length} characters (${title} + " ${settings.titlePrefixSuffix}")`
 			: `Title too short: ${length} characters`;
 		results.push({
@@ -151,7 +151,7 @@ export function checkTitleLength(content: string, file: TFile, settings: SEOSett
 			severity: 'warning'
 		});
 	} else if (length > 60) {
-		const message = settings.titlePrefixSuffix 
+		const message = settings.titlePrefixSuffix
 			? `Title too long: ${length} characters (${title} + " ${settings.titlePrefixSuffix}")`
 			: `Title too long: ${length} characters`;
 		results.push({
@@ -161,7 +161,7 @@ export function checkTitleLength(content: string, file: TFile, settings: SEOSett
 			severity: 'warning'
 		});
 	} else {
-		const message = settings.titlePrefixSuffix 
+		const message = settings.titlePrefixSuffix
 			? `Good title length: ${length} characters (${title} + " ${settings.titlePrefixSuffix}")`
 			: `Good title length: ${length} characters`;
 		results.push({
@@ -170,7 +170,7 @@ export function checkTitleLength(content: string, file: TFile, settings: SEOSett
 			severity: 'info'
 		});
 	}
-	
+
 	return Promise.resolve(results);
 }
 
@@ -183,11 +183,11 @@ export function checkTitleLength(content: string, file: TFile, settings: SEOSett
  */
 export function checkKeywordDensity(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
-	
+
 	if (!settings.keywordProperty) {
 		return Promise.resolve([]);
 	}
-	
+
 	// Get keyword from frontmatter
 	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
 	if (!frontmatterMatch) {
@@ -199,7 +199,7 @@ export function checkKeywordDensity(content: string, file: TFile, settings: SEOS
 		});
 		return Promise.resolve(results);
 	}
-	
+
 	const frontmatter = frontmatterMatch[1];
 	if (!frontmatter) {
 		results.push({
@@ -214,7 +214,7 @@ export function checkKeywordDensity(content: string, file: TFile, settings: SEOS
 	const lines = frontmatter.split('\n');
 	let keyword = '';
 	let foundKeywordLine = false;
-	
+
 	for (const line of lines) {
 		if (line.startsWith(settings.keywordProperty + ':')) {
 			foundKeywordLine = true;
@@ -222,7 +222,7 @@ export function checkKeywordDensity(content: string, file: TFile, settings: SEOS
 			break;
 		}
 	}
-	
+
 	if (!foundKeywordLine) {
 		results.push({
 			passed: true,
@@ -231,7 +231,7 @@ export function checkKeywordDensity(content: string, file: TFile, settings: SEOS
 		});
 		return Promise.resolve(results);
 	}
-	
+
 	// Validate that the keyword is meaningful (not just a boolean or empty)
 	if (!keyword || keyword === 'false' || keyword === 'true' || keyword === 'null' || keyword === 'undefined') {
 		results.push({
@@ -241,21 +241,21 @@ export function checkKeywordDensity(content: string, file: TFile, settings: SEOS
 		});
 		return Promise.resolve(results);
 	}
-	
+
 	// Remove code blocks and frontmatter for keyword analysis
 	let cleanContent = removeCodeBlocks(content);
-	
+
 	// Add title to content for keyword density calculation if it exists
 	const titleFrontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
 	if (titleFrontmatterMatch && titleFrontmatterMatch[1] && settings.titleProperty) {
 		const frontmatter = titleFrontmatterMatch[1];
 		const lines = frontmatter.split('\n');
-		
+
 		for (const line of lines) {
 			if (line.startsWith(settings.titleProperty + ':')) {
 				let title = line.substring(settings.titleProperty.length + 1).trim();
 				// Remove surrounding quotes if present
-				if ((title.startsWith('"') && title.endsWith('"')) || 
+				if ((title.startsWith('"') && title.endsWith('"')) ||
 					(title.startsWith("'") && title.endsWith("'"))) {
 					title = title.slice(1, -1);
 				}
@@ -267,19 +267,19 @@ export function checkKeywordDensity(content: string, file: TFile, settings: SEOS
 			}
 		}
 	}
-	
+
 	// Count keyword occurrences (case-insensitive, flexible matching)
 	const keywordLower = keyword.toLowerCase();
 	const cleanContentLower = cleanContent.toLowerCase();
-	
+
 	// Split keyword into words for more flexible matching
 	const keywordWords = keywordLower.split(/\s+/).filter(word => word.length > 0);
-	
+
 	// Count occurrences by checking if all keyword words appear together
 	// This handles variations like "single-source-of-truth" vs "single source of truth"
 	let keywordCount = 0;
 	const contentWords = cleanContentLower.split(/\s+/);
-	
+
 	for (let i = 0; i <= contentWords.length - keywordWords.length; i++) {
 		const phrase = contentWords.slice(i, i + keywordWords.length).join(' ');
 		// Check if all keyword words appear in this phrase (in any order)
@@ -288,11 +288,11 @@ export function checkKeywordDensity(content: string, file: TFile, settings: SEOS
 			keywordCount++;
 		}
 	}
-	
+
 	// Count total words
 	const words = cleanContent.split(/\s+/).filter(word => word.length > 0);
 	const totalWords = words.length;
-	
+
 	if (totalWords === 0) {
 		results.push({
 			passed: false,
@@ -301,9 +301,9 @@ export function checkKeywordDensity(content: string, file: TFile, settings: SEOS
 		});
 		return Promise.resolve(results);
 	}
-	
+
 	const density = (keywordCount / totalWords) * 100;
-	
+
 	if (density < settings.keywordDensityMin) {
 		results.push({
 			passed: false,
@@ -325,7 +325,7 @@ export function checkKeywordDensity(content: string, file: TFile, settings: SEOS
 			severity: 'info'
 		});
 	}
-	
+
 	return Promise.resolve(results);
 }
 
@@ -345,26 +345,26 @@ export function checkKeywordDensity(content: string, file: TFile, settings: SEOS
  */
 export function checkKeywordInDescription(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
-	
+
 	if (!settings.keywordProperty || !settings.descriptionProperty) {
 		return Promise.resolve([]);
 	}
-	
+
 	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
 	if (!frontmatterMatch) {
 		return Promise.resolve(results);
 	}
-	
+
 	const frontmatter = frontmatterMatch[1];
 	if (!frontmatter) {
 		return Promise.resolve(results);
 	}
-	
+
 	// Parse line by line instead of using regex
 	const lines = frontmatter.split('\n');
 	let keyword = '';
 	let foundKeywordLine = false;
-	
+
 	for (const line of lines) {
 		if (line.startsWith(settings.keywordProperty + ':')) {
 			foundKeywordLine = true;
@@ -372,29 +372,29 @@ export function checkKeywordInDescription(content: string, file: TFile, settings
 			break;
 		}
 	}
-	
+
 	if (!foundKeywordLine || !keyword || keyword === 'false' || keyword === 'true' || keyword === 'null' || keyword === 'undefined') {
 		// No valid keyword, skip this check
 		return Promise.resolve(results);
 	}
-	
+
 	// Get description from frontmatter
 	let description = '';
 	let foundDescriptionLine = false;
-	
+
 	for (const line of lines) {
 		if (line.startsWith(settings.descriptionProperty + ':')) {
 			foundDescriptionLine = true;
 			description = line.substring(settings.descriptionProperty.length + 1).trim();
 			// Remove surrounding quotes if present
-			if ((description.startsWith('"') && description.endsWith('"')) || 
+			if ((description.startsWith('"') && description.endsWith('"')) ||
 				(description.startsWith("'") && description.endsWith("'"))) {
 				description = description.slice(1, -1);
 			}
 			break;
 		}
 	}
-	
+
 	if (!foundDescriptionLine) {
 		results.push({
 			passed: false,
@@ -404,21 +404,21 @@ export function checkKeywordInDescription(content: string, file: TFile, settings
 		});
 		return Promise.resolve(results);
 	}
-	
+
 	// Check if keyword appears in description (case-insensitive, flexible matching)
 	const keywordLower = keyword.toLowerCase();
 	const descriptionLower = description.toLowerCase();
-	
+
 	// First check if the full keyword phrase appears (exact phrase match)
 	const fullPhraseFound = descriptionLower.includes(keywordLower);
-	
+
 	// Also check if all keyword words appear individually (flexible matching)
 	const keywordWords = keywordLower.split(/\s+/).filter(word => word.length > 0);
 	const allWordsFound = keywordWords.every(word => descriptionLower.includes(word));
-	
+
 	// Pass if either the full phrase is found OR all words are found
 	const keywordFound = fullPhraseFound || allWordsFound;
-	
+
 	if (keywordFound) {
 		results.push({
 			passed: true,
@@ -433,7 +433,7 @@ export function checkKeywordInDescription(content: string, file: TFile, settings
 			severity: 'warning'
 		});
 	}
-	
+
 	return Promise.resolve(results);
 }
 
@@ -446,46 +446,46 @@ export function checkKeywordInDescription(content: string, file: TFile, settings
  */
 export function checkTitleH1Uniqueness(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
-	
+
 	if (!settings.titleProperty) {
 		return Promise.resolve(results);
 	}
-	
+
 	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
 	if (!frontmatterMatch) {
 		return Promise.resolve(results);
 	}
-	
+
 	const frontmatter = frontmatterMatch[1];
 	if (!frontmatter) {
 		return Promise.resolve(results);
 	}
-	
+
 	// Get title from frontmatter
 	let metaTitle = '';
 	const lines = frontmatter.split('\n');
-	
+
 	for (const line of lines) {
 		if (line.startsWith(settings.titleProperty + ':')) {
 			metaTitle = line.substring(settings.titleProperty.length + 1).trim();
 			// Remove surrounding quotes if present
-			if ((metaTitle.startsWith('"') && metaTitle.endsWith('"')) || 
+			if ((metaTitle.startsWith('"') && metaTitle.endsWith('"')) ||
 				(metaTitle.startsWith("'") && metaTitle.endsWith("'"))) {
 				metaTitle = metaTitle.slice(1, -1);
 			}
 			break;
 		}
 	}
-	
+
 	if (!metaTitle) {
 		// No title found in frontmatter - this check requires a title to be meaningful
 		// Skip silently as this is expected behavior when no title is set
 		return Promise.resolve(results);
 	}
-	
+
 	// Get H1 heading
 	let h1Heading = '';
-	
+
 	// If "Title property is H1" is enabled, use the title as H1
 	if (settings.skipH1Check) {
 		// If there's a prefix/suffix configured, they will always be different
@@ -497,7 +497,7 @@ export function checkTitleH1Uniqueness(content: string, file: TFile, settings: S
 			});
 			return Promise.resolve(results);
 		}
-		
+
 		// The H1 is the title without prefix/suffix
 		h1Heading = metaTitle;
 		// Remove prefix/suffix if specified to get the actual H1 content
@@ -525,7 +525,7 @@ export function checkTitleH1Uniqueness(content: string, file: TFile, settings: S
 			}
 		}
 	}
-	
+
 	if (!h1Heading) {
 		// No H1 found - this should be flagged as a warning
 		// The heading order check should already catch missing H1, but this provides context
@@ -537,11 +537,11 @@ export function checkTitleH1Uniqueness(content: string, file: TFile, settings: S
 		});
 		return Promise.resolve(results);
 	}
-	
+
 	// Compare meta title and H1
 	const metaTitleLower = metaTitle.toLowerCase().trim();
 	const h1Lower = h1Heading.toLowerCase().trim();
-	
+
 	if (metaTitleLower === h1Lower) {
 		results.push({
 			passed: false,
@@ -556,7 +556,7 @@ export function checkTitleH1Uniqueness(content: string, file: TFile, settings: S
 			severity: 'info'
 		});
 	}
-	
+
 	return Promise.resolve(results);
 }
 
@@ -569,26 +569,26 @@ export function checkTitleH1Uniqueness(content: string, file: TFile, settings: S
  */
 export function checkKeywordInHeadings(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
-	
+
 	if (!settings.keywordProperty) {
 		return Promise.resolve(results);
 	}
-	
+
 	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
 	if (!frontmatterMatch) {
 		return Promise.resolve(results);
 	}
-	
+
 	const frontmatter = frontmatterMatch[1];
 	if (!frontmatter) {
 		return Promise.resolve(results);
 	}
-	
+
 	// Parse line by line instead of using regex
 	const lines = frontmatter.split('\n');
 	let keyword = '';
 	let foundKeywordLine = false;
-	
+
 	for (const line of lines) {
 		if (line.startsWith(settings.keywordProperty + ':')) {
 			foundKeywordLine = true;
@@ -596,7 +596,7 @@ export function checkKeywordInHeadings(content: string, file: TFile, settings: S
 			break;
 		}
 	}
-	
+
 	if (!foundKeywordLine) {
 		results.push({
 			passed: true,
@@ -614,22 +614,22 @@ export function checkKeywordInHeadings(content: string, file: TFile, settings: S
 		});
 		return Promise.resolve(results);
 	}
-	
+
 	// Extract H1 headings only (most important for SEO)
 	const h1Headings: { text: string }[] = [];
-	
+
 	// If "Title property is H1" is enabled, add the title as a virtual H1
 	if (settings.skipH1Check && settings.titleProperty) {
 		const titleFrontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
 		if (titleFrontmatterMatch && titleFrontmatterMatch[1]) {
 			const frontmatter = titleFrontmatterMatch[1];
 			const lines = frontmatter.split('\n');
-			
+
 			for (const line of lines) {
 				if (line.startsWith(settings.titleProperty + ':')) {
 					let title = line.substring(settings.titleProperty.length + 1).trim();
 					// Remove surrounding quotes if present
-					if ((title.startsWith('"') && title.endsWith('"')) || 
+					if ((title.startsWith('"') && title.endsWith('"')) ||
 						(title.startsWith("'") && title.endsWith("'"))) {
 						title = title.slice(1, -1);
 					}
@@ -652,10 +652,10 @@ export function checkKeywordInHeadings(content: string, file: TFile, settings: S
 			}
 		}
 	}
-	
+
 	// Find actual H1 headings in content
 	const contentLines = content.split('\n');
-	
+
 	for (const line of contentLines) {
 		if (!line) continue;
 		const h1Match = line.match(/^#\s+(.+)$/);
@@ -663,7 +663,7 @@ export function checkKeywordInHeadings(content: string, file: TFile, settings: S
 			h1Headings.push({ text: h1Match[1].trim() });
 		}
 	}
-	
+
 	if (h1Headings.length === 0) {
 		results.push({
 			passed: false,
@@ -673,29 +673,29 @@ export function checkKeywordInHeadings(content: string, file: TFile, settings: S
 		});
 		return Promise.resolve(results);
 	}
-	
+
 	// Check if keyword appears in any H1 heading (flexible matching)
 	const keywordLower = keyword.toLowerCase();
 	const keywordWords = keywordLower.split(/\s+/).filter(word => word.length > 0);
-	
+
 	let keywordFoundInH1 = false;
-	
+
 	for (const h1 of h1Headings) {
 		const h1Lower = h1.text.toLowerCase();
-		
+
 		// First check if the full keyword phrase appears (exact phrase match)
 		const fullPhraseFound = h1Lower.includes(keywordLower);
-		
+
 		// Also check if all keyword words appear individually (flexible matching)
 		const allWordsFound = keywordWords.every(word => h1Lower.includes(word));
-		
+
 		// Pass if either the full phrase is found OR all words are found
 		if (fullPhraseFound || allWordsFound) {
 			keywordFoundInH1 = true;
 			break;
 		}
 	}
-	
+
 	if (keywordFoundInH1) {
 		results.push({
 			passed: true,
@@ -710,35 +710,35 @@ export function checkKeywordInHeadings(content: string, file: TFile, settings: S
 			severity: 'warning'
 		});
 	}
-	
+
 	return Promise.resolve(results);
 }
 
 export function checkKeywordInTitle(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
 	const results: SEOCheckResult[] = [];
-	
+
 	if (!settings.keywordProperty || !settings.titleProperty) {
 		return Promise.resolve([]);
 	}
-	
+
 	// Get keyword from frontmatter
 	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
 	if (!frontmatterMatch) {
 		return Promise.resolve(results);
 	}
-	
+
 	const frontmatter = frontmatterMatch[1];
 	if (!frontmatter) {
 		return Promise.resolve(results);
 	}
-	
+
 	// Parse line by line instead of using regex
 	const lines = frontmatter.split('\n');
 	let keyword = '';
 	let foundKeywordLine = false;
 	let title = '';
 	let foundTitleLine = false;
-	
+
 	for (const line of lines) {
 		if (line.startsWith(settings.keywordProperty + ':')) {
 			foundKeywordLine = true;
@@ -746,20 +746,20 @@ export function checkKeywordInTitle(content: string, file: TFile, settings: SEOS
 			break;
 		}
 	}
-	
+
 	for (const line of lines) {
 		if (line.startsWith(settings.titleProperty + ':')) {
 			foundTitleLine = true;
 			title = line.substring(settings.titleProperty.length + 1).trim();
 			// Remove surrounding quotes if present
-			if ((title.startsWith('"') && title.endsWith('"')) || 
+			if ((title.startsWith('"') && title.endsWith('"')) ||
 				(title.startsWith("'") && title.endsWith("'"))) {
 				title = title.slice(1, -1);
 			}
 			break;
 		}
 	}
-	
+
 	if (!foundKeywordLine) {
 		results.push({
 			passed: true,
@@ -777,26 +777,26 @@ export function checkKeywordInTitle(content: string, file: TFile, settings: SEOS
 		});
 		return Promise.resolve(results);
 	}
-	
+
 	// Skip check if no title found
 	if (!foundTitleLine || !title) {
 		return Promise.resolve(results);
 	}
-	
+
 	// Check if keyword appears in title (case-insensitive, generous matching)
 	const titleLower = title.toLowerCase();
 	const keywordLower = keyword.toLowerCase();
-	
+
 	// First check if the full keyword phrase appears (exact phrase match)
 	const fullPhraseFound = titleLower.includes(keywordLower);
-	
+
 	// Also check if all keyword words appear individually (flexible matching)
 	const keywordWords = keywordLower.split(/\s+/).filter(word => word.length > 0);
 	const allWordsFound = keywordWords.every(word => titleLower.includes(word));
-	
+
 	// Pass if either the full phrase is found OR all words are found
 	const keywordFound = fullPhraseFound || allWordsFound;
-	
+
 	if (keywordFound) {
 		results.push({
 			passed: true,
@@ -811,6 +811,89 @@ export function checkKeywordInTitle(content: string, file: TFile, settings: SEOS
 			severity: 'warning'
 		});
 	}
-	
+
+	return Promise.resolve(results);
+}
+
+/**
+ * Checks if target keyword appears in the file slug
+ * @param content - The markdown content to check
+ * @param file - The file being checked
+ * @param settings - Plugin settings
+ * @returns Array of SEO check results
+ */
+export function checkKeywordInSlug(content: string, file: TFile, settings: SEOSettings): Promise<SEOCheckResult[]> {
+	const results: SEOCheckResult[] = [];
+
+	if (!settings.keywordProperty) {
+		return Promise.resolve(results);
+	}
+
+	// Get keyword from frontmatter
+	const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+	if (!frontmatterMatch) {
+		return Promise.resolve(results);
+	}
+
+	const frontmatter = frontmatterMatch[1];
+	if (!frontmatter) {
+		return Promise.resolve(results);
+	}
+
+	// Parse line by line instead of using regex
+	const lines = frontmatter.split('\n');
+	let keyword = '';
+	let foundKeywordLine = false;
+
+	for (const line of lines) {
+		if (line.startsWith(settings.keywordProperty + ':')) {
+			foundKeywordLine = true;
+			keyword = line.substring(settings.keywordProperty.length + 1).trim();
+			break;
+		}
+	}
+
+	if (!foundKeywordLine) {
+		results.push({
+			passed: true,
+			message: `No ${settings.keywordProperty} defined in properties`,
+			severity: 'notice'
+		});
+		return Promise.resolve(results);
+	}
+
+	// Validate that the keyword is meaningful (not just a boolean or empty)
+	if (!keyword || keyword === 'false' || keyword === 'true' || keyword === 'null' || keyword === 'undefined') {
+		results.push({
+			passed: true,
+			message: `No valid keyword defined in properties`,
+			severity: 'notice'
+		});
+		return Promise.resolve(results);
+	}
+
+	// Get the file slug (filename without extension)
+	const slug = file.basename.toLowerCase();
+	const keywordLower = keyword.toLowerCase();
+
+	// Check if keyword appears in slug (case-insensitive, generous matching)
+	const keywordWords = keywordLower.split(/\s+/).filter(word => word.length > 0);
+	const allWordsFound = keywordWords.every(word => slug.includes(word));
+
+	if (allWordsFound) {
+		results.push({
+			passed: true,
+			message: `Target keyword "${keyword}" found in slug`,
+			severity: 'info'
+		});
+	} else {
+		results.push({
+			passed: false,
+			message: `Target keyword "${keyword}" not found in slug`,
+			suggestion: "Include your target keyword in the filename",
+			severity: 'warning'
+		});
+	}
+
 	return Promise.resolve(results);
 }
