@@ -95,7 +95,7 @@ The plugin uses a weighted scoring system that prioritizes critical SEO factors:
 
 ### Manual
 
-1. Download the latest release from the [Releases page](https://github.com/davidvkimball/obsidian-astro-composer/releases) and navigate to your Obsidian vault’s `.obsidian/plugins/` directory.
+1. Download the latest release from the [Releases page](https://github.com/davidvkimball/obsidian-seo/releases) and navigate to your Obsidian vault’s `.obsidian/plugins/` directory.
 2. Ensure `manifest.json`, `main.js`, and `styles.css` are in the `seo` folder.
 3. In Obsidian, go to **Settings > Community Plugins**, enable "Community Plugins" if not already enabled, and then enable "SEO."
 
