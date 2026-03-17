@@ -3,7 +3,7 @@
  * Handles the complex rendering of both current and global panels
  */
 
-import { App, setIcon } from "obsidian";
+import { App, setIcon, TFile } from "obsidian";
 import SEOPlugin from "../main";
 import { SEOResults } from "../types";
 import { getVaultFoldersInfo } from "./panel-utils";
@@ -11,6 +11,7 @@ import { PanelActions } from "./panel-actions";
 import { ResultsDisplay } from "./results-display";
 import { SEOSidePanel } from "./side-panel";
 import { isSupportedFile } from "../utils/file-utils";
+import { Notice } from "obsidian";
 import { resultsToExportString, downloadExport, copyExportToClipboard } from "./csv-export";
 
 export class PanelRenderer {
@@ -43,13 +44,25 @@ export class PanelRenderer {
 			if (panelType === 'global' && globalResults.length > 0) {
 				this.renderHeaderIcons(headerRow, 'global', globalResults, null);
 			} else if (panelType === 'current') {
-				const activeFile = this.app.workspace.getActiveFile();
+				let activeFile = this.app.workspace.getActiveFile();
+				// When the SEO panel is the active leaf on load, getActiveFile() is null; use any open markdown file
+				if (!activeFile) {
+					const markdownLeaves = this.app.workspace.getLeavesOfType('markdown');
+					for (const leaf of markdownLeaves) {
+						const file = (leaf.view as { file?: TFile })?.file;
+						if (file) {
+							activeFile = file;
+							break;
+						}
+					}
+				}
 				const currentFileResults = activeFile && this.plugin.settings.cachedGlobalResults
 					? this.plugin.settings.cachedGlobalResults.find(r => r.file === activeFile.path) ?? null
 					: null;
 				const resultsToShow = currentNoteResults || currentFileResults;
-				if (resultsToShow) {
-					this.renderHeaderIcons(headerRow, 'current', [resultsToShow], resultsToShow);
+				const hasActiveFile = activeFile && isSupportedFile(activeFile, this.plugin.settings);
+				if (resultsToShow || hasActiveFile) {
+					this.renderHeaderIcons(headerRow, 'current', resultsToShow ? [resultsToShow] : [], resultsToShow ?? null);
 				}
 			}
 
@@ -129,10 +142,14 @@ export class PanelRenderer {
 		singleNoteResult: SEOResults | null
 	) {
 		const wrap = headerRow.createEl('div', { cls: 'seo-header-icon-wrap' });
-		if (panelType === 'current' && singleNoteResult) {
+		if (panelType === 'current') {
 			const copyBtn = wrap.createEl('button', { type: 'button', cls: 'seo-header-icon', attr: { 'aria-label': 'Copy results to clipboard' } });
 			setIcon(copyBtn, 'lucide-copy');
 			copyBtn.addEventListener('click', () => {
+				if (!singleNoteResult) {
+					new Notice('No results to export. Run Refresh first.');
+					return;
+				}
 				const format = this.plugin.settings.exportFormat;
 				const content = resultsToExportString(singleNoteResult, format);
 				void copyExportToClipboard(content);
@@ -140,6 +157,10 @@ export class PanelRenderer {
 			const downloadBtn = wrap.createEl('button', { type: 'button', cls: 'seo-header-icon', attr: { 'aria-label': 'Download results' } });
 			setIcon(downloadBtn, 'lucide-download');
 			downloadBtn.addEventListener('click', () => {
+				if (!singleNoteResult) {
+					new Notice('No results to export. Run Refresh first.');
+					return;
+				}
 				const format = this.plugin.settings.exportFormat;
 				const content = resultsToExportString(singleNoteResult, format);
 				const base = singleNoteResult.file.replace(/\.[^.]+$/, '').replace(/[/\\]/g, '-') || 'note';

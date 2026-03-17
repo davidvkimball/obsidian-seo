@@ -269,21 +269,31 @@ export function checkKeywordDensity(content: string, file: TFile, settings: SEOS
 		}
 	}
 
+	// Normalize apostrophes so "melee's" matches "Melee's" (any apostrophe type)
+	const stripApostrophes = (s: string) => s.replace(/[''\u2018\u2019\u201A\u201B]/g, '');
+
 	// Count keyword occurrences (case-insensitive, flexible matching)
 	const keywordLower = keyword.toLowerCase();
 	const cleanContentLower = cleanContent.toLowerCase();
 
-	// Split keyword into words for more flexible matching
-	const keywordWords = keywordLower.split(/\s+/).filter(word => word.length > 0);
+	// Split keyword into words; normalize apostrophes for matching
+	const keywordWords = keywordLower
+		.split(/\s+/)
+		.filter(word => word.length > 0)
+		.map(w => stripApostrophes(w))
+		.filter(w => w.length > 0);
 
-	// Count occurrences by checking if all keyword words appear together
-	// This handles variations like "single-source-of-truth" vs "single source of truth"
+	if (keywordWords.length === 0) {
+		return Promise.resolve(results);
+	}
+
+	// Count occurrences by checking if all keyword words appear together (normalize content words too)
 	let keywordCount = 0;
 	const contentWords = cleanContentLower.split(/\s+/);
 
 	for (let i = 0; i <= contentWords.length - keywordWords.length; i++) {
-		const phrase = contentWords.slice(i, i + keywordWords.length).join(' ');
-		// Check if all keyword words appear in this phrase (in any order)
+		const phraseWords = contentWords.slice(i, i + keywordWords.length).map(stripApostrophes);
+		const phrase = phraseWords.join(' ');
 		const allWordsFound = keywordWords.every(word => phrase.includes(word));
 		if (allWordsFound) {
 			keywordCount++;
@@ -874,11 +884,20 @@ export function checkKeywordInSlug(content: string, file: TFile, settings: SEOSe
 	}
 
 	// Get the file slug (from frontmatter or file name) and normalize to lowercase for comparison
-	const slug = getSlugFromFile(file, content, settings).toLowerCase();
+	let slug = getSlugFromFile(file, content, settings).toLowerCase();
+	// Fallback: when slug is "index" (e.g. index.md), use parent folder name so folder/index.md matches
+	if (slug === 'index') {
+		const parts = file.path.replace(/\\/g, '/').split('/');
+		if (parts.length >= 2) {
+			const parent = parts[parts.length - 2];
+			if (parent) slug = parent.toLowerCase();
+		}
+	}
 
-	// Normalize keyword to kebab-case: any non-alphanumeric (apostrophes, spaces, etc.) becomes hyphen, then collapse
+	// Normalize keyword to kebab-case: strip apostrophes first so "melee's" -> "melees", then spaces/special -> hyphen
 	const keywordNormalized = keyword
 		.toLowerCase()
+		.replace(/[''\u2018\u2019\u201A\u201B]/g, '')
 		.replace(/[^a-z0-9]+/g, '-')
 		.replace(/-+/g, '-')
 		.replace(/^-|-$/g, '');

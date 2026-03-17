@@ -102,20 +102,9 @@ export class SEOSidePanel extends ItemView {
 			const result = await this.actions.checkCurrentNote(SEOSidePanel.globalAuditController.signal);
 			if (result) {
 				this.currentNoteResults = result;
-				
-				// Clear ALL existing results more aggressively
-				const existingResults = this.containerEl.querySelectorAll('.seo-results-container, .seo-file-issue, .seo-issue, .seo-warning, .seo-notice, .seo-info-note, .seo-check, .seo-result, .seo-score-header, .seo-score-text, .seo-score-number, .seo-toggle-icon, .seo-collapse-icon');
-				existingResults.forEach(el => el.remove());
-				
-				// Create a new results container and render results
-				const newResultsContainer = this.containerEl.createEl('div', { cls: 'seo-results-container' });
-				
-				// Reuse existing ResultsDisplay instance to preserve collapse states
-				this.resultsDisplay.updateContainer(newResultsContainer);
-				this.resultsDisplay.renderResults(result);
-				
-				// Update global results if they exist (but don't trigger re-render)
 				this.updateGlobalResultsIfExists(result);
+				// Full re-render so header copy/download icons appear and content shows new results
+				this.render();
 			}
 		} catch (error) {
 			if (error instanceof Error && error.name === 'AbortError') {
