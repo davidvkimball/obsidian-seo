@@ -100,6 +100,20 @@ export class SEOSettingTab extends PluginSettingTab {
 					}));
 		});
 
+		globalGroup.addSetting(setting => {
+			setting
+				.setName('Export format')
+				.setDesc('Format for copy and download from the audit panel (CSV or Markdown). Markdown is useful for pasting into agents or docs.')
+				.addDropdown(dropdown => dropdown
+					.addOption('csv', 'CSV')
+					.addOption('markdown', 'Markdown')
+					.setValue(this.plugin.settings.exportFormat)
+					.onChange(async value => {
+						this.plugin.settings.exportFormat = value as 'csv' | 'markdown';
+						await this.plugin.saveSettings();
+					}));
+		});
+
 		// Property names group
 		const propertyNamesGroup = new SettingGroup(containerEl).setHeading('Property names');
 

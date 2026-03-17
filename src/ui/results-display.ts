@@ -207,6 +207,7 @@ export class ResultsDisplay {
 		
 		// Right side: Toggle button (styled like global sort icon)
 		const toggleBtn = scoreEl.createEl('div', { cls: 'seo-toggle-icon' });
+		toggleBtn.setAttribute('aria-label', this.isCollapsed ? 'Expand all' : 'Collapse all');
 		// Apply the current collapse state to the icon
 		setIcon(toggleBtn, this.isCollapsed ? 'chevrons-up-down' : 'chevrons-down-up');
 		
@@ -215,6 +216,7 @@ export class ResultsDisplay {
 			e.stopPropagation();
 			// Toggle the state
 			this.isCollapsed = !this.isCollapsed;
+			toggleBtn.setAttribute('aria-label', this.isCollapsed ? 'Expand all' : 'Collapse all');
 			// chevrons-down-up = "collapse all", chevrons-up-down = "expand all"
 			setIcon(toggleBtn, this.isCollapsed ? 'chevrons-up-down' : 'chevrons-down-up');
 			this.toggleChecksVisibility();
@@ -518,8 +520,9 @@ export class ResultsDisplay {
 		// Header with sorting buttons and collapse functionality
 		const issuesHeader = issuesList.createEl('div', { cls: 'seo-issues-header-container' });
 		
-		// Collapse icon (only this should be clickable)
+		// Collapse icon (only this should be clickable) - list starts expanded
 		const collapseIcon = issuesHeader.createEl('span', { cls: 'seo-collapse-icon seo-collapsible-header' });
+		collapseIcon.setAttribute('aria-label', 'Collapse list');
 		collapseIcon.appendChild(createCollapseIcon());
 		
 		issuesHeader.createEl('h4', { text: 'Files with results', cls: 'seo-issues-header' });
@@ -592,9 +595,11 @@ export class ResultsDisplay {
 			if (isCollapsed) {
 				filesListContainer.classList.remove('seo-results-list-collapsed');
 				filesListContainer.classList.add('seo-results-list-expanded');
+				collapseIcon.setAttribute('aria-label', 'Collapse list');
 			} else {
 				filesListContainer.classList.remove('seo-results-list-expanded');
 				filesListContainer.classList.add('seo-results-list-collapsed');
+				collapseIcon.setAttribute('aria-label', 'Expand list');
 			}
 			
 			// Rotate the collapse icon
@@ -631,6 +636,7 @@ export class ResultsDisplay {
 		
 		// Collapse icon (only this should be clickable) - start with right arrow (collapsed state)
 		const collapseIcon = passingHeader.createEl('span', { cls: 'seo-collapse-icon seo-collapsible-header' });
+		collapseIcon.setAttribute('aria-label', 'Expand list');
 		collapseIcon.appendChild(createCollapseIcon());
 		
 		// Start with right arrow (collapsed state) and add rotation class
@@ -705,9 +711,11 @@ export class ResultsDisplay {
 			if (isCollapsed) {
 				filesListContainer.classList.remove('seo-results-list-collapsed');
 				filesListContainer.classList.add('seo-results-list-expanded');
+				collapseIcon.setAttribute('aria-label', 'Collapse list');
 			} else {
 				filesListContainer.classList.remove('seo-results-list-expanded');
 				filesListContainer.classList.add('seo-results-list-collapsed');
+				collapseIcon.setAttribute('aria-label', 'Expand list');
 			}
 			
 			// Rotate the collapse icon with smooth transition

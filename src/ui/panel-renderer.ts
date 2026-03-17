@@ -3,7 +3,7 @@
  * Handles the complex rendering of both current and global panels
  */
 
-import { App } from "obsidian";
+import { App, setIcon } from "obsidian";
 import SEOPlugin from "../main";
 import { SEOResults } from "../types";
 import { getVaultFoldersInfo } from "./panel-utils";
@@ -11,6 +11,7 @@ import { PanelActions } from "./panel-actions";
 import { ResultsDisplay } from "./results-display";
 import { SEOSidePanel } from "./side-panel";
 import { isSupportedFile } from "../utils/file-utils";
+import { resultsToExportString, downloadExport, copyExportToClipboard } from "./csv-export";
 
 export class PanelRenderer {
 	constructor(
@@ -34,15 +35,28 @@ export class PanelRenderer {
 			containerEl.empty();
 			containerEl.addClass('seo-panel');
 
-			// Header with proper spacing
+			// Header: flex row with title left, icons right (when data exists)
 			const header = containerEl.createEl('div', { cls: 'seo-panel-header' });
-			header.createEl('h2', { text: panelType === 'current' ? 'SEO audit: current note' : 'SEO audit: vault' });
+			const headerRow = header.createEl('div', { cls: 'seo-panel-header-row' });
+			headerRow.createEl('h2', { text: panelType === 'current' ? 'SEO audit: current note' : 'SEO audit: vault' });
 
-			// Show current note file path if available
+			if (panelType === 'global' && globalResults.length > 0) {
+				this.renderHeaderIcons(headerRow, 'global', globalResults, null);
+			} else if (panelType === 'current') {
+				const activeFile = this.app.workspace.getActiveFile();
+				const currentFileResults = activeFile && this.plugin.settings.cachedGlobalResults
+					? this.plugin.settings.cachedGlobalResults.find(r => r.file === activeFile.path) ?? null
+					: null;
+				const resultsToShow = currentNoteResults || currentFileResults;
+				if (resultsToShow) {
+					this.renderHeaderIcons(headerRow, 'current', [resultsToShow], resultsToShow);
+				}
+			}
+
+			// Show current note file path or vault folders below header row
 			if (panelType === 'current') {
 				this.renderCurrentNoteHeader(header, currentNoteResults);
 			} else {
-				// Show vault folders information for global panel
 				const fileCount = globalResults.length;
 				const foldersInfo = getVaultFoldersInfo(this.plugin.settings.scanDirectories, fileCount);
 				const foldersEl = header.createEl('div', { cls: 'seo-filename' });
@@ -102,6 +116,43 @@ export class PanelRenderer {
 			}
 			
 			filenameEl.textContent = `Target note: ${displayName}`;
+		}
+	}
+
+	/**
+	 * Renders minimal header icons (download for vault; copy + download for current note).
+	 */
+	private renderHeaderIcons(
+		headerRow: HTMLElement,
+		panelType: 'global' | 'current',
+		resultsForCsv: SEOResults[],
+		singleNoteResult: SEOResults | null
+	) {
+		const wrap = headerRow.createEl('div', { cls: 'seo-header-icon-wrap' });
+		if (panelType === 'current' && singleNoteResult) {
+			const copyBtn = wrap.createEl('button', { type: 'button', cls: 'seo-header-icon', attr: { 'aria-label': 'Copy results to clipboard' } });
+			setIcon(copyBtn, 'lucide-copy');
+			copyBtn.addEventListener('click', () => {
+				const format = this.plugin.settings.exportFormat;
+				const content = resultsToExportString(singleNoteResult, format);
+				void copyExportToClipboard(content);
+			});
+			const downloadBtn = wrap.createEl('button', { type: 'button', cls: 'seo-header-icon', attr: { 'aria-label': 'Download results' } });
+			setIcon(downloadBtn, 'lucide-download');
+			downloadBtn.addEventListener('click', () => {
+				const format = this.plugin.settings.exportFormat;
+				const content = resultsToExportString(singleNoteResult, format);
+				const base = singleNoteResult.file.replace(/\.[^.]+$/, '').replace(/[/\\]/g, '-') || 'note';
+				downloadExport(content, `seo-audit-${base}`, format);
+			});
+		} else if (panelType === 'global' && resultsForCsv.length > 0) {
+			const downloadBtn = wrap.createEl('button', { type: 'button', cls: 'seo-header-icon', attr: { 'aria-label': 'Download results' } });
+			setIcon(downloadBtn, 'lucide-download');
+			downloadBtn.addEventListener('click', () => {
+				const format = this.plugin.settings.exportFormat;
+				const content = resultsToExportString(resultsForCsv, format);
+				downloadExport(content, 'seo-vault-audit', format);
+			});
 		}
 	}
 

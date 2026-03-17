@@ -7,6 +7,7 @@ import { TFile } from "obsidian";
 import { SEOSettings } from "../settings";
 import { SEOCheckResult } from "../types";
 import { removeCodeBlocks } from "./utils/content-parser";
+import { getSlugFromFile } from "./utils/note-utils";
 
 /**
  * Checks meta description length and presence
@@ -872,15 +873,20 @@ export function checkKeywordInSlug(content: string, file: TFile, settings: SEOSe
 		return Promise.resolve(results);
 	}
 
-	// Get the file slug (filename without extension)
-	const slug = file.basename.toLowerCase();
-	const keywordLower = keyword.toLowerCase();
+	// Get the file slug (from frontmatter or file name) and normalize to lowercase for comparison
+	const slug = getSlugFromFile(file, content, settings).toLowerCase();
 
-	// Check if keyword appears in slug (case-insensitive, generous matching)
-	const keywordWords = keywordLower.split(/\s+/).filter(word => word.length > 0);
-	const allWordsFound = keywordWords.every(word => slug.includes(word));
+	// Normalize keyword to kebab-case: any non-alphanumeric (apostrophes, spaces, etc.) becomes hyphen, then collapse
+	const keywordNormalized = keyword
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/-+/g, '-')
+		.replace(/^-|-$/g, '');
 
-	if (allWordsFound) {
+	// Slug contains keyword if the normalized keyword appears as a substring (kebab-case)
+	const found = keywordNormalized.length > 0 && slug.includes(keywordNormalized);
+
+	if (found) {
 		results.push({
 			passed: true,
 			message: `Target keyword "${keyword}" found in slug`,
@@ -890,7 +896,7 @@ export function checkKeywordInSlug(content: string, file: TFile, settings: SEOSe
 		results.push({
 			passed: false,
 			message: `Target keyword "${keyword}" not found in slug`,
-			suggestion: "Include your target keyword in the filename",
+			suggestion: "Include your target keyword in the file name",
 			severity: 'warning'
 		});
 	}

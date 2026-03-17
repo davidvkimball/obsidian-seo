@@ -26,12 +26,18 @@ export function checkImageNaming(content: string, file: TFile, settings: SEOSett
 	// Remove code blocks to avoid false positives
 	const cleanContent = removeCodeBlocks(content);
 	
+	// Skip external URLs; image filename rules only apply to vault-local / relative paths
+	function isExternalUrl(path: string): boolean {
+		const trimmed = path.trim();
+		return trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('//');
+	}
+
 	// Find image references
 	const imageMatches = cleanContent.match(/!\[[^\]]*\]\(([^)]+)\)/g);
 	if (imageMatches) {
 		imageMatches.forEach((match, index) => {
 			const imagePath = match.match(/!\[[^\]]*\]\(([^)]+)\)/)?.[1];
-			if (imagePath) {
+			if (imagePath && !isExternalUrl(imagePath)) {
 				const fileName = imagePath.split('/').pop() || '';
 				
 				// Find the line number for this image

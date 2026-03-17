@@ -74,6 +74,8 @@ export interface SEOSettings {
 	defaultSort: 'issues-desc' | 'issues-asc' | 'warnings-desc' | 'warnings-asc' | 'notices-desc' | 'notices-asc' | 'filename-asc' | 'filename-desc';
 	/** Whether to show the ribbon icon */
 	showRibbonIcon: boolean;
+	/** Export format for copy and download (CSV or Markdown) */
+	exportFormat: 'csv' | 'markdown';
 	
 	// Thresholds
 	/** Minimum content length in characters */
@@ -123,6 +125,7 @@ export const DEFAULT_SETTINGS: SEOSettings = {
 	publishMode: false,
 	defaultSort: 'issues-desc',
 	showRibbonIcon: true,
+	exportFormat: 'csv',
 	minContentLength: 300,
 	keywordDensityMin: 1,
 	keywordDensityMax: 2,

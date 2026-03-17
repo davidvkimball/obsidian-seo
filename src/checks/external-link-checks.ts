@@ -210,9 +210,9 @@ export function checkExternalLinks(content: string, file: TFile, settings: SEOSe
 const EXTERNAL_LINK_CACHE_TTL = 3600000; // 1 hour in ms
 const externalLinkCache = new Map<string, { result: SEOCheckResult | null, timestamp: number }>();
 
-// Rate limiting settings
-const MAX_CONCURRENT_REQUESTS = 5;
-const REQUEST_DELAY_MS = 200;
+// Rate limiting: fewer concurrent requests and longer delay to avoid 429 from strict hosts (e.g. archive.org, link shorteners)
+const MAX_CONCURRENT_REQUESTS = 2;
+const REQUEST_DELAY_MS = 600;
 
 class RateLimiter {
 	private queue: Array<{ fn: () => Promise<any>, resolve: (val: any) => void, reject: (err: any) => void }> = [];
@@ -316,7 +316,12 @@ export async function checkExternalBrokenLinks(content: string, file: TFile, set
 					throw: false // Handle status codes manually
 				});
 
-				if (response.status === 403) {
+				if (response.status === 429) {
+					linkIsBroken = true;
+					errorMessage = `External link rate limited (429): ${url}`;
+					suggestion = 'The server is limiting requests. Try again later or run the check on fewer links.';
+					severity = 'warning';
+				} else if (response.status === 403) {
 					linkIsBroken = true;
 					errorMessage = `External link access restricted (403): ${url}`;
 					suggestion = 'This link returned a 403 Forbidden error. This may indicate bot protection rather than a broken link.';

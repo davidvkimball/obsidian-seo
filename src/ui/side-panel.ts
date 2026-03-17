@@ -159,6 +159,11 @@ export class SEOSidePanel extends ItemView {
 			} else {
 				// Render normally if we have cached results or it's not a global panel
 				this.render();
+				// Current-note panel: on startup the active file may not be set yet; re-render after layout so copy/download icons appear
+				if (this.panelType === 'current') {
+					setTimeout(() => this.render(), 300);
+					setTimeout(() => this.render(), 800);
+				}
 			}
 		} catch (error) {
 			console.error('Error opening SEO panel:', error);
