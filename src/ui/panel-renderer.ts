@@ -143,7 +143,7 @@ export class PanelRenderer {
 	) {
 		const wrap = headerRow.createEl('div', { cls: 'seo-header-icon-wrap' });
 		if (panelType === 'current') {
-			const copyBtn = wrap.createEl('button', { type: 'button', cls: 'seo-header-icon', attr: { 'aria-label': 'Copy results to clipboard' } });
+			const copyBtn = wrap.createEl('button', { type: 'button', cls: 'clickable-icon', attr: { 'aria-label': 'Copy results to clipboard' } });
 			setIcon(copyBtn, 'lucide-copy');
 			copyBtn.addEventListener('click', () => {
 				if (!singleNoteResult) {
@@ -154,7 +154,7 @@ export class PanelRenderer {
 				const content = resultsToExportString(singleNoteResult, format);
 				void copyExportToClipboard(content);
 			});
-			const downloadBtn = wrap.createEl('button', { type: 'button', cls: 'seo-header-icon', attr: { 'aria-label': 'Download results' } });
+			const downloadBtn = wrap.createEl('button', { type: 'button', cls: 'clickable-icon', attr: { 'aria-label': 'Download results' } });
 			setIcon(downloadBtn, 'lucide-download');
 			downloadBtn.addEventListener('click', () => {
 				if (!singleNoteResult) {
@@ -167,7 +167,7 @@ export class PanelRenderer {
 				downloadExport(content, `seo-audit-${base}`, format);
 			});
 		} else if (panelType === 'global' && resultsForCsv.length > 0) {
-			const downloadBtn = wrap.createEl('button', { type: 'button', cls: 'seo-header-icon', attr: { 'aria-label': 'Download results' } });
+			const downloadBtn = wrap.createEl('button', { type: 'button', cls: 'clickable-icon', attr: { 'aria-label': 'Download results' } });
 			setIcon(downloadBtn, 'lucide-download');
 			downloadBtn.addEventListener('click', () => {
 				const format = this.plugin.settings.exportFormat;

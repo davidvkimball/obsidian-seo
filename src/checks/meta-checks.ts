@@ -10,6 +10,35 @@ import { removeCodeBlocks } from "./utils/content-parser";
 import { getSlugFromFile } from "./utils/note-utils";
 
 /**
+ * Strip optional YAML double/single quotes from a scalar read from a single frontmatter line.
+ */
+export function stripYamlScalarQuotes(value: string): string {
+	const t = value.trim();
+	if (t.length >= 2 && ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'")))) {
+		return t.slice(1, -1);
+	}
+	return t;
+}
+
+/**
+ * Case-insensitive keyword match for titles, descriptions, and headings:
+ * - Full phrase appears as a substring, OR
+ * - Every keyword word appears as a whole word (so "ai" does not match inside "wait").
+ */
+export function keywordMatchesInPlainText(text: string, keyword: string): boolean {
+	const kw = stripYamlScalarQuotes(keyword).trim();
+	if (!kw) return false;
+	const kwLower = kw.toLowerCase();
+	const textLower = text.toLowerCase();
+	if (textLower.includes(kwLower)) return true;
+	const words = kwLower.split(/\s+/).filter(w => w.length > 0);
+	return words.every(w => {
+		const escaped = w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+		return new RegExp(`\\b${escaped}\\b`, "i").test(text);
+	});
+}
+
+/**
  * Checks meta description length and presence
  * @param content - The markdown content to check
  * @param file - The file being checked
@@ -219,7 +248,7 @@ export function checkKeywordDensity(content: string, file: TFile, settings: SEOS
 	for (const line of lines) {
 		if (line.startsWith(settings.keywordProperty + ':')) {
 			foundKeywordLine = true;
-			keyword = line.substring(settings.keywordProperty.length + 1).trim();
+			keyword = stripYamlScalarQuotes(line.substring(settings.keywordProperty.length + 1).trim());
 			break;
 		}
 	}
@@ -254,12 +283,7 @@ export function checkKeywordDensity(content: string, file: TFile, settings: SEOS
 
 		for (const line of lines) {
 			if (line.startsWith(settings.titleProperty + ':')) {
-				let title = line.substring(settings.titleProperty.length + 1).trim();
-				// Remove surrounding quotes if present
-				if ((title.startsWith('"') && title.endsWith('"')) ||
-					(title.startsWith("'") && title.endsWith("'"))) {
-					title = title.slice(1, -1);
-				}
+				let title = stripYamlScalarQuotes(line.substring(settings.titleProperty.length + 1).trim());
 				// Remove title prefix/suffix if specified (for keyword density, we want the raw title)
 				// Note: We don't remove prefix/suffix here because keyword density should count the actual title
 				// Add title to content for keyword analysis
@@ -271,6 +295,22 @@ export function checkKeywordDensity(content: string, file: TFile, settings: SEOS
 
 	// Normalize apostrophes so "melee's" matches "Melee's" (any apostrophe type)
 	const stripApostrophes = (s: string) => s.replace(/[''\u2018\u2019\u201A\u201B]/g, '');
+
+	/**
+	 * Strip markdown emphasis and leading/trailing punctuation from a whitespace-delimited token
+	 * so "**AI**" / "automation:" match keyword words (same idea as keywordMatchesInPlainText).
+	 */
+	const normalizeContentWordToken = (token: string): string => {
+		let w = stripApostrophes(token).toLowerCase();
+		w = w.replace(/^\*+/, '').replace(/\*+$/, '');
+		w = w.replace(/^_{1,2}/, '').replace(/_{1,2}$/, '');
+		try {
+			w = w.replace(/^[^\p{L}\p{N}]+/u, '').replace(/[^\p{L}\p{N}]+$/u, '');
+		} catch {
+			w = w.replace(/^[^a-z0-9]+/i, '').replace(/[^a-z0-9]+$/i, '');
+		}
+		return w;
+	};
 
 	// Count keyword occurrences (case-insensitive, flexible matching)
 	const keywordLower = keyword.toLowerCase();
@@ -287,21 +327,24 @@ export function checkKeywordDensity(content: string, file: TFile, settings: SEOS
 		return Promise.resolve(results);
 	}
 
-	// Count occurrences by checking if all keyword words appear together (normalize content words too)
+	// Count occurrences: consecutive run of normalized content words must equal keyword words
 	let keywordCount = 0;
 	const contentWords = cleanContentLower.split(/\s+/);
 
 	for (let i = 0; i <= contentWords.length - keywordWords.length; i++) {
-		const phraseWords = contentWords.slice(i, i + keywordWords.length).map(stripApostrophes);
-		const phrase = phraseWords.join(' ');
-		const allWordsFound = keywordWords.every(word => phrase.includes(word));
-		if (allWordsFound) {
+		const slice = contentWords.slice(i, i + keywordWords.length).map(normalizeContentWordToken);
+		if (slice.length !== keywordWords.length) continue;
+		const consecutiveMatch = keywordWords.every((kw, j) => slice[j] === kw);
+		if (consecutiveMatch) {
 			keywordCount++;
 		}
 	}
 
-	// Count total words
-	const words = cleanContent.split(/\s+/).filter(word => word.length > 0);
+	// Total words: same normalization so density denominator matches readable words
+	const words = cleanContentLower
+		.split(/\s+/)
+		.map(normalizeContentWordToken)
+		.filter(w => w.length > 0);
 	const totalWords = words.length;
 
 	if (totalWords === 0) {
@@ -379,7 +422,7 @@ export function checkKeywordInDescription(content: string, file: TFile, settings
 	for (const line of lines) {
 		if (line.startsWith(settings.keywordProperty + ':')) {
 			foundKeywordLine = true;
-			keyword = line.substring(settings.keywordProperty.length + 1).trim();
+			keyword = stripYamlScalarQuotes(line.substring(settings.keywordProperty.length + 1).trim());
 			break;
 		}
 	}
@@ -396,12 +439,7 @@ export function checkKeywordInDescription(content: string, file: TFile, settings
 	for (const line of lines) {
 		if (line.startsWith(settings.descriptionProperty + ':')) {
 			foundDescriptionLine = true;
-			description = line.substring(settings.descriptionProperty.length + 1).trim();
-			// Remove surrounding quotes if present
-			if ((description.startsWith('"') && description.endsWith('"')) ||
-				(description.startsWith("'") && description.endsWith("'"))) {
-				description = description.slice(1, -1);
-			}
+			description = stripYamlScalarQuotes(line.substring(settings.descriptionProperty.length + 1).trim());
 			break;
 		}
 	}
@@ -416,19 +454,8 @@ export function checkKeywordInDescription(content: string, file: TFile, settings
 		return Promise.resolve(results);
 	}
 
-	// Check if keyword appears in description (case-insensitive, flexible matching)
-	const keywordLower = keyword.toLowerCase();
-	const descriptionLower = description.toLowerCase();
-
-	// First check if the full keyword phrase appears (exact phrase match)
-	const fullPhraseFound = descriptionLower.includes(keywordLower);
-
-	// Also check if all keyword words appear individually (flexible matching)
-	const keywordWords = keywordLower.split(/\s+/).filter(word => word.length > 0);
-	const allWordsFound = keywordWords.every(word => descriptionLower.includes(word));
-
-	// Pass if either the full phrase is found OR all words are found
-	const keywordFound = fullPhraseFound || allWordsFound;
+	// Check if keyword appears in description (case-insensitive; whole-word fallback)
+	const keywordFound = keywordMatchesInPlainText(description, keyword);
 
 	if (keywordFound) {
 		results.push({
@@ -603,7 +630,7 @@ export function checkKeywordInHeadings(content: string, file: TFile, settings: S
 	for (const line of lines) {
 		if (line.startsWith(settings.keywordProperty + ':')) {
 			foundKeywordLine = true;
-			keyword = line.substring(settings.keywordProperty.length + 1).trim();
+			keyword = stripYamlScalarQuotes(line.substring(settings.keywordProperty.length + 1).trim());
 			break;
 		}
 	}
@@ -685,23 +712,10 @@ export function checkKeywordInHeadings(content: string, file: TFile, settings: S
 		return Promise.resolve(results);
 	}
 
-	// Check if keyword appears in any H1 heading (flexible matching)
-	const keywordLower = keyword.toLowerCase();
-	const keywordWords = keywordLower.split(/\s+/).filter(word => word.length > 0);
-
 	let keywordFoundInH1 = false;
 
 	for (const h1 of h1Headings) {
-		const h1Lower = h1.text.toLowerCase();
-
-		// First check if the full keyword phrase appears (exact phrase match)
-		const fullPhraseFound = h1Lower.includes(keywordLower);
-
-		// Also check if all keyword words appear individually (flexible matching)
-		const allWordsFound = keywordWords.every(word => h1Lower.includes(word));
-
-		// Pass if either the full phrase is found OR all words are found
-		if (fullPhraseFound || allWordsFound) {
+		if (keywordMatchesInPlainText(h1.text, keyword)) {
 			keywordFoundInH1 = true;
 			break;
 		}
@@ -753,7 +767,7 @@ export function checkKeywordInTitle(content: string, file: TFile, settings: SEOS
 	for (const line of lines) {
 		if (line.startsWith(settings.keywordProperty + ':')) {
 			foundKeywordLine = true;
-			keyword = line.substring(settings.keywordProperty.length + 1).trim();
+			keyword = stripYamlScalarQuotes(line.substring(settings.keywordProperty.length + 1).trim());
 			break;
 		}
 	}
@@ -761,12 +775,7 @@ export function checkKeywordInTitle(content: string, file: TFile, settings: SEOS
 	for (const line of lines) {
 		if (line.startsWith(settings.titleProperty + ':')) {
 			foundTitleLine = true;
-			title = line.substring(settings.titleProperty.length + 1).trim();
-			// Remove surrounding quotes if present
-			if ((title.startsWith('"') && title.endsWith('"')) ||
-				(title.startsWith("'") && title.endsWith("'"))) {
-				title = title.slice(1, -1);
-			}
+			title = stripYamlScalarQuotes(line.substring(settings.titleProperty.length + 1).trim());
 			break;
 		}
 	}
@@ -794,19 +803,7 @@ export function checkKeywordInTitle(content: string, file: TFile, settings: SEOS
 		return Promise.resolve(results);
 	}
 
-	// Check if keyword appears in title (case-insensitive, generous matching)
-	const titleLower = title.toLowerCase();
-	const keywordLower = keyword.toLowerCase();
-
-	// First check if the full keyword phrase appears (exact phrase match)
-	const fullPhraseFound = titleLower.includes(keywordLower);
-
-	// Also check if all keyword words appear individually (flexible matching)
-	const keywordWords = keywordLower.split(/\s+/).filter(word => word.length > 0);
-	const allWordsFound = keywordWords.every(word => titleLower.includes(word));
-
-	// Pass if either the full phrase is found OR all words are found
-	const keywordFound = fullPhraseFound || allWordsFound;
+	const keywordFound = keywordMatchesInPlainText(title, keyword);
 
 	if (keywordFound) {
 		results.push({
@@ -859,7 +856,7 @@ export function checkKeywordInSlug(content: string, file: TFile, settings: SEOSe
 	for (const line of lines) {
 		if (line.startsWith(settings.keywordProperty + ':')) {
 			foundKeywordLine = true;
-			keyword = line.substring(settings.keywordProperty.length + 1).trim();
+			keyword = stripYamlScalarQuotes(line.substring(settings.keywordProperty.length + 1).trim());
 			break;
 		}
 	}
