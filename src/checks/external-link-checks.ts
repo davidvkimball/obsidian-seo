@@ -215,14 +215,18 @@ const MAX_CONCURRENT_REQUESTS = 2;
 const REQUEST_DELAY_MS = 600;
 
 class RateLimiter {
-	private queue: Array<{ fn: () => Promise<any>, resolve: (val: any) => void, reject: (err: any) => void }> = [];
+	private queue: Array<{ fn: () => Promise<unknown>, resolve: (val: unknown) => void, reject: (err: unknown) => void }> = [];
 	private activeRequests = 0;
 	private lastRequestTime = 0;
 
 	async schedule<T>(fn: () => Promise<T>): Promise<T> {
-		return new Promise((resolve, reject) => {
-			this.queue.push({ fn, resolve, reject });
-			this.processQueue();
+		return new Promise<T>((resolve, reject) => {
+			this.queue.push({
+				fn,
+				resolve: resolve as (val: unknown) => void,
+				reject,
+			});
+			void this.processQueue();
 		});
 	}
 
@@ -235,7 +239,7 @@ class RateLimiter {
 		const timeSinceLastRequest = now - this.lastRequestTime;
 
 		if (timeSinceLastRequest < REQUEST_DELAY_MS) {
-			setTimeout(() => this.processQueue(), REQUEST_DELAY_MS - timeSinceLastRequest);
+			window.setTimeout(() => { void this.processQueue(); }, REQUEST_DELAY_MS - timeSinceLastRequest);
 			return;
 		}
 
@@ -251,7 +255,7 @@ class RateLimiter {
 		} finally {
 			this.activeRequests--;
 			// Small delay before processing next to ensure spacing
-			setTimeout(() => this.processQueue(), REQUEST_DELAY_MS);
+			window.setTimeout(() => { void this.processQueue(); }, REQUEST_DELAY_MS);
 		}
 	}
 }
@@ -331,7 +335,7 @@ export async function checkExternalBrokenLinks(content: string, file: TFile, set
 					errorMessage = `External link error (${response.status}): ${url}`;
 					suggestion = `This link returned a ${response.status} error.`;
 				}
-			} catch (error) {
+			} catch {
 				linkIsBroken = true;
 				errorMessage = `External link unreachable: ${url}`;
 				suggestion = 'Check if the URL is correct or if the server is down.';

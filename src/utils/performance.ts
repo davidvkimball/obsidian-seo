@@ -25,7 +25,7 @@ export function debounce<T extends unknown[]>(
 	wait: number,
 	immediate: boolean = false
 ): (...args: T) => void {
-	let timeout: ReturnType<typeof setTimeout> | null = null;
+	let timeout: number | null = null;
 
 	return function executedFunction(...args: T) {
 		const later = () => {
@@ -36,10 +36,10 @@ export function debounce<T extends unknown[]>(
 		const callNow = immediate && !timeout;
 
 		if (timeout) {
-			clearTimeout(timeout);
+			window.clearTimeout(timeout);
 		}
 
-		timeout = setTimeout(later, wait);
+		timeout = window.setTimeout(later, wait);
 
 		if (callNow) {
 			func(...args);
@@ -63,7 +63,7 @@ export function throttle<T extends unknown[]>(
 		if (!inThrottle) {
 			func.apply(this, args);
 			inThrottle = true;
-			setTimeout(() => (inThrottle = false), wait);
+			window.setTimeout(() => (inThrottle = false), wait);
 		}
 	};
 }
@@ -305,7 +305,7 @@ export class BatchProcessor<T> {
 				await this.processor(batch);
 				
 				if (this.delay > 0) {
-					await new Promise(resolve => setTimeout(resolve, this.delay));
+					await new Promise(resolve => window.setTimeout(resolve, this.delay));
 				}
 			}
 		} finally {

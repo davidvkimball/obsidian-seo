@@ -150,8 +150,8 @@ export class SEOSidePanel extends ItemView {
 				this.render();
 				// Current-note panel: on startup the active file may not be set yet; re-render after layout so copy/download icons appear
 				if (this.panelType === 'current') {
-					setTimeout(() => this.render(), 300);
-					setTimeout(() => this.render(), 800);
+					window.setTimeout(() => this.render(), 300);
+					window.setTimeout(() => this.render(), 800);
 				}
 			}
 		} catch (error) {
@@ -190,7 +190,7 @@ export class SEOSidePanel extends ItemView {
 		}
 		
 		// Also do the DOM manipulation as backup
-		setTimeout(() => {
+		window.setTimeout(() => {
 			// Approach 1: Direct DOM manipulation of icon element
 			const iconEl = this.containerEl.querySelector('.view-header-icon') as HTMLElement;
 			if (iconEl) {
@@ -276,7 +276,6 @@ export class SEOSidePanel extends ItemView {
 			// False positive: "SEO" is a proper noun (acronym) and should be capitalized
 			this.containerEl.createEl('div', { 
 				cls: 'seo-info-note seo-no-results-message',
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
 				text: 'No SEO results available for this file. Click "Refresh" to run an audit.'
 			});
 			}
@@ -351,7 +350,6 @@ export class SEOSidePanel extends ItemView {
 		setIcon(spinnerEl, 'loader-circle');
 		// False positive: "SEO" is a proper noun (acronym) and should be capitalized
 		loadingContainer.createEl('h3', { 
-			// eslint-disable-next-line obsidianmd/ui/sentence-case
 			text: 'Running SEO audit...',
 			cls: 'seo-loading-title'
 		});
@@ -533,7 +531,6 @@ export class SEOSidePanel extends ItemView {
 				} else {
 					const noGlobal = containerEl.createEl('div', { cls: 'seo-no-results' });
 					// False positive: Contains quoted text which is already in sentence case
-					// eslint-disable-next-line obsidianmd/ui/sentence-case
 					noGlobal.createEl('p', { text: 'Click "Audit all notes" to audit your files in your configured directories.' });
 				}
 			}
@@ -541,7 +538,6 @@ export class SEOSidePanel extends ItemView {
 		} catch (error) {
 			console.error('Error rendering SEO panel:', error);
 			// False positive: "SEO" is a proper noun (acronym) and should be capitalized
-			// eslint-disable-next-line obsidianmd/ui/sentence-case
 			this.containerEl.createEl('div', { text: 'Error loading SEO panel. Please try again.' });
 		}
 	}
@@ -664,7 +660,6 @@ export class SEOSidePanel extends ItemView {
 			// No results available, show prompt
 			const noResults = this.containerEl.createEl('div', { cls: 'seo-no-results' });
 			// False positive: Contains quoted text which is already in sentence case
-			// eslint-disable-next-line obsidianmd/ui/sentence-case
 			noResults.createEl('p', { text: 'Open a markdown file and click "Refresh" to audit it.' });
 		}
 	}

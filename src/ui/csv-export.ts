@@ -48,7 +48,7 @@ function getCheckLabel(key: string): string {
 function* iterateFindings(results: SEOResults): Generator<{ checkType: string; finding: SEOCheckResult }> {
 	for (const [key, list] of Object.entries(results.checks)) {
 		if (!Array.isArray(list)) continue;
-		for (const finding of list as SEOCheckResult[]) {
+		for (const finding of list) {
 			if (ISSUE_SEVERITIES.includes(finding.severity as (typeof ISSUE_SEVERITIES)[number])) {
 				yield { checkType: getCheckLabel(key), finding };
 			}
@@ -152,9 +152,7 @@ export function downloadExport(content: string, filenameBase: string, format: Ex
 	const filename = filenameBase.endsWith(`.${ext}`) ? filenameBase : `${filenameBase}.${ext}`;
 	const blob = new Blob([content], { type: mime });
 	const url = URL.createObjectURL(blob);
-	const a = document.createElement('a');
-	a.href = url;
-	a.download = filename;
+	const a = createEl('a', { href: url, attr: { download: filename } });
 	a.click();
 	URL.revokeObjectURL(url);
 }

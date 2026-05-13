@@ -34,7 +34,7 @@ export function registerCommands(plugin: SEOPlugin) {
 		callback: () => {
 			plugin.openCurrentPanel();
 			// Wait for panel to open, then trigger the audit
-			setTimeout(() => {
+			window.setTimeout(() => {
 				const currentPanel = plugin.app.workspace.getLeavesOfType('seo-current-panel')[0];
 				if (currentPanel && currentPanel.view) {
 					const checkBtn = currentPanel.view.containerEl.querySelector('.seo-top-btn') as HTMLButtonElement;
@@ -55,7 +55,7 @@ export function registerCommands(plugin: SEOPlugin) {
 			plugin.openGlobalPanel();
 			
 			// Always check if panel opened successfully and run the audit
-			void setTimeout(() => {
+			void window.setTimeout(() => {
 				void (async () => {
 					const globalPanels = plugin.app.workspace.getLeavesOfType('seo-global-panel');
 					

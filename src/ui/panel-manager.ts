@@ -41,7 +41,7 @@ export class PanelManager {
 			if (existingLeaf.view instanceof SEOSidePanel) {
 				const panel = existingLeaf.view;
 				if (typeof panel.forceIconRefresh === 'function') {
-					setTimeout(() => panel.forceIconRefresh(), 100);
+					window.setTimeout(() => panel.forceIconRefresh(), 100);
 				}
 			}
 		} else {
@@ -56,7 +56,7 @@ export class PanelManager {
 				this.app.workspace.setActiveLeaf(leaf);
 
 				// Ensure icon loads properly after opening
-				setTimeout(() => {
+				window.setTimeout(() => {
 					if (leaf.view instanceof SEOSidePanel) {
 						if (typeof leaf.view.forceIconRefresh === 'function') {
 							leaf.view.forceIconRefresh();

@@ -169,15 +169,15 @@ export function createDebouncedFunction<T extends unknown[], R>(
 	delay: number,
 	context: string
 ) {
-	let timeoutId: ReturnType<typeof setTimeout> | null = null;
+	let timeoutId: number | null = null;
 
 	return async (...args: T): Promise<R | undefined> => {
 		return new Promise((resolve) => {
 			if (timeoutId) {
-				clearTimeout(timeoutId);
+				window.clearTimeout(timeoutId);
 			}
 
-			timeoutId = setTimeout(() => {
+			timeoutId = window.setTimeout(() => {
 				void (async () => {
 					try {
 						const result = await fn(...args);

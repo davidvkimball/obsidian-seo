@@ -11,7 +11,7 @@ interface ObsidianWindow extends Window {
  * Helper function to create collapse icon
  */
 function createCollapseIcon(): HTMLElement {
-	const iconEl = document.createElement('span');
+	const iconEl = createSpan();
 	setIcon(iconEl, 'chevron-down');
 	return iconEl;
 }
@@ -82,7 +82,7 @@ export class ResultsDisplay {
 
 			// Type guard for markdown view with editor property
 			if (typeof markdownView === 'object' && markdownView !== null && 'editor' in markdownView) {
-				editor = (markdownView as { editor: unknown }).editor;
+				editor = (markdownView).editor;
 			}
 			
 			if (!editor) {
@@ -135,7 +135,7 @@ export class ResultsDisplay {
 						}]);
 						
 						// Remove highlight after 2 seconds
-						setTimeout(() => {
+						window.setTimeout(() => {
 							try {
 								if (editorObj.removeHighlights) {
 									editorObj.removeHighlights();
@@ -199,7 +199,7 @@ export class ResultsDisplay {
 		} else {
 			// False positive: Text is already in sentence case; exclamation mark is appropriate for success message
 			scoreText.createEl('span', { 
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
+				 
 				text: ' (All checks passed!)',
 				cls: 'seo-success'
 			});

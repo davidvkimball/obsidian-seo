@@ -49,8 +49,7 @@ export class PanelActions {
 		const activeFile = this.app.workspace.getActiveFile();
 		if (!activeFile || !isSupportedFile(activeFile, this.plugin.settings)) {
 			// False positive: Text is already in sentence case
-			// eslint-disable-next-line obsidianmd/ui/sentence-case
-			new Notice('Please open a markdown or MDX file first.');
+			new Notice('Please open a Markdown or MDX file first.');
 			return null;
 		}
 
@@ -65,7 +64,6 @@ export class PanelActions {
 			
 		if (results.length > 0) {
 			// False positive: "SEO" is a proper noun (acronym) and should be capitalized
-			// eslint-disable-next-line obsidianmd/ui/sentence-case
 			new Notice('SEO audit complete.');
 			return results[0] || null;
 		}
@@ -73,7 +71,6 @@ export class PanelActions {
 		} catch (error) {
 		if (error instanceof Error && error.name === 'AbortError') {
 			// False positive: "SEO" is a proper noun (acronym) and should be capitalized
-			// eslint-disable-next-line obsidianmd/ui/sentence-case
 			new Notice('SEO audit cancelled.');
 			throw error; // Re-throw abort errors
 		}
@@ -87,8 +84,7 @@ export class PanelActions {
 		const activeFile = this.app.workspace.getActiveFile();
 		if (!activeFile || !isSupportedFile(activeFile, this.plugin.settings)) {
 			// False positive: Text is already in sentence case
-			// eslint-disable-next-line obsidianmd/ui/sentence-case
-			new Notice('Please open a markdown or MDX file first.');
+			new Notice('Please open a Markdown or MDX file first.');
 			return null;
 		}
 
@@ -280,11 +276,11 @@ export class PanelActions {
 						resolve();
 					} else {
 						// Panel not ready yet, check again
-						setTimeout(checkPanel, 50);
+						window.setTimeout(checkPanel, 50);
 					}
 				} else {
 					// Panel not found, check again
-					setTimeout(checkPanel, 50);
+					window.setTimeout(checkPanel, 50);
 				}
 			};
 			checkPanel();
@@ -299,7 +295,7 @@ export class PanelActions {
 			
 			// Disable refresh button in current note panel if it exists
 			// Wait a bit for the panel to be fully rendered
-			await new Promise(resolve => setTimeout(resolve, 100));
+			await new Promise(resolve => window.setTimeout(resolve, 100));
 			
 			const currentPanels = this.app.workspace.getLeavesOfType('seo-current-panel');
 			if (currentPanels.length > 0) {
@@ -437,11 +433,9 @@ export class PanelActions {
 			menu.addSeparator();
 		}
 		
-		// File name (A to Z)
+		// File name (a to z)
 		menu.addItem((item) => {
-			// False positive: "(A to Z)" is a sorting indicator, not UI text
-			// eslint-disable-next-line obsidianmd/ui/sentence-case
-			item.setTitle('File name (A to Z)')
+			item.setTitle('File name (a to z)')
 				.onClick(() => {
 					onSortChange('filename-asc');
 					this.sortAndRenderFiles(issuesFiles, issuesList, 'filename-asc', settings);
@@ -450,12 +444,10 @@ export class PanelActions {
 				item.setIcon('check');
 			}
 		});
-		
-		// File name (Z to A)
+
+		// File name (z to a)
 		menu.addItem((item) => {
-			// False positive: "(Z to A)" is a sorting indicator, not UI text
-			// eslint-disable-next-line obsidianmd/ui/sentence-case
-			item.setTitle('File name (Z to A)')
+			item.setTitle('File name (z to a)')
 				.onClick(() => {
 					onSortChange('filename-desc');
 					this.sortAndRenderFiles(issuesFiles, issuesList, 'filename-desc', settings);

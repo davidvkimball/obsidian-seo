@@ -30,7 +30,7 @@ interface CacheConfig {
 export class CacheManager<T> {
 	private cache = new Map<string, CacheEntry<T>>();
 	private config: CacheConfig;
-	private cleanupTimer: ReturnType<typeof setInterval> | null = null;
+	private cleanupTimer: number | null = null;
 
 	constructor(config: Partial<CacheConfig> = {}) {
 		this.config = {
@@ -161,7 +161,7 @@ export class CacheManager<T> {
 	 */
 	destroy(): void {
 		if (this.cleanupTimer) {
-			clearInterval(this.cleanupTimer);
+			window.clearInterval(this.cleanupTimer);
 			this.cleanupTimer = null;
 		}
 		this.clear();
@@ -206,7 +206,7 @@ export class CacheManager<T> {
 	 * Start the cleanup timer
 	 */
 	private startCleanupTimer(): void {
-		this.cleanupTimer = setInterval(() => {
+		this.cleanupTimer = window.setInterval(() => {
 			this.cleanup();
 		}, this.config.cleanupInterval);
 	}

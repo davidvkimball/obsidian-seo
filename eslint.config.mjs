@@ -8,7 +8,11 @@ export default defineConfig([
   {
     ignores: ["main.js", "node_modules/**", "dist/**", "*.js", "scripts/**", ".ref/**"]
   },
-  ...obsidianmd.configs.recommended,
+  // obsidianmd recommended rules require type info, so only apply to TS files
+  ...obsidianmd.configs.recommended.map((config) => ({
+    ...config,
+    files: config.files ?? ["**/*.ts"],
+  })),
   {
     files: ["**/*.ts"],
     languageOptions: {
@@ -52,6 +56,13 @@ export default defineConfig([
       "no-console": ["error", { "allow": ["warn", "error", "debug"] }],
       // Require await in async functions (matches Obsidian bot)
       "@typescript-eslint/require-await": "error",
+      // Allow domain-specific acronyms and HTML heading levels in UI strings.
+      // Ignore text inside double quotes (these are quoted button/control names
+      // referenced inside descriptions, which keep their own casing).
+      "obsidianmd/ui/sentence-case": ["error", {
+        acronyms: ["SEO", "MDX", "H1", "H2", "H3", "H4", "H5", "H6", "URL", "CSV"],
+        ignoreRegex: ['"[^"]+"'],
+      }],
     },
   },
   {

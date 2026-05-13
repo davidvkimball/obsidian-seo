@@ -86,7 +86,6 @@ export default class SEOPlugin extends Plugin {
 				await withErrorHandling(
 					() => {
 						// False positive: "SEO" is a proper noun (acronym) and should be capitalized
-						// eslint-disable-next-line obsidianmd/ui/sentence-case
 						this.ribbonIcon = this.addRibbonIcon('search-check', 'Open SEO audit panel', () => {
 							try {
 								// Check if panel already exists
@@ -97,7 +96,7 @@ export default class SEOPlugin extends Plugin {
 								
 								// Only trigger manual refresh if panel already existed (not first run)
 								if (!isFirstRun) {
-									void setTimeout(() => {
+									void window.setTimeout(() => {
 										void (async () => {
 											try {
 												const globalPanels = this.app.workspace.getLeavesOfType('seo-global-panel');
@@ -283,7 +282,6 @@ export default class SEOPlugin extends Plugin {
 				// Add ribbon icon if it doesn't exist
 			if (!this.ribbonIcon) {
 				// False positive: "SEO" is a proper noun (acronym) and should be capitalized
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
 				this.ribbonIcon = this.addRibbonIcon('search-check', 'Open SEO audit panel', () => {
 						try {
 							// Check if panel already exists
@@ -294,7 +292,7 @@ export default class SEOPlugin extends Plugin {
 							
 							// Only trigger manual refresh if panel already existed (not first run)
 							if (!isFirstRun) {
-								void setTimeout(() => {
+								void window.setTimeout(() => {
 									void (async () => {
 										try {
 											const globalPanels = this.app.workspace.getLeavesOfType('seo-global-panel');
@@ -332,9 +330,9 @@ export default class SEOPlugin extends Plugin {
 					// Force multiple refresh triggers to ensure context menu is updated
 					this.app.workspace.trigger('layout-change');
 					// Also try to find and remove any orphaned context menu items
-					setTimeout(() => {
+					window.setTimeout(() => {
 						// Find any context menu items that might reference this icon
-						const contextMenus = document.querySelectorAll('.menu');
+						const contextMenus = activeDocument.querySelectorAll('.menu');
 						contextMenus.forEach(menu => {
 							const items = menu.querySelectorAll('.menu-item');
 							items.forEach(item => {

@@ -23,9 +23,7 @@ export class SEOSettingTab extends PluginSettingTab {
 				.setName('Scan directories')
 				.setDesc('Comma-separated list of directory names to scan. Leave blank to scan all directories.')
 				.addText(text => {
-					// False positive: "like blog, posts, public" is a placeholder example, not UI text
-					// eslint-disable-next-line obsidianmd/ui/sentence-case
-					text.setPlaceholder('like blog, posts, public');
+					text.setPlaceholder('Like blog, posts, public');
 					text.setValue(this.plugin.settings.scanDirectories);
 					text.onChange(async value => {
 						this.plugin.settings.scanDirectories = value;
@@ -74,10 +72,8 @@ export class SEOSettingTab extends PluginSettingTab {
 		globalGroup.addSetting(setting => {
 			setting
 				// False positive: "MDX" is a proper noun (acronym) and should be capitalized
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
 				.setName('Enable MDX file support')
 				// False positive: "MDX" is a proper noun (acronym) and should be capitalized
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
 				.setDesc('Process MDX files in addition to Markdown files. MDX files use the same properties format as Markdown.')
 				.addToggle(toggle => toggle
 					.setValue(this.plugin.settings.enableMDXSupport)
@@ -120,12 +116,9 @@ export class SEOSettingTab extends PluginSettingTab {
 		propertyNamesGroup.addSetting(setting => {
 			setting
 				.setName('Keyword property')
-				// False positive: Contains example property names (targetKeyword, seo, keyword) which are technical notation
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
-				.setDesc('Property name for target keyword (targetKeyword, seo, keyword, etc.)')
+				.setDesc('Property name for target keyword (targetKeyword, SEO, keyword, etc.)')
 				.addText(text => {
 					// False positive: "targetKeyword" is a placeholder, not UI text
-					// eslint-disable-next-line obsidianmd/ui/sentence-case
 					text.setPlaceholder('targetKeyword');
 					text.setValue(this.plugin.settings.keywordProperty);
 					text.onChange(async value => {
@@ -140,9 +133,7 @@ export class SEOSettingTab extends PluginSettingTab {
 				.setName('Description property')
 				.setDesc('Property name for meta description')
 				.addText(text => {
-					// False positive: "description" is a placeholder, not UI text
-					// eslint-disable-next-line obsidianmd/ui/sentence-case
-					text.setPlaceholder('description');
+					text.setPlaceholder('Description');
 					text.setValue(this.plugin.settings.descriptionProperty);
 					text.onChange(async value => {
 						this.plugin.settings.descriptionProperty = value;
@@ -156,9 +147,7 @@ export class SEOSettingTab extends PluginSettingTab {
 				.setName('Title property')
 				.setDesc('Property name for title (leave blank to skip title checks)')
 				.addText(text => {
-					// False positive: "title" is a placeholder, not UI text
-					// eslint-disable-next-line obsidianmd/ui/sentence-case
-					text.setPlaceholder('title');
+					text.setPlaceholder('Title');
 					text.setValue(this.plugin.settings.titleProperty);
 					text.onChange(async value => {
 						this.plugin.settings.titleProperty = value;
@@ -184,9 +173,7 @@ export class SEOSettingTab extends PluginSettingTab {
 				.setName('Slug property')
 				.setDesc('Property name for slug (leave blank to skip slug checks)')
 				.addText(text => {
-					// False positive: "slug" is a placeholder, not UI text
-					// eslint-disable-next-line obsidianmd/ui/sentence-case
-					text.setPlaceholder('slug');
+					text.setPlaceholder('Slug');
 					text.setValue(this.plugin.settings.slugProperty);
 					text.onChange(async value => {
 						this.plugin.settings.slugProperty = value;
@@ -214,13 +201,9 @@ export class SEOSettingTab extends PluginSettingTab {
 			propertyNamesGroup.addSetting(setting => {
 				setting
 					.setName('Use parent folder name instead when specified file name is used')
-					// False positive: Text is already in sentence case
-					// eslint-disable-next-line obsidianmd/ui/sentence-case
-					.setDesc('If a markdown file matches this file name, use the parent folder name as the slug instead')
+					.setDesc('If a Markdown file matches this file name, use the parent folder name as the slug instead')
 					.addText(text => {
-						// False positive: "index" is a placeholder, not UI text
-						// eslint-disable-next-line obsidianmd/ui/sentence-case
-						text.setPlaceholder('index');
+						text.setPlaceholder('Index');
 						text.setValue(this.plugin.settings.parentFolderSlugFilename);
 						text.onChange(async value => {
 							this.plugin.settings.parentFolderSlugFilename = value;
@@ -283,7 +266,7 @@ export class SEOSettingTab extends PluginSettingTab {
 			// Add performance warning
 			// False positive: "Warning:" is a standard warning prefix and should be capitalized
 			setting.descEl.createEl('div', {
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
+				 
 				text: 'Warning: This feature can be very resource-intensive with large vaults and many notes. Disable for faster audits.',
 				cls: 'setting-item-description seo-warning-message'
 			});
@@ -341,7 +324,6 @@ export class SEOSettingTab extends PluginSettingTab {
 			setting
 				.setName('Enable broken external link check button')
 				// False positive: Contains quoted button text which is already in sentence case
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
 				.setDesc('Show "Check external links for 404s" button in current note panel')
 				.addToggle(toggle => toggle
 					.setValue(this.plugin.settings.enableExternalLinkButton)
@@ -394,9 +376,7 @@ export class SEOSettingTab extends PluginSettingTab {
 		auditOptionsGroup.addSetting(setting => {
 			setting
 				.setName('Check potentially broken embeds')
-				// False positive: Text is already in sentence case; "wikilink-based" is technical terminology
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
-				.setDesc('Check for potentially broken markdown or wikilink-based embedded media that may not work on web publishing')
+				.setDesc('Check for potentially broken Markdown or wikilink-based embedded media that may not work on web publishing')
 				.addToggle(toggle => toggle
 					.setValue(this.plugin.settings.checkPotentiallyBrokenEmbeds)
 					.onChange(async value => {
@@ -419,12 +399,8 @@ export class SEOSettingTab extends PluginSettingTab {
 
 		auditOptionsGroup.addSetting(setting => {
 			setting
-				// False positive: "H1" is technical notation (HTML heading level) and should be capitalized
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
 				.setName('Title property is H1')
-				// False positive: "H1" is technical notation (HTML heading level) and should be capitalized
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
-				.setDesc('Enable when your static site generator uses the title property to automatically generate the H1 heading. This prevents H1 validation errors while still flagging H1s that appear after other heading levels.')
+				.setDesc('Enable when your static site generator uses the title property to automatically generate the H1 heading. This prevents H1 validation errors while still flagging additional H1 headings that appear after other heading levels.')
 				.addToggle(toggle => toggle
 					.setValue(this.plugin.settings.skipH1Check)
 					.onChange(async value => {
@@ -450,7 +426,6 @@ export class SEOSettingTab extends PluginSettingTab {
 			// Add warning for vault-wide external link checking
 			// False positive: "Warning:" is a standard warning prefix and should be capitalized
 			setting.descEl.createEl('div', {
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
 				text: 'Warning: This will make vault audits extremely slow. Use the "Check external links" button instead for individual notes.',
 				cls: 'setting-item-description seo-warning-message'
 			});

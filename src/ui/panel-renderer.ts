@@ -90,7 +90,6 @@ export class PanelRenderer {
 			} else {
 				const noGlobal = containerEl.createEl('div', { cls: 'seo-no-results' });
 				// False positive: Contains quoted text which is already in sentence case
-				// eslint-disable-next-line obsidianmd/ui/sentence-case
 				noGlobal.createEl('p', { text: 'Click "Audit all notes" to audit your files in your configured directories.' });
 			}
 			}
@@ -98,7 +97,6 @@ export class PanelRenderer {
 		} catch (error) {
 			console.error('Error rendering SEO panel:', error);
 			// False positive: "SEO" is a proper noun (acronym) and should be capitalized
-			// eslint-disable-next-line obsidianmd/ui/sentence-case
 			containerEl.createEl('div', { text: 'Error loading SEO panel. Please try again.' });
 		}
 	}
@@ -147,7 +145,7 @@ export class PanelRenderer {
 			setIcon(copyBtn, 'lucide-copy');
 			copyBtn.addEventListener('click', () => {
 				if (!singleNoteResult) {
-					new Notice('No results to export. Run Refresh first.');
+					new Notice('No results to export. Run refresh first.');
 					return;
 				}
 				const format = this.plugin.settings.exportFormat;
@@ -158,7 +156,7 @@ export class PanelRenderer {
 			setIcon(downloadBtn, 'lucide-download');
 			downloadBtn.addEventListener('click', () => {
 				if (!singleNoteResult) {
-					new Notice('No results to export. Run Refresh first.');
+					new Notice('No results to export. Run refresh first.');
 					return;
 				}
 				const format = this.plugin.settings.exportFormat;
