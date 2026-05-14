@@ -505,13 +505,14 @@ export class ResultsDisplay {
 			(settings.checkPotentiallyBrokenLinks && settings.checkPotentiallyBrokenEmbeds) : 
 			true;
 		
+		// A file goes into "Files with results" only when it has actual problems
+		// (issues or warnings). Notice-only files are treated as informational and
+		// surface in "Files that pass" instead, so the two lists stay mutually
+		// exclusive and a notice-only file isn't framed as a problem.
 		const issuesFiles = results.filter(r => {
 			const hasIssues = r.issuesCount > 0;
 			const hasWarnings = r.warningsCount > 0;
-			
-			// Use raw notices count so it matches visible entries
-			const hasNotices = showNotices && r.noticesCount > 0;
-			return hasIssues || hasWarnings || hasNotices;
+			return hasIssues || hasWarnings;
 		});
 		if (issuesFiles.length === 0) return;
 
@@ -620,7 +621,9 @@ export class ResultsDisplay {
 	}
 
 	private renderPassingFilesList(results: SEOResults[], currentSort: string, showNotices: boolean): void {
-		// Filter for files that have no issues or warnings (only notices or nothing)
+		// A file passes when it has no issues and no warnings. Notices are informational
+		// and do not disqualify a file from passing; they still render inside the file
+		// row when the showNotices toggle is on.
 		const passingFiles = results.filter(r => {
 			const hasIssues = r.issuesCount > 0;
 			const hasWarnings = r.warningsCount > 0;
