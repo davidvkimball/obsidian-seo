@@ -1,4 +1,4 @@
-# SEO Plugin for Obsidian 
+# Search Engine Optimization
 
 A comprehensive SEO analysis plugin for Obsidian that helps you optimize your notes for better discoverability and search engine ranking.
 
