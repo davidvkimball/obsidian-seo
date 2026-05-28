@@ -1,6 +1,6 @@
 {
 	"name": "seo",
-	"version": "0.4.9",
+	"version": "0.4.10",
 	"description": "Ensure your public-facing notes are optimized for search engines and AI.",
 	"main": "main.js",
 	"type": "module",
@@ -25,7 +25,7 @@
 		"eslint-plugin-obsidianmd": "^0.3.0",
 		"globals": "14.0.0",
 		"obsidian": "^1.11.0",
-		"obsidian-dev-skills": "^1.2.0",
+		"@davidvkimball/obsidian-dev-skills": "^1.3.0",
 		"tslib": "2.4.0",
 		"typescript": "5.8.3",
 		"typescript-eslint": "^8.50.1"
