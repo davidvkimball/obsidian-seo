@@ -6,8 +6,8 @@
 import { TFile, requestUrl } from "obsidian";
 import { SEOSettings } from "../settings";
 import { SEOCheckResult } from "../types";
-import { findLineNumberForImage, getContextAroundLine } from "./utils/position-utils";
-import { removeCodeBlocks } from "./utils/content-parser";
+import { getContextAroundLine } from "./utils/position-utils";
+import { blankNonContentRegions } from "./utils/content-parser";
 
 /**
  * Validates if a URL is properly formatted and not embedded in HTML entities
@@ -66,8 +66,9 @@ function isValidUrl(url: string): boolean {
  * @returns Array of valid external URLs
  */
 function extractValidExternalLinks(content: string): string[] {
-	// Use the content parser to remove code blocks, HTML, and other non-content
-	const cleanContent = removeCodeBlocks(content);
+	// Blank out code blocks, HTML, and other non-content (position-preserving)
+	// so extracted links can be located exactly in the original content.
+	const cleanContent = blankNonContentRegions(content);
 
 	const externalLinks: string[] = [];
 
@@ -180,9 +181,14 @@ export function checkExternalLinks(content: string, file: TFile, settings: SEOSe
 	const uniqueLinks = extractValidExternalLinks(content);
 
 	if (uniqueLinks.length > 0) {
+		// Blank code/HTML regions (position-preserving) so the reported line is
+		// the first occurrence in real content, never one inside a code block.
+		const cleanContent = blankNonContentRegions(content);
+
 		// List each external link as a notice
-		uniqueLinks.forEach((url, index) => {
-			const lineNumber = findLineNumberForImage(content, url);
+		uniqueLinks.forEach((url) => {
+			const linkIndex = cleanContent.indexOf(url);
+			const lineNumber = linkIndex >= 0 ? cleanContent.substring(0, linkIndex).split('\n').length : 1;
 			results.push({
 				passed: true,
 				message: `External link: ${url}`,
@@ -289,6 +295,10 @@ export async function checkExternalBrokenLinks(content: string, file: TFile, set
 		return Promise.resolve(results);
 	}
 
+	// Blank code/HTML regions (position-preserving) so a broken link is
+	// reported at its first occurrence in real content, never inside a code block.
+	const cleanContent = blankNonContentRegions(content);
+
 	// Check each external link
 	const checkTasks = uniqueLinks.map(async (url) => {
 		// Check for global cancellation
@@ -344,15 +354,10 @@ export async function checkExternalBrokenLinks(content: string, file: TFile, set
 
 			let result: SEOCheckResult | null = null;
 			if (linkIsBroken) {
-				const lines = content.split('\n');
-				let lineNumber = 1;
-				for (let i = 0; i < lines.length; i++) {
-					const line = lines[i];
-					if (line && line.includes(url)) {
-						lineNumber = i + 1;
-						break;
-					}
-				}
+				// Positions are preserved by the blanking, so this points at the
+				// first occurrence in real content, never one inside a code block.
+				const linkIndex = cleanContent.indexOf(url);
+				const lineNumber = linkIndex >= 0 ? cleanContent.substring(0, linkIndex).split('\n').length : 1;
 
 				result = {
 					passed: false,

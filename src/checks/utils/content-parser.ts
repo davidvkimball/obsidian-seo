@@ -36,6 +36,27 @@ export function removeHtmlAttributes(content: string): string {
 }
 
 /**
+ * Blanks out regions that should never produce link findings (fenced code
+ * blocks, inline code, HTML tags, frontmatter, and callout-style attributes)
+ * while PRESERVING character positions: every blanked character becomes a
+ * space and newlines are kept. Match indices on the result therefore map 1:1
+ * onto the original content, so line-number attribution stays exact even when
+ * the same URL also appears inside a code block elsewhere in the note.
+ * @param content - The raw markdown content
+ * @returns Content of identical length with non-content regions blanked
+ */
+export function blankNonContentRegions(content: string): string {
+	const blank = (match: string) => match.replace(/[^\n]/g, ' ');
+	return content
+		.replace(/```[\s\S]*?```/g, blank) // Blank fenced code blocks
+		.replace(/~~~[\s\S]*?~~~/g, blank) // Blank ~~~ fenced code blocks
+		.replace(/`[^`\n]+`/g, blank) // Blank inline code
+		.replace(/<[^>]*>/g, blank) // Blank HTML tags
+		.replace(/^---\n[\s\S]*?\n---\n/, blank) // Blank frontmatter
+		.replace(/::\w+\{[^}]*\}/g, blank); // Blank callout-style blocks like ::link{url="..."}
+}
+
+/**
  * Finds the line number where a specific image match occurs
  * @param content - The content to search in
  * @param imageMatch - The image match string to find

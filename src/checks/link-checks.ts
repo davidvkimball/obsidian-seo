@@ -6,7 +6,7 @@
 import { App, TFile } from "obsidian";
 import { SEOSettings } from "../settings";
 import { SEOCheckResult } from "../types";
-import { removeHtmlAttributes } from "./utils/content-parser";
+import { blankNonContentRegions } from "./utils/content-parser";
 import { findLineNumberForImage, getContextAroundLine } from "./utils/position-utils";
 
 /**
@@ -23,35 +23,41 @@ export function checkNakedLinks(content: string, file: TFile, settings: SEOSetti
 		return Promise.resolve([]);
 	}
 
-	// Remove code blocks and HTML content to avoid false positives
-	const cleanContent = removeHtmlAttributes(content);
+	// Blank out code blocks and HTML (position-preserving) so URLs inside them
+	// are ignored WITHOUT shifting match positions. This matters when the same
+	// URL appears both inside a code block and as a real naked link in prose:
+	// deletion-based cleaning made the line lookup attribute the finding to the
+	// code-block occurrence (a confusing, wrong line number).
+	const cleanContent = blankNonContentRegions(content);
 
 	// Find naked links (URLs without markdown link syntax)
 	// Use negative lookbehind to avoid matching URLs within other URLs
-	const nakedLinks = cleanContent.match(/(?<!\]\()(?<!https?:\/\/[^\s)]*\/)https?:\/\/[^\s)]+/g);
-	if (nakedLinks) {
-		nakedLinks.forEach((link, index) => {
-			// Skip archival URLs as they are meant to be displayed as-is
-			if (link.includes('web.archive.org/web/') ||
-				link.includes('archive.today/') ||
-				link.includes('archive.is/') ||
-				link.includes('web.archive.org/save/')) {
-				return;
+	const nakedLinkRegex = /(?<!\]\()(?<!https?:\/\/[^\s)]*\/)https?:\/\/[^\s)]+/g;
+	for (const match of cleanContent.matchAll(nakedLinkRegex)) {
+		const link = match[0];
+
+		// Skip archival URLs as they are meant to be displayed as-is
+		if (link.includes('web.archive.org/web/') ||
+			link.includes('archive.today/') ||
+			link.includes('archive.is/') ||
+			link.includes('web.archive.org/save/')) {
+			continue;
+		}
+
+		// Positions are preserved by the blanking, so the match index maps
+		// directly onto the original content for an exact line number.
+		const lineNumber = cleanContent.substring(0, match.index ?? 0).split('\n').length;
+
+		results.push({
+			passed: false,
+			message: `Naked link found: ${link}`,
+			suggestion: "Convert to markdown link format: [link text](url)",
+			severity: 'warning',
+			position: {
+				line: lineNumber,
+				searchText: link,
+				context: getContextAroundLine(content, lineNumber)
 			}
-
-			const lineNumber = findLineNumberForImage(content, link);
-
-			results.push({
-				passed: false,
-				message: `Naked link found: ${link}`,
-				suggestion: "Convert to markdown link format: [link text](url)",
-				severity: 'warning',
-				position: {
-					line: lineNumber,
-					searchText: link,
-					context: getContextAroundLine(content, lineNumber)
-				}
-			});
 		});
 	}
 
