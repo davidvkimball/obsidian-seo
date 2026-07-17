@@ -1,6 +1,6 @@
 {
 	"name": "seo",
-	"version": "0.5.1",
+	"version": "0.5.2",
 	"description": "Ensure your public-facing notes are optimized for search engines and AI.",
 	"main": "main.js",
 	"type": "module",

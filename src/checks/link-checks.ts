@@ -33,7 +33,8 @@ export function checkNakedLinks(content: string, file: TFile, settings: SEOSetti
 	// Find naked links (URLs without markdown link syntax)
 	// Use negative lookbehind to avoid matching URLs within other URLs
 	const nakedLinkRegex = /(?<!\]\()(?<!https?:\/\/[^\s)]*\/)https?:\/\/[^\s)]+/g;
-	for (const match of cleanContent.matchAll(nakedLinkRegex)) {
+	let match: RegExpExecArray | null;
+	while ((match = nakedLinkRegex.exec(cleanContent)) !== null) {
 		const link = match[0];
 
 		// Skip archival URLs as they are meant to be displayed as-is
@@ -46,7 +47,7 @@ export function checkNakedLinks(content: string, file: TFile, settings: SEOSetti
 
 		// Positions are preserved by the blanking, so the match index maps
 		// directly onto the original content for an exact line number.
-		const lineNumber = cleanContent.substring(0, match.index ?? 0).split('\n').length;
+		const lineNumber = cleanContent.substring(0, match.index).split('\n').length;
 
 		results.push({
 			passed: false,
