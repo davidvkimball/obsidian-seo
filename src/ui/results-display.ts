@@ -330,17 +330,20 @@ export class ResultsDisplay {
 				
 				// Create clickable message if position info is available
 				if (result.position) {
-					const messageEl = li.createEl('span', { 
+					// Capture the narrowed value so the click handler closure
+					// doesn't need a non-null assertion.
+					const position = result.position;
+					const messageEl = li.createEl('span', {
 						text: result.message,
 						cls: 'seo-result-message seo-clickable'
 					});
-					
+
 					// Add click handler for navigation
 					messageEl.addEventListener('click', (e) => {
 						e.preventDefault();
 						e.stopPropagation();
 						void (async () => {
-							await this.navigateToPosition(result.position!);
+							await this.navigateToPosition(position);
 						})();
 					});
 					
