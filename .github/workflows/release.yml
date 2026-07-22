@@ -12,6 +12,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   release:
@@ -49,15 +51,13 @@ jobs:
         id: version
         run: echo "version=$(jq -r .version manifest.json)" >> "$GITHUB_OUTPUT"
 
-      # NOTE: build-provenance attestation is intentionally removed for now.
-      # Attestations signed by GitHub from July 2026 onward fail the Obsidian
-      # directory's attestation verifier ("signature is invalid") even though
-      # GitHub's own `gh attestation verify` passes them — 0.5.1 (old action
-      # versions) and 0.5.2 (current action versions) both failed identically,
-      # while 0.5.0 (signed in May) passed. With no attestation present, the
-      # directory relies on its byte-for-byte build reproduction check, which
-      # this repo passes. Re-add attest-build-provenance@v4 once the directory
-      # verifier is fixed.
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: |
+            main.js
+            styles.css
+            manifest.json
 
       - name: Create or update release
         env:
