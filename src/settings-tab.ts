@@ -146,7 +146,7 @@ export class SEOSettingTab extends PluginSettingTab {
 									await this.plugin.saveSettings();
 								}));
 							// False positive: "Warning:" is a standard warning prefix and should be capitalized
-							setting.descEl.createEl('div', {
+							setting.descEl.createDiv({
 								text: 'Warning: This feature can be very resource-intensive with large vaults and many notes. Disable for faster audits.',
 								cls: 'setting-item-description seo-warning-message',
 							});
@@ -234,7 +234,7 @@ export class SEOSettingTab extends PluginSettingTab {
 									}
 								}));
 							// False positive: "Warning:" is a standard warning prefix and should be capitalized
-							setting.descEl.createEl('div', {
+							setting.descEl.createDiv({
 								text: 'Warning: This will make vault audits extremely slow. Use the "Check external links" button instead for individual notes.',
 								cls: 'setting-item-description seo-warning-message',
 							});
@@ -535,7 +535,7 @@ export class SEOSettingTab extends PluginSettingTab {
 					}));
 			// Add performance warning
 			// False positive: "Warning:" is a standard warning prefix and should be capitalized
-			setting.descEl.createEl('div', {
+			setting.descEl.createDiv({
 				 
 				text: 'Warning: This feature can be very resource-intensive with large vaults and many notes. Disable for faster audits.',
 				cls: 'setting-item-description seo-warning-message'
@@ -695,7 +695,7 @@ export class SEOSettingTab extends PluginSettingTab {
 					}));
 			// Add warning for vault-wide external link checking
 			// False positive: "Warning:" is a standard warning prefix and should be capitalized
-			setting.descEl.createEl('div', {
+			setting.descEl.createDiv({
 				text: 'Warning: This will make vault audits extremely slow. Use the "Check external links" button instead for individual notes.',
 				cls: 'setting-item-description seo-warning-message'
 			});

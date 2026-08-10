@@ -253,7 +253,7 @@ export class SEOSidePanel extends ItemView {
 			
 		if (resultsToShow) {
 			// Create a new results container and render results
-			const newResultsContainer = this.containerEl.createEl('div', { cls: 'seo-results-container' });
+			const newResultsContainer = this.containerEl.createDiv({ cls: 'seo-results-container' });
 			
 			// Reuse the existing results display instance or create a new one
 			if (!this.resultsDisplay) {
@@ -274,7 +274,7 @@ export class SEOSidePanel extends ItemView {
 		} else {
 				// No results available, show message
 			// False positive: "SEO" is a proper noun (acronym) and should be capitalized
-			this.containerEl.createEl('div', { 
+			this.containerEl.createDiv({ 
 				cls: 'seo-info-note seo-no-results-message',
 				text: 'No SEO results available for this file. Click "Refresh" to run an audit.'
 			});
@@ -334,19 +334,19 @@ export class SEOSidePanel extends ItemView {
 		containerEl.addClass('seo-panel');
 
 		// Header
-		const header = containerEl.createEl('div', { cls: 'seo-panel-header' });
+		const header = containerEl.createDiv({ cls: 'seo-panel-header' });
 		header.createEl('h2', { text: this.panelType === 'current' ? 'SEO audit: current note' : 'SEO audit: vault' });
 
 		// Show vault folders information for global panel
 		if (this.panelType === 'global') {
 			const foldersInfo = getVaultFoldersInfo(this.plugin.settings.scanDirectories);
-			const foldersEl = header.createEl('div', { cls: 'seo-filename' });
+			const foldersEl = header.createDiv({ cls: 'seo-filename' });
 			foldersEl.textContent = foldersInfo;
 		}
 
 		// Loading state
-		const loadingContainer = containerEl.createEl('div', { cls: 'seo-loading-container' });
-		const spinnerEl = loadingContainer.createEl('div', { cls: 'seo-loading-spinner' });
+		const loadingContainer = containerEl.createDiv({ cls: 'seo-loading-container' });
+		const spinnerEl = loadingContainer.createDiv({ cls: 'seo-loading-spinner' });
 		setIcon(spinnerEl, 'loader-circle');
 		// False positive: "SEO" is a proper noun (acronym) and should be capitalized
 		loadingContainer.createEl('h3', { 
@@ -410,14 +410,14 @@ export class SEOSidePanel extends ItemView {
 			containerEl.addClass('seo-panel');
 
 			// Header with proper spacing
-			const header = containerEl.createEl('div', { cls: 'seo-panel-header' });
+			const header = containerEl.createDiv({ cls: 'seo-panel-header' });
 			header.createEl('h2', { text: this.panelType === 'current' ? 'SEO audit: current note' : 'SEO audit: vault' });
 
 			// Show current note file path if available
 			if (this.panelType === 'current') {
 				const activeFile = this.app.workspace.getActiveFile();
 				if (activeFile && isSupportedFile(activeFile, this.plugin.settings)) {
-					const filenameEl = header.createEl('div', { cls: 'seo-filename' });
+					const filenameEl = header.createDiv({ cls: 'seo-filename' });
 					
 					// Get the correct display name based on the current active file
 					let displayName = activeFile.path;
@@ -442,7 +442,7 @@ export class SEOSidePanel extends ItemView {
 				// Show vault folders information for global panel
 				const fileCount = this.globalResults.length;
 				const foldersInfo = getVaultFoldersInfo(this.plugin.settings.scanDirectories, fileCount);
-				const foldersEl = header.createEl('div', { cls: 'seo-filename' });
+				const foldersEl = header.createDiv({ cls: 'seo-filename' });
 				foldersEl.textContent = foldersInfo;
 			}
 
@@ -510,7 +510,7 @@ export class SEOSidePanel extends ItemView {
 				const resultsToShow = this.currentNoteResults || currentFileResults;
 				if (resultsToShow) {
 					// Create a new results container and render results
-					const newResultsContainer = this.containerEl.createEl('div', { cls: 'seo-results-container' });
+					const newResultsContainer = this.containerEl.createDiv({ cls: 'seo-results-container' });
 					
 					// Create a new results display instance for this container
 					const tempResultsDisplay = new ResultsDisplay(
@@ -521,7 +521,7 @@ export class SEOSidePanel extends ItemView {
 					tempResultsDisplay.renderResults(resultsToShow);
 					
 				} else {
-					const noResults = containerEl.createEl('div', { cls: 'seo-no-results' });
+					const noResults = containerEl.createDiv({ cls: 'seo-no-results' });
 					const fileTypeText = this.plugin.settings.enableMDXSupport ? 'markdown or MDX file' : 'markdown file';
 					noResults.createEl('p', { text: `Open a ${fileTypeText} and click "Refresh" to audit it.` });
 				}
@@ -529,7 +529,7 @@ export class SEOSidePanel extends ItemView {
 				if (this.globalResults.length > 0) {
 					this.renderGlobalResults(containerEl);
 				} else {
-					const noGlobal = containerEl.createEl('div', { cls: 'seo-no-results' });
+					const noGlobal = containerEl.createDiv({ cls: 'seo-no-results' });
 					// False positive: Contains quoted text which is already in sentence case
 					noGlobal.createEl('p', { text: 'Click "Audit all notes" to audit your files in your configured directories.' });
 				}
@@ -538,7 +538,7 @@ export class SEOSidePanel extends ItemView {
 		} catch (error) {
 			console.error('Error rendering SEO panel:', error);
 			// False positive: "SEO" is a proper noun (acronym) and should be capitalized
-			this.containerEl.createEl('div', { text: 'Error loading SEO panel. Please try again.' });
+			this.containerEl.createDiv({ text: 'Error loading SEO panel. Please try again.' });
 		}
 	}
 
@@ -646,7 +646,7 @@ export class SEOSidePanel extends ItemView {
 		
 		if (resultsToShow) {
 			// Create a new results container and render results
-			const newResultsContainer = this.containerEl.createEl('div', { cls: 'seo-results-container' });
+			const newResultsContainer = this.containerEl.createDiv({ cls: 'seo-results-container' });
 			
 			// Create a new results display instance for this container
 			const tempResultsDisplay = new ResultsDisplay(
@@ -658,7 +658,7 @@ export class SEOSidePanel extends ItemView {
 			
 		} else {
 			// No results available, show prompt
-			const noResults = this.containerEl.createEl('div', { cls: 'seo-no-results' });
+			const noResults = this.containerEl.createDiv({ cls: 'seo-no-results' });
 			// False positive: Contains quoted text which is already in sentence case
 			noResults.createEl('p', { text: 'Open a markdown file and click "Refresh" to audit it.' });
 		}

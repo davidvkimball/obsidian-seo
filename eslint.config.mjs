@@ -8,11 +8,13 @@ export default defineConfig([
   {
     ignores: ["main.js", "node_modules/**", "dist/**", "*.js", "scripts/**", ".ref/**"]
   },
-  // obsidianmd recommended rules require type info, so only apply to TS files
-  ...obsidianmd.configs.recommended.map((config) => ({
-    ...config,
-    files: config.files ?? ["**/*.ts"],
-  })),
+  // The obsidianmd recommended rules need type info, so scope the rule-bearing
+  // configs to TypeScript sources. Objects that only register the plugin must be
+  // left unscoped, otherwise rules applied to other file types cannot resolve the
+  // plugin and ESLint fails to start.
+  ...obsidianmd.configs.recommended.map((config) =>
+    config.rules ? { ...config, files: config.files ?? ["**/*.ts"] } : config,
+  ),
   {
     files: ["**/*.ts"],
     languageOptions: {
@@ -56,6 +58,14 @@ export default defineConfig([
       "no-console": ["error", { "allow": ["warn", "error", "debug"] }],
       // Require await in async functions (matches Obsidian bot)
       "@typescript-eslint/require-await": "error",
+      // The community scorecard reports the no-unsafe-* family when it analyses
+      // this repo, so keep them enabled here to catch any genuine `any` leaks
+      // locally before a release rather than after one.
+      "@typescript-eslint/no-unsafe-member-access": "warn",
+      "@typescript-eslint/no-unsafe-call": "warn",
+      "@typescript-eslint/no-unsafe-assignment": "warn",
+      "@typescript-eslint/no-unsafe-argument": "warn",
+      "@typescript-eslint/no-unsafe-return": "warn",
       // Allow domain-specific acronyms and HTML heading levels in UI strings.
       // Ignore text inside double quotes (these are quoted button/control names
       // referenced inside descriptions, which keep their own casing).
@@ -75,6 +85,15 @@ export default defineConfig([
         __dirname: "readonly",
         __filename: "readonly"
       }
+    },
+    // Build tooling (esbuild config, version bump) runs in Node, not inside the
+    // plugin sandbox, so the mobile-compatibility and console restrictions that
+    // apply to plugin source are not relevant here. The community scorecard
+    // scans plugin source only and does not flag these files either.
+    rules: {
+      "obsidianmd/no-nodejs-modules": "off",
+      "obsidianmd/rule-custom-message": "off",
+      "no-console": "off"
     }
   },
 ]);

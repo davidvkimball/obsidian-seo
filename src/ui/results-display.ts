@@ -159,12 +159,12 @@ export class ResultsDisplay {
 		let filteredNoticesCount = results.noticesCount;
 		
 		// Overall score with collapsible toggle
-		const scoreEl = this.container.createEl('div', { cls: 'seo-score-header' });
+		const scoreEl = this.container.createDiv({ cls: 'seo-score-header' });
 		
 		// Left side: Score text (not bold, not large)
-		const scoreText = scoreEl.createEl('div', { cls: 'seo-score-text' });
-		scoreText.createEl('span', { text: 'Score: ' });
-		const scoreNumber = scoreText.createEl('span', { text: `${Math.round(results.overallScore)}%` });
+		const scoreText = scoreEl.createDiv({ cls: 'seo-score-text' });
+		scoreText.createSpan({ text: 'Score: ' });
+		const scoreNumber = scoreText.createSpan({ text: `${Math.round(results.overallScore)}%` });
 		
 		// Apply color coding to the score
 		if (results.overallScore >= 80) {
@@ -178,27 +178,27 @@ export class ResultsDisplay {
 		}
 		
 		if (results.issuesCount > 0 || results.warningsCount > 0 || filteredNoticesCount > 0) {
-			scoreText.createEl('span', { text: ` (` });
-			scoreText.createEl('span', { 
+			scoreText.createSpan({ text: ` (` });
+			scoreText.createSpan({ 
 				text: `${results.issuesCount} issues`,
 				cls: 'seo-issues-count-text'
 			});
-			scoreText.createEl('span', { text: ', ' });
-			scoreText.createEl('span', { 
+			scoreText.createSpan({ text: ', ' });
+			scoreText.createSpan({ 
 				text: `${results.warningsCount} warnings`,
 				cls: 'seo-warnings-count-text'
 			});
 			if (filteredNoticesCount > 0) {
-				scoreText.createEl('span', { text: ', ' });
-				scoreText.createEl('span', { 
+				scoreText.createSpan({ text: ', ' });
+				scoreText.createSpan({ 
 					text: `${filteredNoticesCount} notices`,
 					cls: 'seo-notices-count-text'
 				});
 			}
-			scoreText.createEl('span', { text: ')' });
+			scoreText.createSpan({ text: ')' });
 		} else {
 			// False positive: Text is already in sentence case; exclamation mark is appropriate for success message
-			scoreText.createEl('span', { 
+			scoreText.createSpan({ 
 				 
 				text: ' (All checks passed!)',
 				cls: 'seo-success'
@@ -206,7 +206,7 @@ export class ResultsDisplay {
 		}
 		
 		// Right side: Toggle button (styled like global sort icon)
-		const toggleBtn = scoreEl.createEl('div', { cls: 'seo-toggle-icon' });
+		const toggleBtn = scoreEl.createDiv({ cls: 'seo-toggle-icon' });
 		toggleBtn.setAttribute('aria-label', this.isCollapsed ? 'Expand all' : 'Collapse all');
 		// Apply the current collapse state to the icon
 		setIcon(toggleBtn, this.isCollapsed ? 'chevrons-up-down' : 'chevrons-down-up');
@@ -223,7 +223,7 @@ export class ResultsDisplay {
 		});
 
 		// Individual checks container
-		const checksContainer = this.container.createEl('div', { cls: 'seo-checks' });
+		const checksContainer = this.container.createDiv({ cls: 'seo-checks' });
 		
 		Object.entries(results.checks).forEach(([checkName, checkResults]) => {
 			if (checkResults.length === 0) return;
@@ -247,8 +247,8 @@ export class ResultsDisplay {
 				statusClass = 'seo-passed';
 			}
 			
-			const checkEl = checksContainer.createEl('div', { cls: `seo-check ${statusClass}` });
-			const header = checkEl.createEl('div', { cls: 'seo-check-header seo-collapsible-header' });
+			const checkEl = checksContainer.createDiv({ cls: `seo-check ${statusClass}` });
+			const header = checkEl.createDiv({ cls: 'seo-check-header seo-collapsible-header' });
 			header.setAttribute('data-check-name', checkName); // Store check name for state tracking
 			
 			// Convert camelCase to sentence case with special handling
@@ -277,12 +277,12 @@ export class ResultsDisplay {
 			}
 			
 			// Add collapse icon
-			const collapseIcon = header.createEl('span', { cls: 'seo-collapse-icon' });
+			const collapseIcon = header.createSpan({ cls: 'seo-collapse-icon' });
 			collapseIcon.appendChild(createCollapseIcon());
 			
-			header.createEl('span', { text: displayName });
+			header.createSpan({ text: displayName });
 			
-			const statusIcon = header.createEl('span', { cls: 'seo-status' });
+			const statusIcon = header.createSpan({ cls: 'seo-status' });
 			const hasErrors = checkResults.some(r => r.severity === 'error');
 			const hasWarnings = checkResults.some(r => r.severity === 'warning');
 			const hasNotices = checkResults.some(r => r.severity === 'notice');
@@ -333,7 +333,7 @@ export class ResultsDisplay {
 					// Capture the narrowed value so the click handler closure
 					// doesn't need a non-null assertion.
 					const position = result.position;
-					const messageEl = li.createEl('span', {
+					const messageEl = li.createSpan({
 						text: result.message,
 						cls: 'seo-result-message seo-clickable'
 					});
@@ -352,14 +352,14 @@ export class ResultsDisplay {
 					messageEl.title = 'Click to jump to this issue in the note';
 				} else {
 					// Non-clickable message for results without position info
-					li.createEl('span', { 
+					li.createSpan({ 
 						text: result.message,
 						cls: 'seo-result-message'
 					});
 				}
 				
 				if (result.suggestion) {
-					const suggestionEl = li.createEl('div', { 
+					const suggestionEl = li.createDiv({ 
 						cls: 'seo-suggestion'
 					});
 					
@@ -440,7 +440,7 @@ export class ResultsDisplay {
 	}
 
 	renderGlobalResults(results: SEOResults[], settings?: SEOSettings): void {
-		const summary = this.container.createEl('div', { cls: 'seo-vault-summary' });
+		const summary = this.container.createDiv({ cls: 'seo-vault-summary' });
 		
 		const totalFiles = results.length;
 		const totalIssues = results.reduce((sum, r) => sum + r.issuesCount, 0);
@@ -459,11 +459,11 @@ export class ResultsDisplay {
 			true;
 
 		// Create stats grid
-		const statsGrid = summary.createEl('div', { cls: 'seo-stats-grid' });
+		const statsGrid = summary.createDiv({ cls: 'seo-stats-grid' });
 		
 		// Overall score first with color coding
-		const scoreStat = statsGrid.createEl('div', { cls: 'seo-stat-item' });
-		const scoreNumber = scoreStat.createEl('div', { cls: 'seo-stat-number', text: `${avgScore}%` });
+		const scoreStat = statsGrid.createDiv({ cls: 'seo-stat-item' });
+		const scoreNumber = scoreStat.createDiv({ cls: 'seo-stat-number', text: `${avgScore}%` });
 		if (avgScore >= 80) {
 			scoreNumber.addClass('seo-score-excellent');
 		} else if (avgScore >= 60) {
@@ -473,32 +473,32 @@ export class ResultsDisplay {
 		} else {
 			scoreNumber.addClass('seo-score-poor');
 		}
-		scoreStat.createEl('div', { cls: 'seo-stat-label', text: 'Average score' });
+		scoreStat.createDiv({ cls: 'seo-stat-label', text: 'Average score' });
 		
 		// Issues count with color coding
-		const issuesStat = statsGrid.createEl('div', { cls: 'seo-stat-item' });
-		const issuesNumber = issuesStat.createEl('div', { cls: 'seo-stat-number', text: totalIssues.toString() });
+		const issuesStat = statsGrid.createDiv({ cls: 'seo-stat-item' });
+		const issuesNumber = issuesStat.createDiv({ cls: 'seo-stat-number', text: totalIssues.toString() });
 		if (totalIssues > 0) {
 			issuesNumber.addClass('seo-issues-count');
 		}
-		issuesStat.createEl('div', { cls: 'seo-stat-label', text: 'Issues' });
+		issuesStat.createDiv({ cls: 'seo-stat-label', text: 'Issues' });
 		
 		// Warnings count with color coding
-		const warningsStat = statsGrid.createEl('div', { cls: 'seo-stat-item' });
-		const warningsNumber = warningsStat.createEl('div', { cls: 'seo-stat-number', text: totalWarnings.toString() });
+		const warningsStat = statsGrid.createDiv({ cls: 'seo-stat-item' });
+		const warningsNumber = warningsStat.createDiv({ cls: 'seo-stat-number', text: totalWarnings.toString() });
 		if (totalWarnings > 0) {
 			warningsNumber.addClass('seo-warnings-count');
 		}
-		warningsStat.createEl('div', { cls: 'seo-stat-label', text: 'Warnings' });
+		warningsStat.createDiv({ cls: 'seo-stat-label', text: 'Warnings' });
 		
 		// Notices count with color coding (only show if notices are enabled)
 		if (showNotices) {
-			const noticesStat = statsGrid.createEl('div', { cls: 'seo-stat-item' });
-			const noticesNumber = noticesStat.createEl('div', { cls: 'seo-stat-number', text: totalNotices.toString() });
+			const noticesStat = statsGrid.createDiv({ cls: 'seo-stat-item' });
+			const noticesNumber = noticesStat.createDiv({ cls: 'seo-stat-number', text: totalNotices.toString() });
 			if (totalNotices > 0) {
 				noticesNumber.addClass('seo-notices-count');
 			}
-			noticesStat.createEl('div', { cls: 'seo-stat-label', text: 'Notices' });
+			noticesStat.createDiv({ cls: 'seo-stat-label', text: 'Notices' });
 		}
 	}
 
@@ -519,13 +519,13 @@ export class ResultsDisplay {
 		});
 		if (issuesFiles.length === 0) return;
 
-		const issuesList = this.container.createEl('div', { cls: 'seo-issues-list' });
+		const issuesList = this.container.createDiv({ cls: 'seo-issues-list' });
 		
 		// Header with sorting buttons and collapse functionality
-		const issuesHeader = issuesList.createEl('div', { cls: 'seo-issues-header-container' });
+		const issuesHeader = issuesList.createDiv({ cls: 'seo-issues-header-container' });
 		
 		// Collapse icon (only this should be clickable) - list starts expanded
-		const collapseIcon = issuesHeader.createEl('span', { cls: 'seo-collapse-icon seo-collapsible-header' });
+		const collapseIcon = issuesHeader.createSpan({ cls: 'seo-collapse-icon seo-collapsible-header' });
 		collapseIcon.setAttribute('aria-label', 'Collapse list');
 		collapseIcon.appendChild(createCollapseIcon());
 		
@@ -540,13 +540,13 @@ export class ResultsDisplay {
 		sortBtn.addEventListener('click', onShowSortMenu);
 		
 		// Files list container
-		const filesListContainer = issuesList.createEl('div', { cls: 'seo-files-list-container' });
+		const filesListContainer = issuesList.createDiv({ cls: 'seo-files-list-container' });
 		
 		// Apply saved sort preference
 		const sortedFiles = this.sortFiles(issuesFiles, currentSort);
 		
 		sortedFiles.forEach(result => {
-			const fileEl = filesListContainer.createEl('div', { cls: 'seo-file-issue' });
+			const fileEl = filesListContainer.createDiv({ cls: 'seo-file-issue' });
 			fileEl.setAttribute('data-file-path', result.file);
 			
 			// Make file path clickable
@@ -563,7 +563,7 @@ export class ResultsDisplay {
 			});
 			
 			// Stats and audit button container
-			const statsContainer = fileEl.createEl('div', { cls: 'seo-stats-container' });
+			const statsContainer = fileEl.createDiv({ cls: 'seo-stats-container' });
 			
 			// Issues, warnings, and notices text
 			const statsText = [];
@@ -571,7 +571,7 @@ export class ResultsDisplay {
 			if (result.warningsCount > 0) statsText.push(`${result.warningsCount} warnings`);
 			if (showNotices && result.noticesCount > 0) statsText.push(`${result.noticesCount} notices`);
 			
-			statsContainer.createEl('span', { 
+			statsContainer.createSpan({ 
 				text: statsText.join(', '),
 				cls: 'seo-file-stats'
 			});
@@ -635,13 +635,13 @@ export class ResultsDisplay {
 
 		if (passingFiles.length === 0) return;
 
-		const passingList = this.container.createEl('div', { cls: 'seo-issues-list' });
+		const passingList = this.container.createDiv({ cls: 'seo-issues-list' });
 		
 		// Header with collapse functionality
-		const passingHeader = passingList.createEl('div', { cls: 'seo-issues-header-container' });
+		const passingHeader = passingList.createDiv({ cls: 'seo-issues-header-container' });
 		
 		// Collapse icon (only this should be clickable) - start with right arrow (collapsed state)
-		const collapseIcon = passingHeader.createEl('span', { cls: 'seo-collapse-icon seo-collapsible-header' });
+		const collapseIcon = passingHeader.createSpan({ cls: 'seo-collapse-icon seo-collapsible-header' });
 		collapseIcon.setAttribute('aria-label', 'Expand list');
 		collapseIcon.appendChild(createCollapseIcon());
 		
@@ -653,11 +653,11 @@ export class ResultsDisplay {
 		}
 		
 		// Center the heading
-		const headingContainer = passingHeader.createEl('div', { cls: 'seo-heading-center' });
+		const headingContainer = passingHeader.createDiv({ cls: 'seo-heading-center' });
 		headingContainer.createEl('h4', { text: 'Files that pass', cls: 'seo-issues-header' });
 		
 		// Files list container (collapsed by default)
-		const filesListContainer = passingList.createEl('div', { 
+		const filesListContainer = passingList.createDiv({ 
 			cls: 'seo-files-list-container seo-results-list-collapsed' 
 		});
 		
@@ -665,7 +665,7 @@ export class ResultsDisplay {
 		const sortedFiles = this.sortFiles(passingFiles, currentSort);
 		
 		sortedFiles.forEach(result => {
-			const fileEl = filesListContainer.createEl('div', { cls: 'seo-file-issue' });
+			const fileEl = filesListContainer.createDiv({ cls: 'seo-file-issue' });
 			fileEl.setAttribute('data-file-path', result.file);
 			
 			// Make file path clickable
@@ -682,11 +682,11 @@ export class ResultsDisplay {
 			});
 			
 			// Stats and audit button container
-			const statsContainer = fileEl.createEl('div', { cls: 'seo-stats-container' });
+			const statsContainer = fileEl.createDiv({ cls: 'seo-stats-container' });
 			
 			// Only show notices if they exist
 			if (showNotices && result.noticesCount > 0) {
-				statsContainer.createEl('span', { 
+				statsContainer.createSpan({ 
 					text: `${result.noticesCount} notices`,
 					cls: 'seo-file-stats'
 				});

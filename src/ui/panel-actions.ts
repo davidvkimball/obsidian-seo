@@ -477,7 +477,7 @@ export class PanelActions {
 
 	private renderFilesList(files: SEOResults[], container: HTMLElement, settings?: SEOSettings): void {
 		files.forEach(result => {
-			const fileEl = container.createEl('div', { cls: 'seo-file-issue' });
+			const fileEl = container.createDiv({ cls: 'seo-file-issue' });
 			fileEl.setAttribute('data-file-path', result.file);
 			
 			// Make file path clickable
@@ -493,7 +493,7 @@ export class PanelActions {
 			});
 			
 			// Stats and audit button container
-			const statsContainer = fileEl.createEl('div', { cls: 'seo-stats-container' });
+			const statsContainer = fileEl.createDiv({ cls: 'seo-stats-container' });
 			
 			// Check if notices should be shown
 			const showNotices = settings ? 
@@ -506,7 +506,7 @@ export class PanelActions {
 			if (result.warningsCount > 0) statsText.push(`${result.warningsCount} warnings`);
 			if (showNotices && result.noticesCount > 0) statsText.push(`${result.noticesCount} notices`);
 			
-			statsContainer.createEl('span', { 
+			statsContainer.createSpan({ 
 				text: statsText.join(', '),
 				cls: 'seo-file-stats'
 			});
