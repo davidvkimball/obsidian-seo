@@ -316,23 +316,32 @@ export function checkKeywordDensity(content: string, file: TFile, settings: SEOS
 	const keywordLower = keyword.toLowerCase();
 	const cleanContentLower = cleanContent.toLowerCase();
 
-	// Split keyword into words; normalize apostrophes for matching
-	const keywordWords = keywordLower
-		.split(/\s+/)
-		.filter(word => word.length > 0)
-		.map(w => stripApostrophes(w))
-		.filter(w => w.length > 0);
+	/**
+	 * Split text into comparable words, treating hyphens and dashes as word
+	 * separators rather than part of a word. Splitting on whitespace alone made
+	 * a hyphenated compound a single token, so "AI-native company" could never
+	 * match the keyword "AI native company": two tokens against three words.
+	 * Since the same split is used for the keyword, a hyphenated keyword also
+	 * matches unhyphenated prose.
+	 */
+	const splitIntoWords = (text: string): string[] =>
+		text
+			.split(/[\s‐‑‒–—―-]+/)
+			.map(normalizeContentWordToken)
+			.filter(w => w.length > 0);
+
+	const keywordWords = splitIntoWords(keywordLower);
 
 	if (keywordWords.length === 0) {
 		return Promise.resolve(results);
 	}
 
-	// Count occurrences: consecutive run of normalized content words must equal keyword words
+	// Count occurrences: consecutive run of content words must equal keyword words
 	let keywordCount = 0;
-	const contentWords = cleanContentLower.split(/\s+/);
+	const contentWords = splitIntoWords(cleanContentLower);
 
 	for (let i = 0; i <= contentWords.length - keywordWords.length; i++) {
-		const slice = contentWords.slice(i, i + keywordWords.length).map(normalizeContentWordToken);
+		const slice = contentWords.slice(i, i + keywordWords.length);
 		if (slice.length !== keywordWords.length) continue;
 		const consecutiveMatch = keywordWords.every((kw, j) => slice[j] === kw);
 		if (consecutiveMatch) {
@@ -340,12 +349,8 @@ export function checkKeywordDensity(content: string, file: TFile, settings: SEOS
 		}
 	}
 
-	// Total words: same normalization so density denominator matches readable words
-	const words = cleanContentLower
-		.split(/\s+/)
-		.map(normalizeContentWordToken)
-		.filter(w => w.length > 0);
-	const totalWords = words.length;
+	// Same tokens form the denominator, so density stays internally consistent.
+	const totalWords = contentWords.length;
 
 	if (totalWords === 0) {
 		results.push({
